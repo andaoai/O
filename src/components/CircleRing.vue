@@ -143,7 +143,7 @@ const labels = computed(() => {
 </script>
 
 <template>
-  <g class="circle-ring" :transform="`rotate(${rotation} ${centerX} ${centerY})`">
+  <g class="circle-ring" :transform="`rotate(${props.rotation} ${centerX} ${centerY})`">
     <!-- 外圆 -->
     <circle
       v-if="showCircle"

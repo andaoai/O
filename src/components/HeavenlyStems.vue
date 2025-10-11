@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import CircleRing from './CircleRing.vue'
+
+interface Props {
+  startDegree?: number  // 起始度数
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  startDegree: 0
+})
 
 // 天干旋转角度（向右旋转，顺时针）
 const heavenlyRotation = ref(0)
@@ -8,12 +16,15 @@ const heavenlyRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateHeavenlyStems = () => {
-  heavenlyRotation.value = (heavenlyRotation.value + 0.001) % 360 // 每帧旋转0.5度
+  heavenlyRotation.value = (heavenlyRotation.value + 0.0) % 360 // 每帧旋转0.5度
   animationId = requestAnimationFrame(rotateHeavenlyStems)
 }
 
 // 启动旋转动画
 rotateHeavenlyStems()
+
+// 计算总的旋转角度 = 起始度数 + 动画旋转
+const totalRotation = computed(() => (props.startDegree + heavenlyRotation.value) % 360)
 
 // 十天干，每个36度，甲从0度开始
 const heavenlyStems = [
@@ -32,8 +43,8 @@ const heavenlyStems = [
 
 <template>
   <CircleRing
-    :radius="240"
-    :inner-radius="190"
+    :radius="220"
+    :inner-radius="195"
     :items="heavenlyStems"
     :show-ticks="true"
     :tick-width="0.6"
@@ -42,6 +53,6 @@ const heavenlyStems = [
     circle-color="#888888"
     tick-color="#666666"
     :label-position="0.5"
-    :rotation="heavenlyRotation"
+    :rotation="totalRotation"
   />
 </template>

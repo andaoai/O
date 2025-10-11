@@ -12,6 +12,11 @@ const radius = ref(240)
 const centerX = ref(400)
 const centerY = ref(300)
 
+// 各组件的起始度数设置
+const constellationStartDegree = ref(45)    // 二十八星宿起始度数
+const heavenlyStemsStartDegree = ref(45)    // 十天干起始度数
+const earthlyBranchesStartDegree = ref(45)  // 十二地支起始度数
+
 // 生成360度刻度点
 const generateTicks = () => {
   const ticks = []
@@ -115,13 +120,13 @@ const celestialBodies = ref([
 
 
       <!-- 二十八星宿圆环（最外层） -->
-      <TwentyEightConstellations />
+      <TwentyEightConstellations :start-degree="constellationStartDegree" />
 
       <!-- 十天干圆环（第二层） -->
-      <HeavenlyStems />
+      <HeavenlyStems :start-degree="heavenlyStemsStartDegree" />
 
       <!-- 十二地支圆环（第三层） -->
-      <EarthlyBranches />
+      <EarthlyBranches :start-degree="earthlyBranchesStartDegree" />
 
       <!-- 太阳系天体轨道系统（第四层） -->
       <StarOrbit

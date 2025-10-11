@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import CircleRing from './CircleRing.vue'
+
+interface Props {
+  startDegree?: number  // 起始度数
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  startDegree: 0
+})
 
 // 28星宿旋转角度（向右旋转，顺时针）
 const constellationRotation = ref(0)
@@ -8,12 +16,15 @@ const constellationRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateConstellations = () => {
-  constellationRotation.value = (constellationRotation.value + 0.002) % 360 // 每帧旋转0.2度
+  constellationRotation.value = (constellationRotation.value + 0.0) % 360 // 每帧旋转0.2度
   animationId = requestAnimationFrame(rotateConstellations)
 }
 
 // 启动旋转动画
 rotateConstellations()
+
+// 计算总的旋转角度 = 起始度数 + 动画旋转
+const totalRotation = computed(() => (props.startDegree + constellationRotation.value) % 360)
 
 // 28星宿，分为4个方位（青龙、白虎、朱雀、玄武），每个7个星宿
 // 每个星宿约12.86度 (360/28)
@@ -73,7 +84,7 @@ const twentyEightConstellations = [
     circle-color="#666666"
     tick-color="#444444"
     :label-position="0.5"
-    :rotation="constellationRotation"
+    :rotation="totalRotation"
     :font-size="12"
   />
 </template>
