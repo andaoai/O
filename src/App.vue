@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
+import AstronomicalCalculator from './components/AstronomicalCalculator.vue'
 
 const radius = ref(240)
 const centerX = ref(400)
@@ -31,7 +32,7 @@ const ticks = ref(generateTicks())
 <template>
   <div class="container">
     <svg width="800" height="600" viewBox="0 0 800 600">
-
+      
       <!-- 二十八星宿圆环（最外层半径） -->
       <TwentyEightConstellations />
 
@@ -40,7 +41,10 @@ const ticks = ref(generateTicks())
 
       <!-- 十天干圆环（最小半径） -->
       <HeavenlyStems />
+
+      
     </svg>
+    <AstronomicalCalculator />
   </div>
 </template>
 
