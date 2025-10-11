@@ -128,10 +128,15 @@ const labels = computed(() => {
     const x = centerX + Math.cos(angleRad) * textRadius
     const y = centerY + Math.sin(angleRad) * textRadius
 
+    // 计算文字旋转角度，让文字底部指向圆心
+    // 文字旋转角度 = 角度 + 90度，这样文字底部会指向圆心
+    const textRotation = midAngle + 90
+
     return {
       x, y,
       item,
-      angle: midAngle
+      angle: midAngle,
+      textRotation
     }
   })
 })
@@ -183,6 +188,7 @@ const labels = computed(() => {
         text-anchor="middle"
         dominant-baseline="middle"
         font-weight="bold"
+        :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
       >
         {{ label.item.label }}
       </text>
