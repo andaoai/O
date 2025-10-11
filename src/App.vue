@@ -5,6 +5,7 @@ import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import AstronomicalCalculator from './components/AstronomicalCalculator.vue'
 import LunarCalendarCard from './components/LunarCalendarCard.vue'
+import Taiji from './components/Taiji.vue'
 
 const radius = ref(240)
 const centerX = ref(400)
@@ -34,6 +35,7 @@ const ticks = ref(generateTicks())
   <div class="container">
     <svg width="800" height="600" viewBox="0 0 800 600">
 
+
       <!-- 二十八星宿圆环（最外层半径） -->
       <TwentyEightConstellations />
 
@@ -42,12 +44,20 @@ const ticks = ref(generateTicks())
 
       <!-- 十天干圆环（最小半径） -->
       <HeavenlyStems />
+      <!-- 太极图（中心） -->
+      <Taiji
+        :x="400"
+        :y="300"
+        :size="40"
+        :auto-rotate="true"
+      />
 
 
     </svg>
     <AstronomicalCalculator />
     <LunarCalendarCard />
-  </div>
+
+    </div>
 </template>
 
 <style>
