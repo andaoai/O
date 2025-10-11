@@ -245,20 +245,7 @@ const getStarColor = (star: Star) => {
           {{ position.star.name }}
         </text>
 
-        <!-- 星等标签（如果有） -->
-        <text
-          v-if="showLabels && position.star.magnitude"
-          :x="position.x"
-          :y="position.y + getStarSize(position.star) + labelDistance + 10"
-          :fill="labelColor"
-          :font-size="labelFontSize - 2"
-          text-anchor="middle"
-          font-family="Arial, sans-serif"
-          opacity="0.8"
-        >
-          {{ position.star.magnitude.toFixed(1) }}m
-        </text>
-      </g>
+        </g>
     </g>
   </g>
 </template>

@@ -16,6 +16,18 @@ const earthlyBranchesStartDegree = ref(45)  // 十二地支起始度数
 // 太阳系天体数据
 const celestialBodies = ref([
   {
+    name: '太阳',
+    distance: 150,
+    angle: 0,
+    magnitude: -26.7,
+    color: '#ffcc00',
+    orbitRadius: 150,
+    orbitEccentricity: 0.02,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 3,
+    showOrbit: true
+  },
+  {
     name: '木星',
     distance: 110,
     angle: 30,
