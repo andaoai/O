@@ -63,7 +63,14 @@ const sectors = computed(() => {
 
 // 生成刻度点
 const ticks = computed(() => {
-  const allTicks = []
+  const allTicks: Array<{
+    x1: number
+    y1: number
+    x2: number
+    y2: number
+    angle: number
+    item: RingItem
+  }> = []
   props.items.forEach((item, index) => {
     const startAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
     const endAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value

@@ -27,6 +27,6 @@ const heavenlyStems = [
     :circle-width="1"
     circle-color="#888888"
     tick-color="#666666"
-    label-position="0.5"
+    :label-position="0.5"
   />
 </template>
