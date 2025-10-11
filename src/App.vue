@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
+import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 
 const radius = ref(240)
 const centerX = ref(400)
@@ -31,6 +32,8 @@ const ticks = ref(generateTicks())
   <div class="container">
     <svg width="800" height="600" viewBox="0 0 800 600">
 
+      <!-- 二十八星宿圆环（最外层半径） -->
+      <TwentyEightConstellations />
 
       <!-- 十二地支圆环（中等半径） -->
       <EarthlyBranches />
