@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir D:codeplanet)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(uv:*)",
+      "Bash(move:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
