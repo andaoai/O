@@ -1,5 +1,19 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import CircleRing from './CircleRing.vue'
+
+// 地支旋转角度（向左旋转，逆时针）
+const earthlyRotation = ref(0)
+
+// 动态更新旋转角度
+let animationId: number
+const rotateEarthlyBranches = () => {
+  earthlyRotation.value = (earthlyRotation.value - 0.3 + 360) % 360 // 每帧逆时针旋转0.3度
+  animationId = requestAnimationFrame(rotateEarthlyBranches)
+}
+
+// 启动旋转动画
+rotateEarthlyBranches()
 
 // 十二地支，每个30度，子从345度开始
 const earthlyBranches = [
@@ -30,5 +44,6 @@ const earthlyBranches = [
     circle-color="#888888"
     tick-color="#666666"
     :label-position="0.5"
+    :rotation="earthlyRotation"
   />
 </template>

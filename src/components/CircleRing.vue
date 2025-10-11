@@ -24,6 +24,7 @@ interface Props {
   circleWidth?: number
   circleColor?: string
   showSectors?: boolean  // 是否显示扇形区域
+  rotation?: number      // 旋转角度（度数）
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -38,7 +39,8 @@ const props = withDefaults(defineProps<Props>(), {
   showCircle: true,
   circleWidth: 1,
   circleColor: 'white',
-  showSectors: false
+  showSectors: false,
+  rotation: 0
 })
 
 const centerX = 400
@@ -50,8 +52,12 @@ const angleStep = computed(() => 360 / props.items.length)
 // 生成扇形区域
 const sectors = computed(() => {
   return props.items.map((item, index) => {
-    const startAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
-    const endAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+    const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
+    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+
+    // 应用旋转角度
+    const startAngle = (baseStartAngle + props.rotation) % 360
+    const endAngle = (baseEndAngle + props.rotation) % 360
 
     return {
       startAngle,
@@ -72,8 +78,11 @@ const ticks = computed(() => {
     item: RingItem
   }> = []
   props.items.forEach((item, index) => {
-    const startAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
-    const endAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+    const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
+    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+
+    // 应用旋转角度
+    const startAngle = (baseStartAngle + props.rotation) % 360
 
     // 添加起始刻度
     const startAngleRad = (startAngle * Math.PI) / 180
@@ -94,8 +103,12 @@ const ticks = computed(() => {
 // 生成标签位置（在扇形中心）
 const labels = computed(() => {
   return props.items.map((item, index) => {
-    const startAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
-    const endAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+    const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
+    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+
+    // 应用旋转角度
+    const startAngle = (baseStartAngle + props.rotation) % 360
+    const endAngle = (baseEndAngle + props.rotation) % 360
 
     // 处理跨越0度的情况
     let midAngle
@@ -125,7 +138,7 @@ const labels = computed(() => {
 </script>
 
 <template>
-  <g class="circle-ring">
+  <g class="circle-ring" :transform="`rotate(${rotation} ${centerX} ${centerY})`">
     <!-- 外圆 -->
     <circle
       v-if="showCircle"

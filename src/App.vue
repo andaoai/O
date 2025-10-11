@@ -30,42 +30,7 @@ const ticks = ref(generateTicks())
 <template>
   <div class="container">
     <svg width="800" height="600" viewBox="0 0 800 600">
-      <!-- 最外层：360度刻度圆环 -->
-      <g class="main-ring">
-        <!-- 外圆 -->
-        <circle
-          :cx="centerX"
-          :cy="centerY"
-          :r="radius"
-          fill="none"
-          stroke="white"
-          stroke-width="1"
-        />
 
-        <!-- 360度刻度 -->
-        <g v-for="tick in ticks" :key="tick.angle">
-          <line
-            :x1="tick.x1"
-            :y1="tick.y1"
-            :x2="tick.x2"
-            :y2="tick.y2"
-            stroke="white"
-            stroke-width="0.3"
-          />
-          <!-- 每30度显示数字 -->
-          <text
-            v-if="tick.angle % 30 === 0"
-            :x="centerX + Math.cos((tick.angle * Math.PI) / 180) * (radius + 20)"
-            :y="centerY + Math.sin((tick.angle * Math.PI) / 180) * (radius + 20)"
-            fill="white"
-            font-size="10"
-            text-anchor="middle"
-            dominant-baseline="middle"
-          >
-            {{ tick.angle }}
-          </text>
-        </g>
-      </g>
 
       <!-- 十二地支圆环（中等半径） -->
       <EarthlyBranches />
