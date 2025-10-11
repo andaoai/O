@@ -173,7 +173,7 @@ const labels = computed(() => {
         :y1="centerY + Math.sin((tick.angle * Math.PI) / 180) * innerRadius"
         :x2="centerX + Math.cos((tick.angle * Math.PI) / 180) * radius"
         :y2="centerY + Math.sin((tick.angle * Math.PI) / 180) * radius"
-        :stroke="tick.item.color || tickColor"
+        :stroke="tickColor"
         :stroke-width="tickWidth"
       />
     </g>

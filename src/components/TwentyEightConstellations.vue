@@ -42,13 +42,13 @@ const twentyEightConstellations = [
   { label: '壁', color: '#0B5345', startAngle: 167.16, endAngle: 180 },
 
   // 西方白虎七宿 (180-270度)
-  { label: '奎', color: '#EC7063', startAngle: 180, endAngle: 192.86 },
-  { label: '娄', color: '#E74C3C', startAngle: 192.86, endAngle: 205.72 },
-  { label: '胃', color: '#CB4335', startAngle: 205.72, endAngle: 218.58 },
-  { label: '昴', color: '#B03A2E', startAngle: 218.58, endAngle: 231.44 },
-  { label: '毕', color: '#943126', startAngle: 231.44, endAngle: 244.3 },
-  { label: '觜', color: '#7B241C', startAngle: 244.3, endAngle: 257.16 },
-  { label: '参', color: '#641E16', startAngle: 257.16, endAngle: 270 },
+  { label: '奎', color: '#D4AF37', startAngle: 180, endAngle: 192.86 },  // 更改为金色
+  { label: '娄', color: '#BCC6CC', startAngle: 192.86, endAngle: 205.72 }, // 更改为银色
+  { label: '胃', color: '#AEB6BF', startAngle: 205.72, endAngle: 218.58 }, // 更改为浅灰色
+  { label: '昴', color: '#829AE3', startAngle: 218.58, endAngle: 231.44 }, // 更改以增加色彩变化
+  { label: '毕', color: '#566573', startAngle: 231.44, endAngle: 244.3 },  // 深灰色
+  { label: '觜', color: '#2C3E50', startAngle: 244.3, endAngle: 257.16 },  // 深邃蓝灰
+  { label: '参', color: '#1C2833', startAngle: 257.16, endAngle: 270 },    // 最深的色调
 
   // 南方朱雀七宿 (270-360度)
   { label: '井', color: '#F5B7B1', startAngle: 270, endAngle: 282.86 },
@@ -64,7 +64,7 @@ const twentyEightConstellations = [
 <template>
   <CircleRing
     :radius="280"
-    :inner-radius="220"
+    :inner-radius="250"
     :items="twentyEightConstellations"
     :show-ticks="true"
     :tick-width="1"

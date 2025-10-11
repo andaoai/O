@@ -8,7 +8,7 @@ const earthlyRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateEarthlyBranches = () => {
-  earthlyRotation.value = (earthlyRotation.value - 0.03 + 360) % 360 // 每帧逆时针旋转0.3度
+  earthlyRotation.value = (earthlyRotation.value - 0.01 + 360) % 360 // 每帧逆时针旋转0.3度
   animationId = requestAnimationFrame(rotateEarthlyBranches)
 }
 
@@ -17,18 +17,18 @@ rotateEarthlyBranches()
 
 // 十二地支，每个30度，子从345度开始
 const earthlyBranches = [
-  { label: '子', color: '#E74C3C', startAngle: 345, endAngle: 15 },    // 345-15度
-  { label: '丑', color: '#E67E22', startAngle: 15, endAngle: 45 },      // 15-45度
-  { label: '寅', color: '#F39C12', startAngle: 45, endAngle: 75 },      // 45-75度
-  { label: '卯', color: '#27AE60', startAngle: 75, endAngle: 105 },     // 75-105度
-  { label: '辰', color: '#2ECC71', startAngle: 105, endAngle: 135 },    // 105-135度
-  { label: '巳', color: '#3498DB', startAngle: 135, endAngle: 165 },    // 135-165度
-  { label: '午', color: '#9B59B6', startAngle: 165, endAngle: 195 },    // 165-195度
-  { label: '未', color: '#E91E63', startAngle: 195, endAngle: 225 },    // 195-225度
-  { label: '申', color: '#00BCD4', startAngle: 225, endAngle: 255 },    // 225-255度
-  { label: '酉', color: '#795548', startAngle: 255, endAngle: 285 },    // 255-285度
-  { label: '戌', color: '#607D8B', startAngle: 285, endAngle: 315 },    // 285-315度
-  { label: '亥', color: '#9E9E9E', startAngle: 315, endAngle: 345 }     // 315-345度
+  { label: '子', color: '#0D47A1', startAngle: 345, endAngle: 15 },    // 水，深蓝
+  { label: '丑', color: '#795548', startAngle: 15, endAngle: 45 },      // 土，棕
+  { label: '寅', color: '#2E7D32', startAngle: 45, endAngle: 75 },      // 木，绿
+  { label: '卯', color: '#388E3C', startAngle: 75, endAngle: 105 },     // 木，绿
+  { label: '辰', color: '#F57C00', startAngle: 105, endAngle: 135 },    // 土，橙黄
+  { label: '巳', color: '#D32F2F', startAngle: 135, endAngle: 165 },    // 火，红
+  { label: '午', color: '#C62828', startAngle: 165, endAngle: 195 },    // 火，深红
+  { label: '未', color: '#EF6C00', startAngle: 195, endAngle: 225 },    // 土，橙
+  { label: '申', color: '#FFEB3B', startAngle: 225, endAngle: 255 },    // 金，黄白
+  { label: '酉', color: '#FFF176', startAngle: 255, endAngle: 285 },    // 金，浅黄
+  { label: '戌', color: '#F9A825', startAngle: 285, endAngle: 315 },    // 土，淡黄
+  { label: '亥', color: '#0288D1', startAngle: 315, endAngle: 345 }     // 水，天蓝
 ]
 </script>
 

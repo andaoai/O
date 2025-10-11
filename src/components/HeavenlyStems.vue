@@ -8,7 +8,7 @@ const heavenlyRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateHeavenlyStems = () => {
-  heavenlyRotation.value = (heavenlyRotation.value + 0.05) % 360 // 每帧旋转0.5度
+  heavenlyRotation.value = (heavenlyRotation.value + 0.001) % 360 // 每帧旋转0.5度
   animationId = requestAnimationFrame(rotateHeavenlyStems)
 }
 
@@ -17,16 +17,16 @@ rotateHeavenlyStems()
 
 // 十天干，每个36度，甲从0度开始
 const heavenlyStems = [
-  { label: '甲', color: '#FF6B6B', startAngle: 0, endAngle: 36 },      // 0-36度
-  { label: '乙', color: '#4ECDC4', startAngle: 36, endAngle: 72 },     // 36-72度
-  { label: '丙', color: '#45B7D1', startAngle: 72, endAngle: 108 },    // 72-108度
-  { label: '丁', color: '#96CEB4', startAngle: 108, endAngle: 144 },   // 108-144度
-  { label: '戊', color: '#FFEAA7', startAngle: 144, endAngle: 180 },   // 144-180度
-  { label: '己', color: '#DDA0DD', startAngle: 180, endAngle: 216 },   // 180-216度
-  { label: '庚', color: '#98D8C8', startAngle: 216, endAngle: 252 },   // 216-252度
-  { label: '辛', color: '#F7DC6F', startAngle: 252, endAngle: 288 },   // 252-288度
-  { label: '壬', color: '#BB8FCE', startAngle: 288, endAngle: 324 },   // 288-324度
-  { label: '癸', color: '#85C1E2', startAngle: 324, endAngle: 360 }    // 324-360度
+  { label: '甲', color: '#2ECC71', startAngle: -18, endAngle: 18 },      // 木，绿色
+  { label: '乙', color: '#28B463', startAngle: 18, endAngle: 54 },        // 木，深绿
+  { label: '丙', color: '#E74C3C', startAngle: 54, endAngle: 90 },       // 火，红色
+  { label: '丁', color: '#C0392B', startAngle: 90, endAngle: 126 },      // 火，深红
+  { label: '戊', color: '#D35400', startAngle: 126, endAngle: 162 },     // 土，橙色
+  { label: '己', color: '#F39C12', startAngle: 162, endAngle: 198 },     // 土，黄橙
+  { label: '庚', color: '#F1C40F', startAngle: 198, endAngle: 234 },     // 金，金色/黄色
+  { label: '辛', color: '#BDC3C7', startAngle: 234, endAngle: 270 },     // 金，银灰色
+  { label: '壬', color: '#3498DB', startAngle: 270, endAngle: 306 },     // 水，蓝色
+  { label: '癸', color: '#2980B9', startAngle: 306, endAngle: 342 }      // 水，深蓝
 ]
 </script>
 
