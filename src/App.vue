@@ -8,33 +8,10 @@ import LunarCalendarCard from './components/LunarCalendarCard.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/StarOrbit.vue'
 
-const radius = ref(240)
-const centerX = ref(400)
-const centerY = ref(300)
-
 // 各组件的起始度数设置
 const constellationStartDegree = ref(45)    // 二十八星宿起始度数
 const heavenlyStemsStartDegree = ref(45)    // 十天干起始度数
 const earthlyBranchesStartDegree = ref(45)  // 十二地支起始度数
-
-// 生成360度刻度点
-const generateTicks = () => {
-  const ticks = []
-  for (let i = 0; i < 360; i++) {
-    const angle = (i * Math.PI) / 180
-    const x1 = centerX.value + Math.cos(angle) * radius.value
-    const y1 = centerY.value + Math.sin(angle) * radius.value
-    const x2 = centerX.value + Math.cos(angle) * (radius.value + 10)
-    const y2 = centerY.value + Math.sin(angle) * (radius.value + 10)
-
-    ticks.push({
-      x1, y1, x2, y2, angle: i
-    })
-  }
-  return ticks
-}
-
-const ticks = ref(generateTicks())
 
 // 太阳系天体数据
 const celestialBodies = ref([
@@ -46,54 +23,6 @@ const celestialBodies = ref([
     color: '#d4a373',
     orbitRadius: 110,
     orbitEccentricity: 0.05,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 2,
-    showOrbit: true
-  },
-  {
-    name: '土星',
-    distance: 100,
-    angle: 120,
-    magnitude: 0.5,
-    color: '#fad5a5',
-    orbitRadius: 100,
-    orbitEccentricity: 0.05,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 2,
-    showOrbit: true
-  },
-  {
-    name: '火星',
-    distance: 90,
-    angle: 200,
-    magnitude: -0.5,
-    color: '#cd5c5c',
-    orbitRadius: 90,
-    orbitEccentricity: 0.09,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 2,
-    showOrbit: true
-  },
-  {
-    name: '金星',
-    distance: 80,
-    angle: 300,
-    magnitude: -4.4,
-    color: '#ffd700',
-    orbitRadius: 80,
-    orbitEccentricity: 0.01,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 2,
-    showOrbit: true
-  },
-  {
-    name: '水星',
-    distance: 70,
-    angle: 45,
-    magnitude: -0.2,
-    color: '#c0c0c0',
-    orbitRadius: 70,
-    orbitEccentricity: 0.2,
     orbitStyle: 'solid' as const,
     orbitWidth: 2,
     showOrbit: true

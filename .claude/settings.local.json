@@ -8,7 +8,9 @@
       "Bash(dir:*)",
       "Bash(uv:*)",
       "Bash(move:*)",
-      "Bash(npm run type-check:*)"
+      "Bash(npm run type-check:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(npx vue-tsc:*)"
     ],
     "deny": [],
     "ask": []
