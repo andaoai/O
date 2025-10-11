@@ -295,7 +295,7 @@ const getConstellationFromLongitude = (longitude: number): string => {
   return constellations[index]!
 }
 
-let updateInterval: number
+let updateInterval: ReturnType<typeof setInterval>
 
 onMounted(() => {
   updateAstronomicalData()

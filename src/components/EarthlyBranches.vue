@@ -34,8 +34,8 @@ const earthlyBranches = [
 
 <template>
   <CircleRing
-    :radius="200"
-    :inner-radius="140"
+    :radius="180"
+    :inner-radius="130"
     :items="earthlyBranches"
     :show-ticks="true"
     :tick-width="0.8"

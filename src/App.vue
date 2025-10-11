@@ -6,6 +6,7 @@ import TwentyEightConstellations from './components/TwentyEightConstellations.vu
 import AstronomicalCalculator from './components/AstronomicalCalculator.vue'
 import LunarCalendarCard from './components/LunarCalendarCard.vue'
 import Taiji from './components/Taiji.vue'
+import StarOrbit from './components/StarOrbit.vue'
 
 const radius = ref(240)
 const centerX = ref(400)
@@ -29,6 +30,83 @@ const generateTicks = () => {
 }
 
 const ticks = ref(generateTicks())
+
+// 太阳系天体数据
+const celestialBodies = ref([
+  {
+    name: '木星',
+    distance: 110,
+    angle: 30,
+    magnitude: -2.5,
+    color: '#d4a373',
+    orbitRadius: 110,
+    orbitEccentricity: 0.05,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 2,
+    showOrbit: true
+  },
+  {
+    name: '土星',
+    distance: 100,
+    angle: 120,
+    magnitude: 0.5,
+    color: '#fad5a5',
+    orbitRadius: 100,
+    orbitEccentricity: 0.05,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 2,
+    showOrbit: true
+  },
+  {
+    name: '火星',
+    distance: 90,
+    angle: 200,
+    magnitude: -0.5,
+    color: '#cd5c5c',
+    orbitRadius: 90,
+    orbitEccentricity: 0.09,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 2,
+    showOrbit: true
+  },
+  {
+    name: '金星',
+    distance: 80,
+    angle: 300,
+    magnitude: -4.4,
+    color: '#ffd700',
+    orbitRadius: 80,
+    orbitEccentricity: 0.01,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 2,
+    showOrbit: true
+  },
+  {
+    name: '水星',
+    distance: 70,
+    angle: 45,
+    magnitude: -0.2,
+    color: '#c0c0c0',
+    orbitRadius: 70,
+    orbitEccentricity: 0.2,
+    orbitStyle: 'solid' as const,
+    orbitWidth: 2,
+    showOrbit: true
+  },
+  {
+    name: '月亮',
+    distance: 60,
+    angle: 180,
+    magnitude: -12.6,
+    color: '#f0f0f0',
+    orbitRadius: 60,
+    orbitEccentricity: 0.05,
+    orbitStyle: 'dashed' as const,
+    orbitWidth: 1,
+    showOrbit: true,
+    twinkle: true
+  }
+])
 </script>
 
 <template>
@@ -36,22 +114,36 @@ const ticks = ref(generateTicks())
     <svg width="800" height="600" viewBox="0 0 800 600">
 
 
-      <!-- 二十八星宿圆环（最外层半径） -->
+      <!-- 二十八星宿圆环（最外层） -->
       <TwentyEightConstellations />
 
-      <!-- 十二地支圆环（中等半径） -->
+      <!-- 十天干圆环（第二层） -->
+      <HeavenlyStems />
+
+      <!-- 十二地支圆环（第三层） -->
       <EarthlyBranches />
 
-      <!-- 十天干圆环（最小半径） -->
-      <HeavenlyStems />
+      <!-- 太阳系天体轨道系统（第四层） -->
+      <StarOrbit
+        :stars="celestialBodies"
+        :max-radius="400"
+        :min-radius="20"
+        :show-orbits="true"
+        :show-stars="true"
+        :show-labels="true"
+        :show-grid="false"
+        :animate="false"
+        :twinkle="false"
+        :label-font-size="12"
+      />
+
       <!-- 太极图（中心） -->
       <Taiji
         :x="400"
         :y="300"
-        :size="40"
+        :size="20"
         :auto-rotate="true"
       />
-
 
     </svg>
     <AstronomicalCalculator />

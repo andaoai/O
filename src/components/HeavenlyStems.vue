@@ -32,8 +32,8 @@ const heavenlyStems = [
 
 <template>
   <CircleRing
-    :radius="120"
-    :inner-radius="60"
+    :radius="240"
+    :inner-radius="190"
     :items="heavenlyStems"
     :show-ticks="true"
     :tick-width="0.6"
