@@ -9,16 +9,16 @@ import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/StarOrbit.vue'
 
 // 各组件的起始度数设置
-const constellationStartDegree = ref(45)    // 二十八星宿起始度数
-const heavenlyStemsStartDegree = ref(45)    // 十天干起始度数
-const earthlyBranchesStartDegree = ref(45)  // 十二地支起始度数
+const constellationStartDegree = ref(0)    // 二十八星宿起始度数
+const heavenlyStemsStartDegree = ref(0)    // 十天干起始度数
+const earthlyBranchesStartDegree = ref(0)  // 十二地支起始度数
 
 // 太阳系天体数据
 const celestialBodies = ref([
   {
     name: '太阳',
     distance: 150,
-    angle: 0,
+    angle: 0,      // 正上方
     magnitude: -26.7,
     color: '#ffcc00',
     orbitRadius: 150,
@@ -30,7 +30,7 @@ const celestialBodies = ref([
   {
     name: '木星',
     distance: 110,
-    angle: 30,
+    angle: 90,     // 正左方
     magnitude: -2.5,
     color: '#d4a373',
     orbitRadius: 110,
@@ -42,7 +42,7 @@ const celestialBodies = ref([
   {
     name: '月亮',
     distance: 60,
-    angle: 180,
+    angle: 180,    // 正下方
     magnitude: -12.6,
     color: '#f0f0f0',
     orbitRadius: 60,

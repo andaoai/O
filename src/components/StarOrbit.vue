@@ -123,8 +123,8 @@ const starPositions = computed(() => {
       currentAngle = (star.angle + phase * 360) % 360
     }
 
-    // 转换为笛卡尔坐标
-    const angleRad = (currentAngle * Math.PI) / 180
+    // 转换为笛卡尔坐标 - 0度在上方，90度在左边，180度在下方，270度在右边
+    const angleRad = ((270 - currentAngle) * Math.PI) / 180
     const x = props.centerX + Math.cos(angleRad) * currentDistance
     const y = props.centerY + Math.sin(angleRad) * currentDistance
 

@@ -84,8 +84,8 @@ const ticks = computed(() => {
     // 应用旋转角度
     const startAngle = (baseStartAngle + props.rotation) % 360
 
-    // 添加起始刻度
-    const startAngleRad = (startAngle * Math.PI) / 180
+    // 添加起始刻度 - 0度在上方，90度在左边，180度在下方，270度在右边
+    const startAngleRad = ((270 - startAngle) * Math.PI) / 180
     const x1 = centerX + Math.cos(startAngleRad) * props.radius
     const y1 = centerY + Math.sin(startAngleRad) * props.radius
     const x2 = centerX + Math.cos(startAngleRad) * (props.radius + props.tickLength)
@@ -121,7 +121,7 @@ const labels = computed(() => {
       midAngle = (startAngle + endAngle) / 2
     }
 
-    const angleRad = (midAngle * Math.PI) / 180
+    const angleRad = ((270 - midAngle) * Math.PI) / 180
 
     // 文字位置在内圆和外圆之间
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
@@ -169,10 +169,10 @@ const labels = computed(() => {
     <!-- 分隔线（从内圆到外圆） -->
     <g v-if="showTicks" v-for="tick in ticks" :key="tick.angle">
       <line
-        :x1="centerX + Math.cos((tick.angle * Math.PI) / 180) * innerRadius"
-        :y1="centerY + Math.sin((tick.angle * Math.PI) / 180) * innerRadius"
-        :x2="centerX + Math.cos((tick.angle * Math.PI) / 180) * radius"
-        :y2="centerY + Math.sin((tick.angle * Math.PI) / 180) * radius"
+        :x1="centerX + Math.cos(((270 - tick.angle) * Math.PI) / 180) * innerRadius"
+        :y1="centerY + Math.sin(((270 - tick.angle) * Math.PI) / 180) * innerRadius"
+        :x2="centerX + Math.cos(((270 - tick.angle) * Math.PI) / 180) * radius"
+        :y2="centerY + Math.sin(((270 - tick.angle) * Math.PI) / 180) * radius"
         :stroke="tickColor"
         :stroke-width="tickWidth"
       />
