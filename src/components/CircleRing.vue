@@ -129,8 +129,8 @@ const labels = computed(() => {
     const y = centerY + Math.sin(angleRad) * textRadius
 
     // 计算文字旋转角度，让文字底部指向圆心
-    // 文字旋转角度 = 角度 + 90度，这样文字底部会指向圆心
-    const textRotation = midAngle + 90
+    // 使用与位置计算相同的坐标转换逻辑
+    const textRotation = (270 - midAngle) + 90
 
     return {
       x, y,
@@ -186,7 +186,7 @@ const labels = computed(() => {
         :fill="label.item.color || labelColor"
         :font-size="label.item.fontSize || 14"
         text-anchor="middle"
-        dominant-baseline="middle"
+        dominant-baseline="hanging"
         font-weight="bold"
         :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
       >
