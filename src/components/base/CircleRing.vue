@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { computed } from 'vue'
+import PolarCanvas from './PolarCanvas.vue'
 
 interface RingItem {
   label: string
@@ -25,7 +26,6 @@ interface Props {
   circleColor?: string
   showSectors?: boolean  // 是否显示扇形区域
   rotation?: number      // 旋转角度（度数）
-  // 新增动画支持
   enableAnimation?: boolean  // 是否启用自动旋转动画
   animationSpeed?: number    // 动画速度（度/帧），正数为顺时针，负数为逆时针
   startDegree?: number       // 起始度数
@@ -50,77 +50,30 @@ const props = withDefaults(defineProps<Props>(), {
   startDegree: 0
 })
 
-const centerX = 400
-const centerY = 300
-
-// 动画相关状态
-const animationRotation = ref(0)
-let animationId: number | null = null
-
-// 启动动画
-const startAnimation = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-  }
-
-  const animate = () => {
-    animationRotation.value = (animationRotation.value + props.animationSpeed + 360) % 360
-    animationId = requestAnimationFrame(animate)
-  }
-  animate()
-}
-
-// 停止动画
-const stopAnimation = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-}
-
-// 监听动画开关
-watch(() => props.enableAnimation, (enabled) => {
-  if (enabled) {
-    startAnimation()
-  } else {
-    stopAnimation()
-    animationRotation.value = 0
-  }
-}, { immediate: true })
-
-// 组件卸载时清理动画
-onUnmounted(() => {
-  stopAnimation()
-})
-
-// 计算总的旋转角度 = 起始度数 + 动画旋转 + 手动旋转
-const totalRotation = computed(() => {
-  return (props.startDegree + animationRotation.value + props.rotation) % 360
-})
-
 // 计算每个项目的角度范围
 const angleStep = computed(() => 360 / props.items.length)
 
 // 生成扇形区域
-const sectors = computed(() => {
+const generateSectors = (getMidAngle: Function, generateArcPath: Function, totalRotation: number) => {
   return props.items.map((item, index) => {
     const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
-    // 应用旋转角度
-    const startAngle = (baseStartAngle + totalRotation.value) % 360
-    const endAngle = (baseEndAngle + totalRotation.value) % 360
+    // 只应用起始度数，不需要再加 totalRotation（PolarCanvas 已经处理了旋转）
+    const startAngle = (baseStartAngle + props.startDegree) % 360
+    const endAngle = (baseEndAngle + props.startDegree) % 360
 
     return {
       startAngle,
       endAngle,
-      item
+      item,
+      path: generateArcPath(400, 300, props.radius, startAngle, endAngle, props.innerRadius)
     }
   })
-})
+}
 
 // 生成刻度点
-const ticks = computed(() => {
+const generateTicks = (polarToCartesian: Function, totalRotation: number) => {
   const allTicks: Array<{
     x1: number
     y1: number
@@ -129,123 +82,129 @@ const ticks = computed(() => {
     angle: number
     item: RingItem
   }> = []
+
   props.items.forEach((item, index) => {
     const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
-    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
-    // 应用旋转角度
-    const startAngle = (baseStartAngle + totalRotation.value) % 360
+    // 只应用起始度数，不需要再加 totalRotation（PolarCanvas 已经处理了旋转）
+    const startAngle = (baseStartAngle + props.startDegree) % 360
 
-    // 添加起始刻度 - 0度在上方，90度在左边，180度在下方，270度在右边
-    const startAngleRad = ((270 - startAngle) * Math.PI) / 180
-    const x1 = centerX + Math.cos(startAngleRad) * props.radius
-    const y1 = centerY + Math.sin(startAngleRad) * props.radius
-    const x2 = centerX + Math.cos(startAngleRad) * (props.radius + props.tickLength)
-    const y2 = centerY + Math.sin(startAngleRad) * (props.radius + props.tickLength)
+    // 添加起始刻度
+    const startInner = polarToCartesian(startAngle, props.innerRadius)
+    const startOuter = polarToCartesian(startAngle, props.radius)
 
     allTicks.push({
-      x1, y1, x2, y2,
+      x1: startInner.x,
+      y1: startInner.y,
+      x2: startOuter.x,
+      y2: startOuter.y,
       angle: startAngle,
       item
     })
   })
   return allTicks
-})
+}
 
 // 生成标签位置（在扇形中心）
-const labels = computed(() => {
+const generateLabels = (getMidAngle: Function, polarToCartesian: Function, totalRotation: number) => {
   return props.items.map((item, index) => {
     const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
-    // 应用旋转角度
-    const startAngle = (baseStartAngle + totalRotation.value) % 360
-    const endAngle = (baseEndAngle + totalRotation.value) % 360
+    // 只应用起始度数，不需要再加 totalRotation（PolarCanvas 已经处理了旋转）
+    const startAngle = (baseStartAngle + props.startDegree) % 360
+    const endAngle = (baseEndAngle + props.startDegree) % 360
 
-    // 处理跨越0度的情况
-    let midAngle
-    if (startAngle > endAngle) {
-      // 跨越0度的情况，比如345-15度
-      const span = (360 - startAngle) + endAngle
-      midAngle = (startAngle + span / 2 + 360) % 360
-    } else {
-      // 正常情况
-      midAngle = (startAngle + endAngle) / 2
-    }
-
-    const angleRad = ((270 - midAngle) * Math.PI) / 180
+    // 计算中点角度
+    const midAngle = getMidAngle(startAngle, endAngle)
 
     // 文字位置在内圆和外圆之间
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
-    const x = centerX + Math.cos(angleRad) * textRadius
-    const y = centerY + Math.sin(angleRad) * textRadius
+    const position = polarToCartesian(midAngle, textRadius)
 
     // 计算文字旋转角度，让文字底部指向圆心
-    // 使用与位置计算相同的坐标转换逻辑
     const textRotation = (270 - midAngle) + 90
 
     return {
-      x, y,
+      x: position.x,
+      y: position.y,
       item,
       angle: midAngle,
       textRotation
     }
   })
-})
+}
 </script>
 
 <template>
-  <g class="circle-ring">
-    <!-- 外圆 -->
-    <circle
-      v-if="showCircle"
-      :cx="centerX"
-      :cy="centerY"
-      :r="radius"
-      fill="none"
-      :stroke="circleColor"
-      :stroke-width="circleWidth"
-    />
+  <PolarCanvas
+    :enable-animation="enableAnimation"
+    :animation-speed="animationSpeed"
+    :rotation="rotation"
+  >
+    <template #default="slotProps">
+      <g class="circle-ring">
+        <!-- 外圆 -->
+        <circle
+          v-if="showCircle"
+          :cx="slotProps.centerX"
+          :cy="slotProps.centerY"
+          :r="radius"
+          fill="none"
+          :stroke="circleColor"
+          :stroke-width="circleWidth"
+        />
 
-    <!-- 内圆 -->
-    <circle
-      v-if="innerRadius > 0"
-      :cx="centerX"
-      :cy="centerY"
-      :r="innerRadius"
-      fill="none"
-      :stroke="circleColor"
-      :stroke-width="circleWidth"
-    />
+        <!-- 内圆 -->
+        <circle
+          v-if="innerRadius > 0"
+          :cx="slotProps.centerX"
+          :cy="slotProps.centerY"
+          :r="innerRadius"
+          fill="none"
+          :stroke="circleColor"
+          :stroke-width="circleWidth"
+        />
 
-    <!-- 分隔线（从内圆到外圆） -->
-    <g v-if="showTicks" v-for="tick in ticks" :key="tick.angle">
-      <line
-        :x1="centerX + Math.cos(((270 - tick.angle) * Math.PI) / 180) * innerRadius"
-        :y1="centerY + Math.sin(((270 - tick.angle) * Math.PI) / 180) * innerRadius"
-        :x2="centerX + Math.cos(((270 - tick.angle) * Math.PI) / 180) * radius"
-        :y2="centerY + Math.sin(((270 - tick.angle) * Math.PI) / 180) * radius"
-        :stroke="tickColor"
-        :stroke-width="tickWidth"
-      />
-    </g>
+        <!-- 扇形区域 -->
+        <g v-if="showSectors" v-for="sector in generateSectors(slotProps.getMidAngle, slotProps.generateArcPath, slotProps.totalRotation)" :key="sector.startAngle">
+          <path
+            :d="sector.path"
+            :fill="sector.item.color || '#ffffff'"
+            opacity="0.3"
+          />
+        </g>
 
-    <!-- 标签（在环内部中心位置） -->
-    <g v-if="showLabels" v-for="label in labels" :key="label.angle">
-      <text
-        :x="label.x"
-        :y="label.y"
-        :fill="label.item.color || labelColor"
-        :font-size="label.item.fontSize || 14"
-        text-anchor="middle"
-        dominant-baseline="central"
-        font-weight="bold"
-        :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
-      >
-        {{ label.item.label }}
-      </text>
-    </g>
-  </g>
+        <!-- 分隔线（从内圆到外圆） -->
+        <g v-if="showTicks" v-for="tick in generateTicks(slotProps.polarToCartesian, slotProps.totalRotation)" :key="tick.angle">
+          <line
+            :x1="tick.x1"
+            :y1="tick.y1"
+            :x2="tick.x2"
+            :y2="tick.y2"
+            :stroke="tickColor"
+            :stroke-width="tickWidth"
+          />
+        </g>
+
+        <!-- 标签（在环内部中心位置） -->
+        <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian, slotProps.totalRotation)" :key="label.angle">
+          <text
+            :x="label.x"
+            :y="label.y"
+            :fill="label.item.color || labelColor"
+            :font-size="label.item.fontSize || 14"
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-weight="bold"
+            :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
+          >
+            {{ label.item.label }}
+          </text>
+        </g>
+      </g>
+    </template>
+  </PolarCanvas>
 </template>
 
 <style scoped>
