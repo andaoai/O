@@ -6,6 +6,7 @@ import TwentyEightConstellations from './components/TwentyEightConstellations.vu
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
+import TimeControl from './components/TimeControl.vue'
 import { calculateSolarOrbitAngle } from './utils/solarTime'
 
 
@@ -56,28 +57,26 @@ const celestialBodies = ref([
   }
 ])
 
-// 定时更新太阳角度
-let updateInterval: ReturnType<typeof setInterval> | null = null
+// 时间控制
+const controlledTime = ref(new Date())
 
+// 更新太阳角度（使用控制的时间）
 const updateSolarAngle = () => {
-  const solarAngle = calculateSolarOrbitAngle()
+  const solarAngle = calculateSolarOrbitAngle(0, controlledTime.value)
   if (celestialBodies.value[0]) {
     celestialBodies.value[0].angle = solarAngle
   }
 }
 
+// 时间变化处理器
+const handleTimeChange = (newTime: Date) => {
+  controlledTime.value = newTime
+  updateSolarAngle()
+}
+
 onMounted(() => {
   // 立即更新一次
   updateSolarAngle()
-
-  // 每分钟更新一次太阳角度
-  updateInterval = setInterval(updateSolarAngle, 60000)
-})
-
-onUnmounted(() => {
-  if (updateInterval) {
-    clearInterval(updateInterval)
-  }
 })
 
 </script>
@@ -136,6 +135,12 @@ onUnmounted(() => {
       />
 
     </svg>
+
+    <!-- 时间控制面板 -->
+    <TimeControl
+      v-model="controlledTime"
+      @time-change="handleTimeChange"
+    />
 
     </div>
 </template>

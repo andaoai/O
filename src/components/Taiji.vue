@@ -37,7 +37,7 @@
           :r="size/4"
           :fill="yangColor"
         />
-      </g>
+        </g>
     </template>
   </PolarCanvas>
 </template>
@@ -87,7 +87,8 @@ const getDisplayPosition = (centerX: number, centerY: number, totalRotation: num
 
   if (props.pointToSun && props.sunAngle !== undefined) {
     // 如果要指向太阳，白色部分（阳）指向太阳方向
-    targetRotation = props.sunAngle + 125  
+    // 使用负角度以匹配PolarCanvas的坐标系统（角度增加为逆时针）
+    targetRotation = -props.sunAngle - 125
   } else if (props.autoRotate) {
     targetRotation = totalRotation
   }
