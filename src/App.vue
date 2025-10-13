@@ -7,7 +7,7 @@ import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
 import TimeControl from './components/TimeControl.vue'
-import { calculateSolarOrbitAngle } from './utils/solarTime'
+import { calculateSolarOrbitAngle, calculateLunarOrbitAngle } from './utils/solarTime'
 
 
 // 太阳系天体数据
@@ -43,12 +43,12 @@ const celestialBodies = ref([
   {
     name: '月亮',
     distance: 60,
-    angle: 180,    // 正下方
+    angle: 0,      // 将通过月亮时角动态计算
     magnitude: -12.6,
     color: '#f0f0f0',
     orbitRadius: 60,
     orbitEccentricity: 0.05,
-    orbitPeriod: 30,    // 30秒转一圈
+    orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
     orbitPhase: 0,
     orbitStyle: 'dashed' as const,
     orbitWidth: 1,
@@ -68,15 +68,25 @@ const updateSolarAngle = () => {
   }
 }
 
+// 更新月亮角度（使用控制的时间）
+const updateLunarAngle = () => {
+  const lunarAngle = calculateLunarOrbitAngle(0, controlledTime.value)
+  if (celestialBodies.value[2]) { // 月亮是第3个天体（索引2）
+    celestialBodies.value[2].angle = lunarAngle
+  }
+}
+
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
   controlledTime.value = newTime
   updateSolarAngle()
+  updateLunarAngle()
 }
 
 onMounted(() => {
   // 立即更新一次
   updateSolarAngle()
+  updateLunarAngle()
 })
 
 </script>
