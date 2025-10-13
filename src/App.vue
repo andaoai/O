@@ -90,10 +90,11 @@ const celestialBodies = ref([
 
       <!-- 太极图（中心） -->
       <Taiji
-        :x="400"
-        :y="300"
+        :x="0"
+        :y="0"
         :size="20"
         :auto-rotate="true"
+        :rotate-speed="0.8"
       />
 
     </svg>

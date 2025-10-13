@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import PolarCanvas from './PolarCanvas.vue'
 
 interface Star {
   name: string
@@ -25,8 +26,6 @@ interface Star {
 
 interface Props {
   // 基础属性
-  centerX?: number
-  centerY?: number
   maxRadius?: number      // 最大轨道半径
   minRadius?: number      // 最小轨道半径
 
@@ -68,8 +67,6 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  centerX: 400,
-  centerY: 300,
   maxRadius: 280,
   minRadius: 0,
   showStars: true,
@@ -93,7 +90,7 @@ const props = withDefaults(defineProps<Props>(), {
   rotation: 0
 })
 
-// 动画时间
+// 动画时间（用于恒星轨道运动）
 const animationTime = ref(0)
 
 // 动画循环
@@ -117,24 +114,24 @@ onUnmounted(() => {
 })
 
 // 生成轨道路径（考虑离心率的椭圆轨道）
-const generateOrbitPath = (star: Star) => {
+const generateOrbitPath = (star: Star, centerX: number, centerY: number) => {
   const radius = star.orbitRadius || star.distance
   const eccentricity = star.orbitEccentricity || 0
 
   if (eccentricity === 0) {
     // 圆形轨道 - 以centerX,centerY为中心
-    return `M ${props.centerX + radius},${props.centerY} A ${radius},${radius} 0 1,0 ${props.centerX + radius},${props.centerY + 0.1}`
+    return `M ${centerX + radius},${centerY} A ${radius},${radius} 0 1,0 ${centerX + radius},${centerY + 0.1}`
   } else {
     // 椭圆轨道 - 以centerX,centerY为中心
     const a = radius  // 半长轴
     const b = radius * Math.sqrt(1 - eccentricity * eccentricity)  // 半短轴
 
-    return `M ${props.centerX + a},${props.centerY} A ${a},${b} 0 1,0 ${props.centerX + a},${props.centerY + 0.1}`
+    return `M ${centerX + a},${centerY} A ${a},${b} 0 1,0 ${centerX + a},${centerY + 0.1}`
   }
 }
 
 // 计算恒星当前位置（考虑动画）
-const starPositions = computed(() => {
+const generateStarPositions = (polarToCartesian: Function) => {
   return props.stars.map((star, index) => {
     let currentAngle = star.angle
     let currentDistance = star.distance
@@ -145,22 +142,19 @@ const starPositions = computed(() => {
       currentAngle = (star.angle + phase * 360) % 360
     }
 
-    // 转换为笛卡尔坐标 - 0度在上方，90度在左边，180度在下方，270度在右边
-    const angleRad = ((270 - currentAngle) * Math.PI) / 180
-    const x = props.centerX + Math.cos(angleRad) * currentDistance
-    const y = props.centerY + Math.sin(angleRad) * currentDistance
+    const position = polarToCartesian(currentAngle, currentDistance)
 
     return {
-      x,
-      y,
+      x: position.x,
+      y: position.y,
       angle: currentAngle,
       star
     }
   })
-})
+}
 
 // 生成网格圆圈
-const gridCircles = computed(() => {
+const generateGridCircles = () => {
   const circles = []
   const step = (props.maxRadius - props.minRadius) / props.gridLevels
 
@@ -173,7 +167,7 @@ const gridCircles = computed(() => {
   }
 
   return circles
-})
+}
 
 // 获取恒星显示大小
 const getStarSize = (star: Star) => {
@@ -199,77 +193,86 @@ const getStarColor = (star: Star) => {
 </script>
 
 <template>
-  <g class="star-orbit" :transform="`rotate(${rotation} ${centerX} ${centerY})`">
+  <PolarCanvas
+    :enable-animation="false"
+    :rotation="rotation"
+    :max-radius="maxRadius"
+    :min-radius="minRadius"
+  >
+    <template #default="slotProps">
+      <g class="star-orbit">
 
-    <!-- 网格圆圈 -->
-    <g v-if="showGrid" class="grid">
-      <circle
-        v-for="grid in gridCircles"
-        :key="grid.level"
-        :cx="centerX"
-        :cy="centerY"
-        :r="grid.radius"
-        fill="none"
-        :stroke="gridColor"
-        :stroke-width="gridWidth"
-        stroke-dasharray="2,4"
-        opacity="0.3"
-      />
-    </g>
-
-    <!-- 轨道 -->
-    <g v-if="showOrbits" class="orbits">
-      <path
-        v-for="(star, index) in stars"
-        :key="`orbit-${index}`"
-        v-show="star.showOrbit !== false"
-        :d="generateOrbitPath(star)"
-        fill="none"
-        :stroke="star.orbitColor || orbitColor"
-        :stroke-width="star.orbitWidth || orbitWidth"
-        :stroke-dasharray="(star.orbitStyle || orbitStyle) === 'dashed' ? '5,5' : (star.orbitStyle || orbitStyle) === 'dotted' ? '2,2' : ''"
-        opacity="0.6"
-      />
-    </g>
-
-    <!-- 恒星 -->
-    <g v-if="showStars" class="stars">
-      <g v-for="(position, index) in starPositions" :key="`star-${index}`">
-        <!-- 恒星光晕效果 -->
-        <circle
-          v-if="position.star.magnitude && position.star.magnitude < 2"
-          :cx="position.x"
-          :cy="position.y"
-          :r="getStarSize(position.star) * 2"
-          :fill="getStarColor(position.star)"
-          opacity="0.1"
-        />
-
-        <!-- 主恒星 -->
-        <circle
-          :cx="position.x"
-          :cy="position.y"
-          :r="getStarSize(position.star)"
-          :fill="getStarColor(position.star)"
-          :class="{ 'twinkle': twinkle || position.star.twinkle }"
-        />
-
-        <!-- 恒星标签 -->
-        <text
-          v-if="showLabels && position.star.name"
-          :x="position.x"
-          :y="position.y - getStarSize(position.star) - labelDistance"
-          :fill="labelColor"
-          :font-size="labelFontSize"
-          text-anchor="middle"
-          font-family="Arial, sans-serif"
-        >
-          {{ position.star.name }}
-        </text>
-
+        <!-- 网格圆圈 -->
+        <g v-if="showGrid" class="grid">
+          <circle
+            v-for="grid in generateGridCircles()"
+            :key="grid.level"
+            :cx="slotProps.centerX"
+            :cy="slotProps.centerY"
+            :r="grid.radius"
+            fill="none"
+            :stroke="gridColor"
+            :stroke-width="gridWidth"
+            stroke-dasharray="2,4"
+            opacity="0.3"
+          />
         </g>
-    </g>
-  </g>
+
+        <!-- 轨道 -->
+        <g v-if="showOrbits" class="orbits">
+          <path
+            v-for="(star, index) in stars"
+            :key="`orbit-${index}`"
+            v-show="star.showOrbit !== false"
+            :d="generateOrbitPath(star, slotProps.centerX, slotProps.centerY)"
+            fill="none"
+            :stroke="star.orbitColor || orbitColor"
+            :stroke-width="star.orbitWidth || orbitWidth"
+            :stroke-dasharray="(star.orbitStyle || orbitStyle) === 'dashed' ? '5,5' : (star.orbitStyle || orbitStyle) === 'dotted' ? '2,2' : ''"
+            opacity="0.6"
+          />
+        </g>
+
+        <!-- 恒星 -->
+        <g v-if="showStars" class="stars">
+          <g v-for="(position, index) in generateStarPositions(slotProps.polarToCartesian)" :key="`star-${index}`">
+            <!-- 恒星光晕效果 -->
+            <circle
+              v-if="position.star.magnitude && position.star.magnitude < 2"
+              :cx="position.x"
+              :cy="position.y"
+              :r="getStarSize(position.star) * 2"
+              :fill="getStarColor(position.star)"
+              opacity="0.1"
+            />
+
+            <!-- 主恒星 -->
+            <circle
+              :cx="position.x"
+              :cy="position.y"
+              :r="getStarSize(position.star)"
+              :fill="getStarColor(position.star)"
+              :class="{ 'twinkle': twinkle || position.star.twinkle }"
+            />
+
+            <!-- 恒星标签 -->
+            <text
+              v-if="showLabels && position.star.name"
+              :x="position.x"
+              :y="position.y - getStarSize(position.star) - labelDistance"
+              :fill="labelColor"
+              :font-size="labelFontSize"
+              text-anchor="middle"
+              font-family="Arial, sans-serif"
+            >
+              {{ position.star.name }}
+            </text>
+
+            </g>
+        </g>
+      </g>
+    </template>
+  </PolarCanvas>
 </template>
 
 <style scoped>
