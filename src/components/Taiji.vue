@@ -18,7 +18,7 @@
 
         <!-- 左半边黑色半圆 (S形曲线) -->
         <path
-          :d="generateTaijiPath(size, yinColor)"
+          :d="generateTaijiPath(size)"
           :fill="yinColor"
         />
 
@@ -43,7 +43,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import PolarCanvas from './base/PolarCanvas.vue'
 
 interface Props {
@@ -55,6 +54,8 @@ interface Props {
   yangColor?: string
   autoRotate?: boolean
   rotateSpeed?: number
+  pointToSun?: boolean
+  sunAngle?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -65,11 +66,13 @@ const props = withDefaults(defineProps<Props>(), {
   yinColor: '#000000',
   yangColor: '#ffffff',
   autoRotate: false,
-  rotateSpeed: 30
+  rotateSpeed: 30,
+  pointToSun: false,
+  sunAngle: 0
 })
 
 // 生成太极图的S形曲线路径
-const generateTaijiPath = (size: number, yinColor: string) => {
+const generateTaijiPath = (size: number) => {
   return `M 0,${-size} A ${size/2},${size/2} 0 0,1 0,0 A ${size/2},${size/2} 0 0,0 0,${size} A ${size},${size} 0 0,1 0,${-size}`
 }
 
@@ -79,10 +82,20 @@ const getDisplayPosition = (centerX: number, centerY: number, totalRotation: num
     x: centerX + props.x,
     y: centerY + props.y
   }
+
+  let targetRotation = props.rotation
+
+  if (props.pointToSun && props.sunAngle !== undefined) {
+    // 如果要指向太阳，白色部分（阳）指向太阳方向
+    targetRotation = props.sunAngle + 125  
+  } else if (props.autoRotate) {
+    targetRotation = totalRotation
+  }
+
   return {
     x: position.x,
     y: position.y,
-    rotation: props.autoRotate ? totalRotation : props.rotation
+    rotation: targetRotation
   }
 }
 </script>

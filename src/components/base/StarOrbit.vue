@@ -134,7 +134,7 @@ const generateOrbitPath = (star: Star, centerX: number, centerY: number) => {
 const generateStarPositions = (polarToCartesian: Function) => {
   return props.stars.map((star, index) => {
     let currentAngle = star.angle
-    let currentDistance = star.distance
+    const currentDistance = star.distance
 
     if (props.animate && star.orbitPeriod) {
       // 使用响应式动画时间

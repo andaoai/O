@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
+import { calculateSolarOrbitAngle } from './utils/solarTime'
 
 
 // 太阳系天体数据
@@ -13,12 +14,12 @@ const celestialBodies = ref([
   {
     name: '太阳',
     distance: 150,
-    angle: 0,      // 正上方
+    angle: 0,      // 将通过太阳时角动态计算
     magnitude: -26.7,
     color: '#ffcc00',
     orbitRadius: 150,
     orbitEccentricity: 0.02,
-    orbitPeriod: 60,    // 60秒转一圈
+    orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
     orbitPhase: 0,
     orbitStyle: 'solid' as const,
     orbitWidth: 3,
@@ -54,6 +55,31 @@ const celestialBodies = ref([
     twinkle: true
   }
 ])
+
+// 定时更新太阳角度
+let updateInterval: ReturnType<typeof setInterval> | null = null
+
+const updateSolarAngle = () => {
+  const solarAngle = calculateSolarOrbitAngle()
+  if (celestialBodies.value[0]) {
+    celestialBodies.value[0].angle = solarAngle
+  }
+}
+
+onMounted(() => {
+  // 立即更新一次
+  updateSolarAngle()
+
+  // 每分钟更新一次太阳角度
+  updateInterval = setInterval(updateSolarAngle, 60000)
+})
+
+onUnmounted(() => {
+  if (updateInterval) {
+    clearInterval(updateInterval)
+  }
+})
+
 </script>
 
 <template>
@@ -104,8 +130,9 @@ const celestialBodies = ref([
         :x="0"
         :y="0"
         :size="20"
-        :auto-rotate="true"
-        :rotate-speed="0.8"
+        :auto-rotate="false"
+        :point-to-sun="true"
+        :sun-angle="celestialBodies[0]?.angle || 0"
       />
 
     </svg>
