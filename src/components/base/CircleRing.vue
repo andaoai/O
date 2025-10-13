@@ -238,7 +238,7 @@ const labels = computed(() => {
         :fill="label.item.color || labelColor"
         :font-size="label.item.fontSize || 14"
         text-anchor="middle"
-        dominant-baseline="hanging"
+        dominant-baseline="central"
         font-weight="bold"
         :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
       >
