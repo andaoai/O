@@ -19,7 +19,8 @@
       "mcp__playwright__browser_snapshot",
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_console_messages",
-      "mcp__playwright__browser_evaluate"
+      "mcp__playwright__browser_evaluate",
+      "mcp__ide__getDiagnostics"
     ],
     "deny": [],
     "ask": []
