@@ -3,8 +3,6 @@ import { ref } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
-import AstronomicalCalculator from './components/AstronomicalCalculator.vue'
-import LunarCalendarCard from './components/LunarCalendarCard.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 
@@ -99,8 +97,6 @@ const celestialBodies = ref([
       />
 
     </svg>
-    <!-- <AstronomicalCalculator />
-    <LunarCalendarCard /> -->
 
     </div>
 </template>

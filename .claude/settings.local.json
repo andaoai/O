@@ -14,7 +14,10 @@
       "mcp__context7__resolve-library-id",
       "Bash(npm run dev)",
       "Bash(npx playwright open:*)",
-      "mcp__playwright__browser_navigate"
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_wait_for"
     ],
     "deny": [],
     "ask": []
