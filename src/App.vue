@@ -5,6 +5,7 @@ import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
+import SiXiang from './components/SiXiang.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
@@ -16,11 +17,11 @@ import { calculateSolarOrbitAngle, calculateLunarOrbitAngle } from './utils/sola
 const celestialBodies = ref([
   {
     name: '太阳',
-    distance: 150,
+    distance: 80,
     angle: 0,      // 将通过太阳时角动态计算
     magnitude: -26.7,
     color: '#ffcc00',
-    orbitRadius: 150,
+    orbitRadius: 80,
     orbitEccentricity: 0.02,
     orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
     orbitPhase: 0,
@@ -30,11 +31,11 @@ const celestialBodies = ref([
   },
   {
     name: '木星',
-    distance: 110,
+    distance: 60,
     angle: 90,     // 正左方
     magnitude: -2.5,
     color: '#d4a373',
-    orbitRadius: 110,
+    orbitRadius: 60,
     orbitEccentricity: 0.05,
     orbitPeriod: 45,    // 45秒转一圈
     orbitPhase: 0,
@@ -44,11 +45,11 @@ const celestialBodies = ref([
   },
   {
     name: '月亮',
-    distance: 60,
+    distance: 40,
     angle: 0,      // 将通过月亮时角动态计算
     magnitude: -12.6,
     color: '#f0f0f0',
-    orbitRadius: 60,
+    orbitRadius: 40,
     orbitEccentricity: 0.05,
     orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
     orbitPhase: 0,
@@ -128,10 +129,13 @@ onMounted(() => {
       <!-- 十二长生圆环（第五层） -->
       <TwelveLongevity />
 
-      <!-- 太阳系天体轨道系统（第六层） -->
+      <!-- 四象圆环（第六层） -->
+      <SiXiang />
+
+      <!-- 太阳系天体轨道系统（第七层） -->
       <StarOrbit
         :stars="celestialBodies"
-        :max-radius="150"
+        :max-radius="90"
         :min-radius="30"
         :show-orbits="true"
         :show-stars="true"
@@ -147,7 +151,7 @@ onMounted(() => {
       <Taiji
         :x="0"
         :y="0"
-        :size="40"
+        :size="25"
         :auto-rotate="false"
         :point-to-sun="true"
         :sun-angle="celestialBodies[0]?.angle || 0"

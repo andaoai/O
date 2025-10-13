@@ -29,6 +29,7 @@ interface Props {
   enableAnimation?: boolean  // 是否启用自动旋转动画
   animationSpeed?: number    // 动画速度（度/帧），正数为顺时针，负数为逆时针
   startDegree?: number       // 起始度数
+  verticalTwoChar?: boolean  // 是否对双字符标签进行垂直排列
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -47,7 +48,8 @@ const props = withDefaults(defineProps<Props>(), {
   rotation: 0,
   enableAnimation: false,
   animationSpeed: 0.5,
-  startDegree: 0
+  startDegree: 0,
+  verticalTwoChar: false
 })
 
 // 计算每个项目的角度范围
@@ -125,8 +127,8 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     // 计算文字旋转角度，让文字底部指向圆心
     const textRotation = (270 - midAngle) + 90
 
-    // 检查是否为双字符标签
-    const isTwoCharacter = item.label.length === 2
+    // 检查是否为双字符标签且启用垂直排列（用于十二长生）
+    const isTwoCharacter = item.label.length === 2 && props.verticalTwoChar
 
     return {
       x: position.x,
@@ -195,7 +197,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
 
         <!-- 标签（在环内部中心位置） -->
         <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian, slotProps.totalRotation)" :key="label.angle">
-          <!-- 单字符标签 -->
+          <!-- 单字符或四象标签（水平显示） -->
           <text
             v-if="!label.isTwoCharacter"
             :x="label.x"
@@ -209,7 +211,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           >
             {{ label.item.label }}
           </text>
-          <!-- 双字符标签垂直排列 -->
+          <!-- 双字符标签垂直排列（用于十二长生） -->
           <g v-else :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`">
             <text
               :x="label.x"

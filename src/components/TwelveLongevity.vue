@@ -47,6 +47,7 @@ for (let group = 0; group < 5; group++) {
     :enable-animation="false"
     :animation-speed="0.1"
     :start-degree="startDegree"
+    :vertical-two-char="true"
     font-size="13"
   />
 </template>
