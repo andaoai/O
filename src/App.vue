@@ -6,7 +6,7 @@ import TwentyEightConstellations from './components/TwentyEightConstellations.vu
 import AstronomicalCalculator from './components/AstronomicalCalculator.vue'
 import LunarCalendarCard from './components/LunarCalendarCard.vue'
 import Taiji from './components/Taiji.vue'
-import StarOrbit from './components/StarOrbit.vue'
+import StarOrbit from './components/base/StarOrbit.vue'
 
 // 各组件的起始度数设置
 const constellationStartDegree = ref(0)    // 二十八星宿起始度数
@@ -99,8 +99,8 @@ const celestialBodies = ref([
       />
 
     </svg>
-    <AstronomicalCalculator />
-    <LunarCalendarCard />
+    <!-- <AstronomicalCalculator />
+    <LunarCalendarCard /> -->
 
     </div>
 </template>

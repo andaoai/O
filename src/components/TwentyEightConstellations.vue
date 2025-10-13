@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import CircleRing from './CircleRing.vue'
+import CircleRing from './base/CircleRing.vue'
 
 interface Props {
   startDegree?: number  // 起始度数
