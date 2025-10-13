@@ -3,6 +3,8 @@
     :enable-animation="autoRotate"
     :animation-speed="rotateSpeed"
     :rotation="rotation"
+    :center-x="0"
+    :center-y="0"
   >
     <template #default="slotProps">
       <g

@@ -67,7 +67,7 @@ const generateSectors = (getMidAngle: Function, generateArcPath: Function, total
       startAngle,
       endAngle,
       item,
-      path: generateArcPath(400, 300, props.radius, startAngle, endAngle, props.innerRadius)
+      path: generateArcPath(0, 0, props.radius, startAngle, endAngle, props.innerRadius)
     }
   })
 }
@@ -141,6 +141,8 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     :enable-animation="enableAnimation"
     :animation-speed="animationSpeed"
     :rotation="rotation"
+    :center-x="0"
+    :center-y="0"
   >
     <template #default="slotProps">
       <g class="circle-ring">

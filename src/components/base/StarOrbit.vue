@@ -198,6 +198,8 @@ const getStarColor = (star: Star) => {
     :rotation="rotation"
     :max-radius="maxRadius"
     :min-radius="minRadius"
+    :center-x="0"
+    :center-y="0"
   >
     <template #default="slotProps">
       <g class="star-orbit">

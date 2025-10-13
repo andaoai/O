@@ -83,12 +83,13 @@ onMounted(() => {
 
 <template>
   <div class="container">
-    <svg width="800" height="600" viewBox="0 0 800 600">
+    <svg width="1200" height="1200" viewBox="0 0 1200 1200">
+      <g transform="translate(600, 600)">
 
       <!-- 360度刻度尺（最外层） -->
       <CircleScale
-        :radius="380"
-        :inner-radius="365"
+        :radius="350"
+        :inner-radius="330"
         :show-sectors="true"
         sector-color="#666666"
         :sector-opacity="0.1"
@@ -112,8 +113,8 @@ onMounted(() => {
       <!-- 太阳系天体轨道系统（第四层） -->
       <StarOrbit
         :stars="celestialBodies"
-        :max-radius="400"
-        :min-radius="20"
+        :max-radius="480"
+        :min-radius="30"
         :show-orbits="true"
         :show-stars="true"
         :show-labels="true"
@@ -128,11 +129,12 @@ onMounted(() => {
       <Taiji
         :x="0"
         :y="0"
-        :size="20"
+        :size="40"
         :auto-rotate="false"
         :point-to-sun="true"
         :sun-angle="celestialBodies[0]?.angle || 0"
       />
+      </g>
 
     </svg>
 
