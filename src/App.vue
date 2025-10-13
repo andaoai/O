@@ -5,8 +5,10 @@ import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
+import CircleScale from './components/base/CircleScale.vue'
 
 // 各组件的起始度数设置
+const scaleStartDegree = ref(0)            // 360度刻度尺起始度数
 const constellationStartDegree = ref(0)    // 二十八星宿起始度数
 const heavenlyStemsStartDegree = ref(0)    // 十天干起始度数
 const earthlyBranchesStartDegree = ref(0)  // 十二地支起始度数
@@ -63,8 +65,23 @@ const celestialBodies = ref([
   <div class="container">
     <svg width="800" height="600" viewBox="0 0 800 600">
 
+      <!-- 360度刻度尺（最外层） -->
+      <CircleScale
+        :radius="380"
+        :inner-radius="365"
+        :start-degree="scaleStartDegree"
+        :show-sectors="true"
+        sector-color="#666666"
+        :sector-opacity="0.1"
+        :show-labels="true"
+        label-color="#888888"
+        :scale-interval="5"
+        :show-circle="true"
+        circle-color="#666666"
+        :circle-width="1"
+      />
 
-      <!-- 二十八星宿圆环（最外层） -->
+      <!-- 二十八星宿圆环（第二层） -->
       <TwentyEightConstellations :start-degree="constellationStartDegree" />
 
       <!-- 十天干圆环（第二层） -->
