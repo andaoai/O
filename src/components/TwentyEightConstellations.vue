@@ -1,13 +1,8 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-interface Props {
-  startDegree?: number  // 起始度数
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  startDegree: 0
-})
+// 28星宿组件内部起始度数设置
+const startDegree = 0  // 28星宿起始度数
 
 // 28星宿，分为4个方位（青龙、白虎、朱雀、玄武），每个7个星宿
 // 每个星宿约12.86度 (360/28)
@@ -67,7 +62,7 @@ const twentyEightConstellations = [
     circle-color="#666666"
     tick-color="#444444"
     :label-position="0.5"
-    :enable-animation="true"
+    :enable-animation="false"
     :animation-speed="0.2"
     :start-degree="startDegree"
     :font-size="12"

@@ -7,11 +7,6 @@ import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
 
-// 各组件的起始度数设置
-const scaleStartDegree = ref(0)            // 360度刻度尺起始度数
-const constellationStartDegree = ref(0)    // 二十八星宿起始度数
-const heavenlyStemsStartDegree = ref(0)    // 十天干起始度数
-const earthlyBranchesStartDegree = ref(0)  // 十二地支起始度数
 
 // 太阳系天体数据
 const celestialBodies = ref([
@@ -69,7 +64,6 @@ const celestialBodies = ref([
       <CircleScale
         :radius="380"
         :inner-radius="365"
-        :start-degree="scaleStartDegree"
         :show-sectors="true"
         sector-color="#666666"
         :sector-opacity="0.1"
@@ -82,13 +76,13 @@ const celestialBodies = ref([
       />
 
       <!-- 二十八星宿圆环（第二层） -->
-      <TwentyEightConstellations :start-degree="constellationStartDegree" />
+      <TwentyEightConstellations />
 
       <!-- 十天干圆环（第二层） -->
-      <HeavenlyStems :start-degree="heavenlyStemsStartDegree" />
+      <HeavenlyStems />
 
       <!-- 十二地支圆环（第三层） -->
-      <EarthlyBranches :start-degree="earthlyBranchesStartDegree" />
+      <EarthlyBranches />
 
       <!-- 太阳系天体轨道系统（第四层） -->
       <StarOrbit
