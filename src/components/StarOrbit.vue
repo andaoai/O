@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 interface Star {
   name: string
@@ -93,6 +93,29 @@ const props = withDefaults(defineProps<Props>(), {
   rotation: 0
 })
 
+// 动画时间
+const animationTime = ref(0)
+
+// 动画循环
+let animationId: number
+const animate = () => {
+  animationTime.value += 0.016 * props.animationSpeed // 约60fps
+  animationId = requestAnimationFrame(animate)
+}
+
+// 启动/停止动画
+onMounted(() => {
+  if (props.animate) {
+    animate()
+  }
+})
+
+onUnmounted(() => {
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+  }
+})
+
 // 生成轨道路径（考虑离心率的椭圆轨道）
 const generateOrbitPath = (star: Star) => {
   const radius = star.orbitRadius || star.distance
@@ -117,9 +140,8 @@ const starPositions = computed(() => {
     let currentDistance = star.distance
 
     if (props.animate && star.orbitPeriod) {
-      // 简单的线性动画（可以替换为更真实的天体力学计算）
-      const time = Date.now() / 1000
-      const phase = (star.orbitPhase || 0) + (time * props.animationSpeed / star.orbitPeriod)
+      // 使用响应式动画时间
+      const phase = (star.orbitPhase || 0) + (animationTime.value / star.orbitPeriod)
       currentAngle = (star.angle + phase * 360) % 360
     }
 

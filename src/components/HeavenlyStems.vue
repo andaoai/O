@@ -16,7 +16,7 @@ const heavenlyRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateHeavenlyStems = () => {
-  heavenlyRotation.value = (heavenlyRotation.value + 0.0) % 360 // 每帧旋转0.5度
+  heavenlyRotation.value = (heavenlyRotation.value + 0.5) % 360 // 每帧旋转0.5度
   animationId = requestAnimationFrame(rotateHeavenlyStems)
 }
 

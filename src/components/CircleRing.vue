@@ -143,7 +143,7 @@ const labels = computed(() => {
 </script>
 
 <template>
-  <g class="circle-ring" :transform="`rotate(${props.rotation} ${centerX} ${centerY})`">
+  <g class="circle-ring">
     <!-- 外圆 -->
     <circle
       v-if="showCircle"
@@ -198,6 +198,6 @@ const labels = computed(() => {
 
 <style scoped>
 .circle-ring {
-  transition: all 0.3s ease;
+  /* 移除 transition 避免与 JavaScript 动画冲突 */
 }
 </style>

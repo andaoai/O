@@ -23,6 +23,8 @@ const celestialBodies = ref([
     color: '#ffcc00',
     orbitRadius: 150,
     orbitEccentricity: 0.02,
+    orbitPeriod: 60,    // 60秒转一圈
+    orbitPhase: 0,
     orbitStyle: 'solid' as const,
     orbitWidth: 3,
     showOrbit: true
@@ -35,6 +37,8 @@ const celestialBodies = ref([
     color: '#d4a373',
     orbitRadius: 110,
     orbitEccentricity: 0.05,
+    orbitPeriod: 45,    // 45秒转一圈
+    orbitPhase: 0,
     orbitStyle: 'solid' as const,
     orbitWidth: 2,
     showOrbit: true
@@ -47,6 +51,8 @@ const celestialBodies = ref([
     color: '#f0f0f0',
     orbitRadius: 60,
     orbitEccentricity: 0.05,
+    orbitPeriod: 30,    // 30秒转一圈
+    orbitPhase: 0,
     orbitStyle: 'dashed' as const,
     orbitWidth: 1,
     showOrbit: true,
@@ -78,7 +84,8 @@ const celestialBodies = ref([
         :show-stars="true"
         :show-labels="true"
         :show-grid="false"
-        :animate="false"
+        :animate="true"
+        :animation-speed="1"
         :twinkle="false"
         :label-font-size="12"
       />

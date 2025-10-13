@@ -16,7 +16,7 @@ const constellationRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateConstellations = () => {
-  constellationRotation.value = (constellationRotation.value + 0.0) % 360 // 每帧旋转0.2度
+  constellationRotation.value = (constellationRotation.value + 0.2) % 360 // 每帧旋转0.2度
   animationId = requestAnimationFrame(rotateConstellations)
 }
 

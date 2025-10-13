@@ -16,7 +16,7 @@ const earthlyRotation = ref(0)
 // 动态更新旋转角度
 let animationId: number
 const rotateEarthlyBranches = () => {
-  earthlyRotation.value = (earthlyRotation.value - 0.0 + 360) % 360 // 每帧逆时针旋转0.3度
+  earthlyRotation.value = (earthlyRotation.value - 0.3 + 360) % 360 // 每帧逆时针旋转0.3度
   animationId = requestAnimationFrame(rotateEarthlyBranches)
 }
 
