@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
 import CircleRing from './CircleRing.vue'
 
 interface Props {
@@ -9,22 +8,6 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   startDegree: 0
 })
-
-// 地支旋转角度（向左旋转，逆时针）
-const earthlyRotation = ref(0)
-
-// 动态更新旋转角度
-let animationId: number
-const rotateEarthlyBranches = () => {
-  earthlyRotation.value = (earthlyRotation.value - 0.3 + 360) % 360 // 每帧逆时针旋转0.3度
-  animationId = requestAnimationFrame(rotateEarthlyBranches)
-}
-
-// 启动旋转动画
-rotateEarthlyBranches()
-
-// 计算总的旋转角度 = 起始度数 + 动画旋转
-const totalRotation = computed(() => (props.startDegree + earthlyRotation.value) % 360)
 
 // 十二地支，每个30度，子从345度开始
 const earthlyBranches = [
@@ -55,6 +38,8 @@ const earthlyBranches = [
     circle-color="#888888"
     tick-color="#666666"
     :label-position="0.5"
-    :rotation="totalRotation"
+    :enable-animation="true"
+    :animation-speed="-0.3"
+    :start-degree="startDegree"
   />
 </template>

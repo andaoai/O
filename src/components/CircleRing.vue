@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 
 interface RingItem {
   label: string
@@ -25,6 +25,10 @@ interface Props {
   circleColor?: string
   showSectors?: boolean  // 是否显示扇形区域
   rotation?: number      // 旋转角度（度数）
+  // 新增动画支持
+  enableAnimation?: boolean  // 是否启用自动旋转动画
+  animationSpeed?: number    // 动画速度（度/帧），正数为顺时针，负数为逆时针
+  startDegree?: number       // 起始度数
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -40,11 +44,59 @@ const props = withDefaults(defineProps<Props>(), {
   circleWidth: 1,
   circleColor: 'white',
   showSectors: false,
-  rotation: 0
+  rotation: 0,
+  enableAnimation: false,
+  animationSpeed: 0.5,
+  startDegree: 0
 })
 
 const centerX = 400
 const centerY = 300
+
+// 动画相关状态
+const animationRotation = ref(0)
+let animationId: number | null = null
+
+// 启动动画
+const startAnimation = () => {
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+  }
+
+  const animate = () => {
+    animationRotation.value = (animationRotation.value + props.animationSpeed + 360) % 360
+    animationId = requestAnimationFrame(animate)
+  }
+  animate()
+}
+
+// 停止动画
+const stopAnimation = () => {
+  if (animationId) {
+    cancelAnimationFrame(animationId)
+    animationId = null
+  }
+}
+
+// 监听动画开关
+watch(() => props.enableAnimation, (enabled) => {
+  if (enabled) {
+    startAnimation()
+  } else {
+    stopAnimation()
+    animationRotation.value = 0
+  }
+}, { immediate: true })
+
+// 组件卸载时清理动画
+onUnmounted(() => {
+  stopAnimation()
+})
+
+// 计算总的旋转角度 = 起始度数 + 动画旋转 + 手动旋转
+const totalRotation = computed(() => {
+  return (props.startDegree + animationRotation.value + props.rotation) % 360
+})
 
 // 计算每个项目的角度范围
 const angleStep = computed(() => 360 / props.items.length)
@@ -56,8 +108,8 @@ const sectors = computed(() => {
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
     // 应用旋转角度
-    const startAngle = (baseStartAngle + props.rotation) % 360
-    const endAngle = (baseEndAngle + props.rotation) % 360
+    const startAngle = (baseStartAngle + totalRotation.value) % 360
+    const endAngle = (baseEndAngle + totalRotation.value) % 360
 
     return {
       startAngle,
@@ -82,7 +134,7 @@ const ticks = computed(() => {
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
     // 应用旋转角度
-    const startAngle = (baseStartAngle + props.rotation) % 360
+    const startAngle = (baseStartAngle + totalRotation.value) % 360
 
     // 添加起始刻度 - 0度在上方，90度在左边，180度在下方，270度在右边
     const startAngleRad = ((270 - startAngle) * Math.PI) / 180
@@ -107,8 +159,8 @@ const labels = computed(() => {
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
 
     // 应用旋转角度
-    const startAngle = (baseStartAngle + props.rotation) % 360
-    const endAngle = (baseEndAngle + props.rotation) % 360
+    const startAngle = (baseStartAngle + totalRotation.value) % 360
+    const endAngle = (baseEndAngle + totalRotation.value) % 360
 
     // 处理跨越0度的情况
     let midAngle
