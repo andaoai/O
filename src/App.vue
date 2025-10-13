@@ -4,6 +4,7 @@ import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import EightGates from './components/EightGates.vue'
+import TwelveLongevity from './components/TwelveLongevity.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
@@ -123,6 +124,9 @@ onMounted(() => {
 
       <!-- 八门圆环（第四层） -->
       <EightGates />
+
+      <!-- 十二长生圆环（第五层） -->
+      <TwelveLongevity />
 
       <!-- 太阳系天体轨道系统（第六层） -->
       <StarOrbit

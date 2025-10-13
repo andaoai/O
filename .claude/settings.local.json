@@ -20,7 +20,8 @@
       "mcp__playwright__browser_wait_for",
       "mcp__playwright__browser_console_messages",
       "mcp__playwright__browser_evaluate",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "mcp__playwright__browser_click"
     ],
     "deny": [],
     "ask": []

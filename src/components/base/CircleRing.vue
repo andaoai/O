@@ -125,12 +125,16 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     // 计算文字旋转角度，让文字底部指向圆心
     const textRotation = (270 - midAngle) + 90
 
+    // 检查是否为双字符标签
+    const isTwoCharacter = item.label.length === 2
+
     return {
       x: position.x,
       y: position.y,
       item,
       angle: midAngle,
-      textRotation
+      textRotation,
+      isTwoCharacter
     }
   })
 }
@@ -191,7 +195,9 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
 
         <!-- 标签（在环内部中心位置） -->
         <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian, slotProps.totalRotation)" :key="label.angle">
+          <!-- 单字符标签 -->
           <text
+            v-if="!label.isTwoCharacter"
             :x="label.x"
             :y="label.y"
             :fill="label.item.color || labelColor"
@@ -203,6 +209,31 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           >
             {{ label.item.label }}
           </text>
+          <!-- 双字符标签垂直排列 -->
+          <g v-else :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`">
+            <text
+              :x="label.x"
+              :y="label.y - 6"
+              :fill="label.item.color || labelColor"
+              :font-size="label.item.fontSize || 14"
+              text-anchor="middle"
+              dominant-baseline="central"
+              font-weight="bold"
+            >
+              {{ label.item.label[0] }}
+            </text>
+            <text
+              :x="label.x"
+              :y="label.y + 6"
+              :fill="label.item.color || labelColor"
+              :font-size="label.item.fontSize || 14"
+              text-anchor="middle"
+              dominant-baseline="central"
+              font-weight="bold"
+            >
+              {{ label.item.label[1] }}
+            </text>
+          </g>
         </g>
       </g>
     </template>
