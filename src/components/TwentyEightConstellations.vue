@@ -52,8 +52,8 @@ const twentyEightConstellations = [
 
 <template>
   <CircleRing
-    :radius="280"
-    :inner-radius="250"
+    :radius="420"
+    :inner-radius="390"
     :items="twentyEightConstellations"
     :show-ticks="true"
     :tick-width="1"

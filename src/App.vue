@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
+import EightGates from './components/EightGates.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
@@ -98,8 +99,8 @@ onMounted(() => {
 
       <!-- 360度刻度尺（最外层） -->
       <CircleScale
-        :radius="350"
-        :inner-radius="330"
+        :radius="480"
+        :inner-radius="460"
         :show-sectors="true"
         sector-color="#666666"
         :sector-opacity="0.1"
@@ -120,10 +121,13 @@ onMounted(() => {
       <!-- 十二地支圆环（第三层） -->
       <EarthlyBranches />
 
-      <!-- 太阳系天体轨道系统（第四层） -->
+      <!-- 八门圆环（第四层） -->
+      <EightGates />
+
+      <!-- 太阳系天体轨道系统（第六层） -->
       <StarOrbit
         :stars="celestialBodies"
-        :max-radius="480"
+        :max-radius="150"
         :min-radius="30"
         :show-orbits="true"
         :show-stars="true"
