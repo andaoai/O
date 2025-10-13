@@ -10,9 +10,17 @@
       "Bash(move:*)",
       "Bash(npm run type-check:*)",
       "WebFetch(domain:github.com)",
-      "Bash(npx vue-tsc:*)"
+      "Bash(npx vue-tsc:*)",
+      "mcp__context7__resolve-library-id",
+      "Bash(npm run dev)",
+      "Bash(npx playwright open:*)",
+      "mcp__playwright__browser_navigate"
     ],
     "deny": [],
     "ask": []
-  }
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "github"
+  ]
 }
