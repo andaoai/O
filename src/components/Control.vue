@@ -44,6 +44,18 @@
 
       <div class="manual-controls">
         <button
+          class="step-btn year-btn negative"
+          @click="stepYear(-1)"
+        >
+          -1年
+        </button>
+        <button
+          class="step-btn month-btn negative"
+          @click="stepMonth(-1)"
+        >
+          -1月
+        </button>
+        <button
           class="step-btn"
           @click="stepTime(-86400)"
         >
@@ -66,6 +78,18 @@
           @click="stepTime(86400)"
         >
           +1天
+        </button>
+        <button
+          class="step-btn month-btn"
+          @click="stepMonth(1)"
+        >
+          +1月
+        </button>
+        <button
+          class="step-btn year-btn"
+          @click="stepYear(1)"
+        >
+          +1年
         </button>
       </div>
     </div>
@@ -443,6 +467,37 @@ const stepTime = (seconds: number) => {
   updateTime(newTime)
 }
 
+// 步进月份
+const stepMonth = (months: number) => {
+  pause()
+  const newTime = new Date(currentTime.value)
+  const currentMonth = newTime.getMonth()
+  const currentYear = newTime.getFullYear()
+
+  // 计算新的年份和月份
+  let newMonth = currentMonth + months
+  let newYear = currentYear
+
+  if (newMonth > 11) {
+    newYear += Math.floor(newMonth / 12)
+    newMonth = newMonth % 12
+  } else if (newMonth < 0) {
+    newYear += Math.floor(newMonth / 12)
+    newMonth = (newMonth % 12 + 12) % 12
+  }
+
+  newTime.setFullYear(newYear, newMonth, newTime.getDate())
+  updateTime(newTime)
+}
+
+// 步进年份
+const stepYear = (years: number) => {
+  pause()
+  const newTime = new Date(currentTime.value)
+  newTime.setFullYear(newTime.getFullYear() + years)
+  updateTime(newTime)
+}
+
 // 设置一天中的特定时间
 const setTimeOfDay = (hours: number, minutes: number) => {
   pause()
@@ -673,7 +728,7 @@ onUnmounted(() => {
 
 .manual-controls {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
   gap: 4px;
 }
 
@@ -695,6 +750,43 @@ onUnmounted(() => {
 
 .step-btn:active {
   background: #555;
+}
+
+.month-btn {
+  background: #444;
+  border-color: #666;
+}
+
+.month-btn:hover {
+  background: #555;
+  border-color: #777;
+}
+
+.year-btn {
+  background: #555;
+  border-color: #777;
+  color: #ffcc00;
+}
+
+.year-btn:hover {
+  background: #666;
+  border-color: #888;
+}
+
+.negative {
+  background: #444;
+  border-color: #666;
+  color: #ff6666;
+}
+
+.month-btn.negative:hover {
+  background: #555;
+  border-color: #777;
+}
+
+.year-btn.negative:hover {
+  background: #555;
+  border-color: #777;
 }
 
 .quick-jump {
