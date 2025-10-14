@@ -18,15 +18,19 @@
         class="control-btn"
         @click="togglePlayPause"
         :class="{ active: isPlaying }"
+        title="空格键"
       >
         {{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}
+        <span class="key-hint">空格</span>
       </button>
 
       <button
         class="control-btn"
         @click="resetToNow"
+        title="R键"
       >
         ⟲ 现在
+        <span class="key-hint">R</span>
       </button>
     </div>
 
@@ -46,50 +50,66 @@
         <button
           class="step-btn year-btn negative"
           @click="stepYear(-1)"
+          title="Shift+Y"
         >
           -1年
+          <span class="key-hint">⇧Y</span>
         </button>
         <button
           class="step-btn month-btn negative"
           @click="stepMonth(-1)"
+          title="Shift+M"
         >
           -1月
+          <span class="key-hint">⇧M</span>
         </button>
         <button
           class="step-btn"
           @click="stepTime(-86400)"
+          title="Shift+D"
         >
           -1天
+          <span class="key-hint">⇧D</span>
         </button>
         <button
           class="step-btn"
           @click="stepTime(-3600)"
+          title="Shift+H"
         >
           -1小时
+          <span class="key-hint">⇧H</span>
         </button>
         <button
           class="step-btn"
           @click="stepTime(3600)"
+          title="H"
         >
           +1小时
+          <span class="key-hint">H</span>
         </button>
         <button
           class="step-btn"
           @click="stepTime(86400)"
+          title="D"
         >
           +1天
+          <span class="key-hint">D</span>
         </button>
         <button
           class="step-btn month-btn"
           @click="stepMonth(1)"
+          title="M"
         >
           +1月
+          <span class="key-hint">M</span>
         </button>
         <button
           class="step-btn year-btn"
           @click="stepYear(1)"
+          title="Y"
         >
           +1年
+          <span class="key-hint">Y</span>
         </button>
       </div>
     </div>
@@ -130,26 +150,34 @@
         <button
           class="jump-btn"
           @click="setTimeOfDay(0, 0)"
+          title="数字键1"
         >
           00:00
+          <span class="key-hint">1</span>
         </button>
         <button
           class="jump-btn"
           @click="setTimeOfDay(6, 0)"
+          title="数字键2"
         >
           06:00
+          <span class="key-hint">2</span>
         </button>
         <button
           class="jump-btn"
           @click="setTimeOfDay(12, 0)"
+          title="数字键3"
         >
           12:00
+          <span class="key-hint">3</span>
         </button>
         <button
           class="jump-btn"
           @click="setTimeOfDay(18, 0)"
+          title="数字键4"
         >
           18:00
+          <span class="key-hint">4</span>
         </button>
       </div>
     </div>
@@ -164,20 +192,26 @@
         <button
           class="zoom-btn"
           @click="zoomOut"
+          title="-键"
         >
           -
+          <span class="key-hint">-</span>
         </button>
         <button
           class="zoom-btn"
           @click="resetZoom"
+          title="0键"
         >
           重置
+          <span class="key-hint">0</span>
         </button>
         <button
           class="zoom-btn"
           @click="zoomIn"
+          title="+键"
         >
           +
+          <span class="key-hint">+</span>
         </button>
       </div>
       <div class="zoom-presets">
@@ -225,88 +259,52 @@
           <button
             class="offset-btn"
             @click="moveUp"
+            title="方向键↑"
           >
             ↑
+            <span class="key-hint">↑</span>
           </button>
         </div>
         <div class="offset-row">
           <button
             class="offset-btn"
             @click="moveLeft"
+            title="方向键←"
           >
             ←
+            <span class="key-hint">←</span>
           </button>
           <button
             class="offset-btn"
             @click="resetOffset"
+            title="Delete/Backspace"
           >
             重置
+            <span class="key-hint">Del</span>
           </button>
           <button
             class="offset-btn"
             @click="moveRight"
+            title="方向键→"
           >
             →
+            <span class="key-hint">→</span>
           </button>
         </div>
         <div class="offset-row">
           <button
             class="offset-btn"
             @click="moveDown"
+            title="方向键↓"
           >
             ↓
+            <span class="key-hint">↓</span>
           </button>
         </div>
       </div>
     </div>
 
-    <!-- 快捷键提示 -->
-    <div class="shortcuts-hint">
-      <div class="hint-title">快捷键</div>
-      <div class="shortcuts-grid">
-        <div class="shortcut-item">
-          <span class="key">空格</span>
-          <span class="desc">播放/暂停</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">R</span>
-          <span class="desc">重置时间</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">Y/Shift+Y</span>
-          <span class="desc">±1年</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">M/Shift+M</span>
-          <span class="desc">±1月</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">D/Shift+D</span>
-          <span class="desc">±1天</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">H/Shift+H</span>
-          <span class="desc">±1小时</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">1-4</span>
-          <span class="desc">跳转时段</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">+/-</span>
-          <span class="desc">缩放</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">方向键</span>
-          <span class="desc">平移</span>
-        </div>
-        <div class="shortcut-item">
-          <span class="key">0</span>
-          <span class="desc">重置缩放</span>
-        </div>
-      </div>
     </div>
-  </div>
 </template>
 
 <script setup lang="ts">
@@ -783,11 +781,11 @@ onUnmounted(() => {
   position: fixed;
   right: 20px;
   top: 20px;
-  width: 280px;
+  width: 260px;
   background: rgba(0, 0, 0, 0.9);
   border: 1px solid #444;
   border-radius: 8px;
-  padding: 16px;
+  padding: 12px;
   color: #fff;
   font-family: 'Arial', sans-serif;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
@@ -795,18 +793,18 @@ onUnmounted(() => {
 }
 
 .title {
-  margin: 0 0 16px 0;
-  font-size: 16px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
   font-weight: bold;
   text-align: center;
   color: #ffcc00;
   border-bottom: 1px solid #444;
-  padding-bottom: 8px;
+  padding-bottom: 6px;
 }
 
 .time-display {
   text-align: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .current-time {
@@ -824,8 +822,8 @@ onUnmounted(() => {
 
 .control-buttons {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 6px;
+  margin-bottom: 12px;
   justify-content: center;
 }
 
@@ -851,8 +849,25 @@ onUnmounted(() => {
   border-color: #ffcc00;
 }
 
+.control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.key-hint {
+  font-size: 8px;
+  color: #ffcc00;
+  font-weight: bold;
+  background: #333;
+  padding: 1px 3px;
+  border-radius: 2px;
+  margin-top: 1px;
+}
+
 .time-adjustment {
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .time-selector {
@@ -938,14 +953,18 @@ onUnmounted(() => {
 }
 
 .step-btn {
-  padding: 6px 8px;
+  padding: 6px 4px;
   background: #333;
   border: 1px solid #555;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 10px;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .step-btn:hover {
@@ -1012,14 +1031,18 @@ onUnmounted(() => {
 }
 
 .jump-btn {
-  padding: 6px 4px;
+  padding: 6px 2px;
   background: #222;
   border: 1px solid #444;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .jump-btn:hover {
@@ -1071,6 +1094,10 @@ onUnmounted(() => {
   font-size: 14px;
   font-weight: bold;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
 }
 
 .zoom-btn:hover {
@@ -1156,8 +1183,10 @@ onUnmounted(() => {
   font-weight: bold;
   transition: all 0.2s;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
 }
 
 .offset-btn:hover {
@@ -1173,49 +1202,30 @@ onUnmounted(() => {
   width: 50px; /* 重置按钮稍微宽一些 */
 }
 
-.shortcuts-hint {
-  border-top: 1px solid #444;
-  padding-top: 16px;
-  margin-top: 16px;
-}
-
-.hint-title {
-  font-size: 12px;
-  font-weight: bold;
-  color: #ffcc00;
-  margin-bottom: 8px;
-  text-align: center;
-}
-
-.shortcuts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.shortcut-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 6px;
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 3px;
-  font-size: 10px;
-}
-
-.key {
-  background: #333;
-  color: #ffcc00;
-  padding: 2px 4px;
-  border-radius: 2px;
-  font-weight: bold;
-  font-family: 'Courier New', monospace;
+/* 为不同按钮的快捷键提示设置不同样式 */
+.control-btn .key-hint {
   font-size: 9px;
+  padding: 1px 4px;
 }
 
-.desc {
-  color: #ccc;
-  font-size: 9px;
+.step-btn .key-hint {
+  font-size: 7px;
+  padding: 1px 2px;
+}
+
+.jump-btn .key-hint {
+  font-size: 7px;
+  padding: 1px 2px;
+}
+
+.zoom-btn .key-hint {
+  font-size: 7px;
+  padding: 1px 2px;
+}
+
+.offset-btn .key-hint {
+  font-size: 6px;
+  padding: 1px 2px;
+  margin-top: 0;
 }
 </style>
