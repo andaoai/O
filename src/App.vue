@@ -25,7 +25,7 @@ import {
 const eclipticPlanets = ref<PlanetData[]>([])
 
 // 黄道轨道半径（所有行星都在同一条黄道上）
-const ECLIPTIC_RADIUS = 60
+const ECLIPTIC_RADIUS = 120
 
 // 转换行星数据为StarOrbit组件所需的格式
 const celestialBodies = computed(() => {
@@ -36,13 +36,13 @@ const celestialBodies = computed(() => {
       angle: convertEclipticToDisplayAngle(planet.eclipticLongitude, 0),
       magnitude: planet.magnitude,
       color: planet.color,
-      size: planet.name === 'Sun' ? 6 : planet.name === 'Jupiter' ? 4 : 3,
+      size: planet.name === 'Sun' ? 12 : planet.name === 'Jupiter' ? 8 : 6,
       orbitRadius: ECLIPTIC_RADIUS,  // 统一的黄道轨道半径
       orbitEccentricity: 0,  // 黄道是正圆形
       orbitPeriod: 10,  // 给一个合理的周期用于演示动画
       orbitPhase: 0,
       orbitStyle: 'solid' as const,  // 黄道用实线
-      orbitWidth: 2,
+      orbitWidth: 3,
       showOrbit: planet.name === 'Sun',  // 只显示一次黄道（太阳）
       twinkle: false  // 关闭闪烁效果
     }
@@ -136,8 +136,8 @@ onMounted(() => {
       <!-- 黄道行星系统（第九层） -->
       <StarOrbit
         :stars="celestialBodies"
-        :max-radius="90"
-        :min-radius="25"
+        :max-radius="150"
+        :min-radius="50"
         :show-orbits="true"
         :show-stars="true"
         :show-labels="true"
@@ -147,11 +147,11 @@ onMounted(() => {
         :enable-rotation="true"
         :rotation-speed="0.2"
         :twinkle="false"
-        :label-font-size="11"
+        :label-font-size="14"
         label-color="#ffffff"
-        orbit-color="#444444"
-        :orbit-width="1"
-        :default-star-size="3"
+        orbit-color="#666666"
+        :orbit-width="2"
+        :default-star-size="6"
       />
 
       <!-- 太极图（中心） -->
