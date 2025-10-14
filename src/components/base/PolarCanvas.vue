@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue'
+import { computed, watch } from 'vue'
+import { useAnimation, AnimationType } from '@/composables/useAnimation'
 
 // 基础点坐标
 interface Point {
@@ -42,49 +43,35 @@ const props = withDefaults(defineProps<Props>(), {
   minRadius: 0
 })
 
-// 动画相关状态
-const animationRotation = ref(0)
-let animationId: number | null = null
-
-// 启动动画
-const startAnimation = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
+// 使用统一的动画系统
+const animationId = `polar-canvas-${Date.now()}-${Math.random()}`
+const { start, stop, setSpeed, getValue, setValue } = useAnimation(
+  animationId,
+  AnimationType.ROTATION,
+  {
+    enabled: props.enableAnimation,
+    speed: props.animationSpeed
   }
-
-  const animate = () => {
-    animationRotation.value = (animationRotation.value + props.animationSpeed + 360) % 360
-    animationId = requestAnimationFrame(animate)
-  }
-  animate()
-}
-
-// 停止动画
-const stopAnimation = () => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-}
+)
 
 // 监听动画开关
 watch(() => props.enableAnimation, (enabled) => {
   if (enabled) {
-    startAnimation()
+    start()
   } else {
-    stopAnimation()
-    animationRotation.value = 0
+    stop()
+    setValue(0)
   }
 }, { immediate: true })
 
-// 组件卸载时清理动画
-onUnmounted(() => {
-  stopAnimation()
+// 监听动画速度变化
+watch(() => props.animationSpeed, (newSpeed) => {
+  setSpeed(newSpeed)
 })
 
 // 计算总的旋转角度
 const totalRotation = computed(() => {
-  return (animationRotation.value + props.rotation) % 360
+  return (getValue() + props.rotation) % 360
 })
 
 // 角度转换为笛卡尔坐标
@@ -173,7 +160,10 @@ defineExpose({
   generateEqualAngles,
   generateArcPath,
   totalRotation,
-  animationRotation
+  animationRotation: getValue,
+  startAnimation: start,
+  stopAnimation: stop,
+  setAnimationSpeed: setSpeed
 })
 </script>
 

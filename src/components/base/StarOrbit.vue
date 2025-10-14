@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PolarCanvas from './PolarCanvas.vue'
+import { useAnimation, AnimationType } from '@/composables/useAnimation'
 
 interface Star {
   name: string
@@ -64,6 +65,8 @@ interface Props {
 
   // 旋转
   rotation?: number        // 整体旋转角度
+  enableRotation?: boolean // 是否启用整体旋转
+  rotationSpeed?: number   // 旋转速度
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -87,31 +90,39 @@ const props = withDefaults(defineProps<Props>(), {
   gridLevels: 5,
   animate: false,
   animationSpeed: 1,
-  rotation: 0
+  rotation: 0,
+  enableRotation: false,
+  rotationSpeed: 0.5
 })
 
-// 动画时间（用于恒星轨道运动）
-const animationTime = ref(0)
-
-// 动画循环
-let animationId: number
-const animate = () => {
-  animationTime.value += 0.016 * props.animationSpeed // 约60fps
-  animationId = requestAnimationFrame(animate)
-}
-
-// 启动/停止动画
-onMounted(() => {
-  if (props.animate) {
-    animate()
+// 使用统一的动画系统
+const animationId = `star-orbit-${Date.now()}-${Math.random()}`
+const { start, stop, setSpeed, getValue, setValue } = useAnimation(
+  animationId,
+  AnimationType.ORBITAL,
+  {
+    enabled: props.animate,
+    speed: props.animationSpeed
   }
+)
+
+// 监听动画开关
+watch(() => props.animate, (enabled: boolean) => {
+  if (enabled) {
+    start()
+  } else {
+    stop()
+    setValue(0)
+  }
+}, { immediate: true })
+
+// 监听动画速度变化
+watch(() => props.animationSpeed, (newSpeed: number) => {
+  setSpeed(newSpeed)
 })
 
-onUnmounted(() => {
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-  }
-})
+// 获取动画时间（用于恒星轨道运动）
+const animationTime = computed(() => getValue())
 
 // 生成轨道路径（考虑离心率的椭圆轨道）
 const generateOrbitPath = (star: Star, centerX: number, centerY: number) => {
@@ -194,7 +205,8 @@ const getStarColor = (star: Star) => {
 
 <template>
   <PolarCanvas
-    :enable-animation="false"
+    :enable-animation="enableRotation"
+    :animation-speed="rotationSpeed"
     :rotation="rotation"
     :max-radius="maxRadius"
     :min-radius="minRadius"

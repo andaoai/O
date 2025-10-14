@@ -39,7 +39,7 @@ const celestialBodies = computed(() => {
       size: planet.name === 'Sun' ? 6 : planet.name === 'Jupiter' ? 4 : 3,
       orbitRadius: ECLIPTIC_RADIUS,  // 统一的黄道轨道半径
       orbitEccentricity: 0,  // 黄道是正圆形
-      orbitPeriod: 0,  // 不使用动画，使用真实天文计算
+      orbitPeriod: 10,  // 给一个合理的周期用于演示动画
       orbitPhase: 0,
       orbitStyle: 'solid' as const,  // 黄道用实线
       orbitWidth: 2,
@@ -142,7 +142,10 @@ onMounted(() => {
         :show-stars="true"
         :show-labels="true"
         :show-grid="false"
-        :animate="false"
+        :animate="true"
+        :animation-speed="0.5"
+        :enable-rotation="true"
+        :rotation-speed="0.2"
         :twinkle="false"
         :label-font-size="11"
         label-color="#ffffff"
@@ -175,7 +178,7 @@ onMounted(() => {
       @offset-change="handleOffsetChange"
     />
 
-    </div>
+  </div>
 </template>
 
 <style>
