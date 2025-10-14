@@ -27,7 +27,8 @@
       "Bash(npm run build:*)",
       "mcp__playwright__browser_fill_form",
       "Bash(node:*)",
-      "Bash(gh pr:*)"
+      "Bash(gh pr:*)",
+      "mcp__playwright__browser_press_key"
     ],
     "deny": [],
     "ask": []
