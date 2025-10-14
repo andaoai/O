@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
@@ -12,54 +12,42 @@ import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
 import Control from './components/Control.vue'
 import { calculateSolarOrbitAngle, calculateLunarOrbitAngle } from './utils/solarTime'
+import {
+  getAllPlanetsEclipticPositions,
+  convertEclipticToDisplayAngle,
+  calculateDisplayRadius,
+  createPlanetPositionCalculator,
+  type PlanetData
+} from './utils/eclipticPlanets'
 
 
-// 太阳系天体数据
-const celestialBodies = ref([
-  {
-    name: '太阳',
-    distance: 80,
-    angle: 0,      // 将通过太阳时角动态计算
-    magnitude: -26.7,
-    color: '#ffcc00',
-    orbitRadius: 80,
-    orbitEccentricity: 0.02,
-    orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
-    orbitPhase: 0,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 3,
-    showOrbit: true
-  },
-  {
-    name: '木星',
-    distance: 60,
-    angle: 90,     // 正左方
-    magnitude: -2.5,
-    color: '#d4a373',
-    orbitRadius: 60,
-    orbitEccentricity: 0.05,
-    orbitPeriod: 45,    // 45秒转一圈
-    orbitPhase: 0,
-    orbitStyle: 'solid' as const,
-    orbitWidth: 2,
-    showOrbit: true
-  },
-  {
-    name: '月亮',
-    distance: 40,
-    angle: 0,      // 将通过月亮时角动态计算
-    magnitude: -12.6,
-    color: '#f0f0f0',
-    orbitRadius: 40,
-    orbitEccentricity: 0.05,
-    orbitPeriod: 0,    // 0表示不使用动画，而是使用实际时间
-    orbitPhase: 0,
-    orbitStyle: 'dashed' as const,
-    orbitWidth: 1,
-    showOrbit: true,
-    twinkle: true
-  }
-])
+// 黄道行星数据
+const eclipticPlanets = ref<PlanetData[]>([])
+
+// 黄道轨道半径（所有行星都在同一条黄道上）
+const ECLIPTIC_RADIUS = 60
+
+// 转换行星数据为StarOrbit组件所需的格式
+const celestialBodies = computed(() => {
+  return eclipticPlanets.value.map(planet => {
+    return {
+      name: planet.chineseName,
+      distance: ECLIPTIC_RADIUS,  // 所有行星都在黄道上
+      angle: convertEclipticToDisplayAngle(planet.eclipticLongitude, 0),
+      magnitude: planet.magnitude,
+      color: planet.color,
+      size: planet.name === 'Sun' ? 6 : planet.name === 'Jupiter' ? 4 : 3,
+      orbitRadius: ECLIPTIC_RADIUS,  // 统一的黄道轨道半径
+      orbitEccentricity: 0,  // 黄道是正圆形
+      orbitPeriod: 0,  // 不使用动画，使用真实天文计算
+      orbitPhase: 0,
+      orbitStyle: 'solid' as const,  // 黄道用实线
+      orbitWidth: 2,
+      showOrbit: planet.name === 'Sun',  // 只显示一次黄道（太阳）
+      twinkle: false  // 关闭闪烁效果
+    }
+  })
+})
 
 // 时间控制
 const controlledTime = ref(new Date())
@@ -71,27 +59,15 @@ const zoomLevel = ref(1)
 const offsetX = ref(0)
 const offsetY = ref(0)
 
-// 更新太阳角度（使用控制的时间）
-const updateSolarAngle = () => {
-  const solarAngle = calculateSolarOrbitAngle(0, controlledTime.value)
-  if (celestialBodies.value[0]) {
-    celestialBodies.value[0].angle = solarAngle
-  }
-}
-
-// 更新月亮角度（使用控制的时间）
-const updateLunarAngle = () => {
-  const lunarAngle = calculateLunarOrbitAngle(0, controlledTime.value)
-  if (celestialBodies.value[2]) { // 月亮是第3个天体（索引2）
-    celestialBodies.value[2].angle = lunarAngle
-  }
+// 更新行星位置（使用控制的时间）
+const updatePlanetPositions = () => {
+  eclipticPlanets.value = getAllPlanetsEclipticPositions(controlledTime.value)
 }
 
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
   controlledTime.value = newTime
-  updateSolarAngle()
-  updateLunarAngle()
+  updatePlanetPositions()
 }
 
 // 缩放变化处理器
@@ -107,8 +83,7 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
 
 onMounted(() => {
   // 立即更新一次
-  updateSolarAngle()
-  updateLunarAngle()
+  updatePlanetPositions()
 })
 
 </script>
@@ -158,19 +133,22 @@ onMounted(() => {
       <!-- 四象圆环（第八层） -->
       <!-- <SiXiang /> -->
 
-      <!-- 太阳系天体轨道系统（第九层） -->
+      <!-- 黄道行星系统（第九层） -->
       <StarOrbit
         :stars="celestialBodies"
         :max-radius="90"
-        :min-radius="30"
+        :min-radius="25"
         :show-orbits="true"
         :show-stars="true"
         :show-labels="true"
         :show-grid="false"
-        :animate="true"
-        :animation-speed="1"
+        :animate="false"
         :twinkle="false"
-        :label-font-size="12"
+        :label-font-size="11"
+        label-color="#ffffff"
+        orbit-color="#444444"
+        :orbit-width="1"
+        :default-star-size="3"
       />
 
       <!-- 太极图（中心） -->

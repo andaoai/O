@@ -45,21 +45,15 @@
       <div class="manual-controls">
         <button
           class="step-btn"
+          @click="stepTime(-86400)"
+        >
+          -1天
+        </button>
+        <button
+          class="step-btn"
           @click="stepTime(-3600)"
         >
           -1小时
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(-60)"
-        >
-          -1分钟
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(60)"
-        >
-          +1分钟
         </button>
         <button
           class="step-btn"
@@ -67,6 +61,41 @@
         >
           +1小时
         </button>
+        <button
+          class="step-btn"
+          @click="stepTime(86400)"
+        >
+          +1天
+        </button>
+      </div>
+    </div>
+
+    <!-- 时间选择器 -->
+    <div class="time-selector">
+      <label>时间选择:</label>
+      <div class="time-inputs">
+        <div class="date-input-group">
+          <label>日期:</label>
+          <input
+            type="text"
+            v-model="dateInput"
+            @change="onDateChange"
+            @blur="onDateChange"
+            placeholder="YYYY-MM-DD"
+            class="time-input"
+          />
+        </div>
+        <div class="clock-input-group">
+          <label>时间:</label>
+          <input
+            type="text"
+            v-model="timeInput"
+            @change="onTimeChange"
+            @blur="onTimeChange"
+            placeholder="HH:MM:SS"
+            class="time-input"
+          />
+        </div>
       </div>
     </div>
 
@@ -239,6 +268,10 @@ const internalOffsetX = ref(0) // 内部X轴偏移，默认为0
 const internalOffsetY = ref(0) // 内部Y轴偏移，默认为0
 let animationId: number | null = null
 
+// 时间选择器的响应式数据
+const dateInput = ref('')
+const timeInput = ref('')
+
 // 监听 props.zoom 的变化
 watch(() => props.zoom, (newZoom) => {
   if (newZoom !== undefined && newZoom !== null) {
@@ -260,8 +293,28 @@ watch(() => props.offsetY, (newOffsetY) => {
   }
 }, { immediate: true })
 
+// 更新时间选择器的值
+const updateDateTimeInputs = (date: Date) => {
+  // 格式化日期为 YYYY-MM-DD
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  dateInput.value = `${year}-${month}-${day}`
+
+  // 格式化时间为 HH:MM:SS
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  timeInput.value = `${hours}:${minutes}:${seconds}`
+}
+
 // 计算属性
 const formattedTime = computed(() => formatTime(currentTime.value))
+
+// 监听时间变化，更新时间选择器的值
+watch(() => currentTime.value, (newTime) => {
+  updateDateTimeInputs(newTime)
+}, { immediate: true })
 
 // 格式化时间
 const formatTime = (date: Date): string => {
@@ -331,6 +384,56 @@ const pause = () => {
 const resetToNow = () => {
   pause()
   updateTime(new Date())
+}
+
+// 处理日期变化
+const onDateChange = () => {
+  if (!dateInput.value || !timeInput.value) return
+
+  pause()
+  const dateParts = dateInput.value.split('-').map(Number)
+  const timeParts = timeInput.value.split(':').map(Number)
+
+  // 验证解析的数字是否有效
+  if (dateParts.length !== 3 || timeParts.length !== 3) return
+  if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
+
+  const year = dateParts[0]!
+  const month = dateParts[1]!
+  const day = dateParts[2]!
+  const hours = timeParts[0]!
+  const minutes = timeParts[1]!
+  const seconds = timeParts[2]!
+
+  const newTime = new Date(year, month - 1, day, hours, minutes, seconds)
+  if (!isNaN(newTime.getTime())) {
+    updateTime(newTime)
+  }
+}
+
+// 处理时间变化
+const onTimeChange = () => {
+  if (!dateInput.value || !timeInput.value) return
+
+  pause()
+  const dateParts = dateInput.value.split('-').map(Number)
+  const timeParts = timeInput.value.split(':').map(Number)
+
+  // 验证解析的数字是否有效
+  if (dateParts.length !== 3 || timeParts.length !== 3) return
+  if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
+
+  const year = dateParts[0]!
+  const month = dateParts[1]!
+  const day = dateParts[2]!
+  const hours = timeParts[0]!
+  const minutes = timeParts[1]!
+  const seconds = timeParts[2]!
+
+  const newTime = new Date(year, month - 1, day, hours, minutes, seconds)
+  if (!isNaN(newTime.getTime())) {
+    updateTime(newTime)
+  }
 }
 
 // 步进时间
@@ -490,6 +593,60 @@ onUnmounted(() => {
 
 .time-adjustment {
   margin-bottom: 16px;
+}
+
+.time-selector {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.time-selector label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.time-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.date-input-group, .clock-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.date-input-group label, .clock-input-group label {
+  font-size: 11px;
+  color: #aaa;
+  margin-bottom: 2px;
+}
+
+.time-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
+}
+
+.time-input:focus {
+  outline: none;
+  border-color: #ffcc00;
+  background: #444;
+  box-shadow: 0 0 4px rgba(255, 204, 0, 0.3);
+}
+
+.time-input:hover {
+  border-color: #666;
+  background: #3a3a3a;
 }
 
 .speed-control {
