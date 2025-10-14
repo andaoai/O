@@ -30,7 +30,8 @@
       "Bash(gh pr:*)",
       "mcp__playwright__browser_press_key",
       "WebSearch",
-      "WebFetch(domain:astronomy.readthedocs.io)"
+      "WebFetch(domain:astronomy.readthedocs.io)",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "ask": []

@@ -147,8 +147,9 @@ const moonPosition = computed(() => {
 
   if (props.animate) {
     // 使用响应式动画时间，但基于控制时间的基础上进行动画
+    // 使用减法以确保月球与其他天体同方向运动（增加黄道经度）
     const phase = animationTime.value * 0.1 // 调整动画速度
-    currentAngle = (moon.eclipticLongitude + phase * 360) % 360
+    currentAngle = (moon.eclipticLongitude - phase * 360) % 360
   }
 
   // 创建临时月球数据用于位置计算

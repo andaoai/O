@@ -277,9 +277,27 @@ export function getMoonPosition(date: Date = new Date()): MoonData {
     // 计算月球的地心向量（用于距离）
     const moonVector = Astronomy.GeoVector(Astronomy.Body.Moon, astroTime, true)
 
-    // 使用固定的升交点值作为默认值（月球的升交点大约在0度附近）
-    // 实际的升交点会以18.6年为周期变化，但对于日常演示我们可以使用固定值
-    const ascendingNode = 0 // 简化为0度，即春分点方向
+    // 使用astronomy-engine库计算月球升交点位置
+    let ascendingNode = 0
+    try {
+      const searchTime = new Astronomy.AstroTime(date)
+
+      // 搜索最近的升交点事件
+      const nodeInfo = Astronomy.SearchMoonNode(searchTime)
+
+      if (nodeInfo) {
+        // 计算升交点时刻的月球黄道经度
+        // NodeEventInfo只包含时间和类型，我们需要自己计算黄道经度
+        const moonPosition = Astronomy.EclipticGeoMoon(nodeInfo.time)
+        ascendingNode = moonPosition.lon
+      } else {
+        // 如果搜索失败，使用一个合理的默认值
+        ascendingNode = 0
+      }
+    } catch (nodeError) {
+      // 如果无法获取升交点，使用一个合理的默认值
+      ascendingNode = 0
+    }
 
     // 将月相经度转换为月相值（0-1）
     // 月相经度：0°=新月，90°=上弦月，180°=满月，270°=下弦月
