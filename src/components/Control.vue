@@ -10,6 +10,24 @@
       <div class="date-display">
         {{ formatDate(currentTime) }}
       </div>
+
+      <!-- 农历和干支信息 -->
+      <div class="lunar-display">
+        <div class="lunar-date">{{ chineseCalendar.lunarDate }}</div>
+        <div class="ganzhi-year">{{ chineseCalendar.ganzhi.year.full }}年 {{ chineseCalendar.ganzhi.year.animal }}</div>
+      </div>
+
+      <!-- 节气信息 -->
+      <div v-if="chineseCalendar.solarTerm" class="solar-term-display">
+        <div class="solar-term-text">
+          {{ getSolarTermDescription(chineseCalendar.solarTerm) }}
+        </div>
+      </div>
+
+      <!-- 日干支 -->
+      <div class="daily-ganzhi">
+        {{ chineseCalendar.ganzhi.day.full }}日 {{ chineseCalendar.ganzhi.hour.full }}时
+      </div>
     </div>
 
     <!-- 控制按钮 -->
@@ -309,6 +327,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { getChineseCalendarInfo, getSolarTermDescription, type ChineseCalendarInfo } from '@/utils/chineseCalendar'
 
 interface Props {
   modelValue?: Date
@@ -340,6 +359,9 @@ let animationId: number | null = null
 // 时间选择器的响应式数据
 const dateInput = ref('')
 const timeInput = ref('')
+
+// 中国历法信息
+const chineseCalendar = computed(() => getChineseCalendarInfo(currentTime.value))
 
 // 监听 props.zoom 的变化
 watch(() => props.zoom, (newZoom) => {
@@ -818,6 +840,42 @@ onUnmounted(() => {
 .date-display {
   font-size: 12px;
   color: #888;
+  margin-bottom: 6px;
+}
+
+.lunar-display {
+  margin-bottom: 6px;
+  padding: 4px 0;
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
+}
+
+.lunar-date {
+  font-size: 11px;
+  color: #ff9900;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.ganzhi-year {
+  font-size: 10px;
+  color: #ccaa00;
+}
+
+.solar-term-display {
+  margin-bottom: 4px;
+}
+
+.solar-term-text {
+  font-size: 10px;
+  color: #66ccff;
+  font-weight: bold;
+}
+
+.daily-ganzhi {
+  font-size: 10px;
+  color: #99cc99;
+  font-style: italic;
 }
 
 .control-buttons {

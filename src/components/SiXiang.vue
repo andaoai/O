@@ -43,8 +43,8 @@ const fourSymbols = [
 
 <template>
   <CircleRing
-    :radius="180"
-    :inner-radius="150"
+    :radius="200"
+    :inner-radius="230"
     :items="fourSymbols"
     :show-ticks="true"
     :tick-width="1"

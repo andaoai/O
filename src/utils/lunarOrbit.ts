@@ -157,7 +157,7 @@ export function getWhitePathParameters(date: Date = new Date()): {
 
     // 根据月球位置计算白道中心的偏移
     // 这里使用简化的可视化偏移，实际偏移需要根据具体观测需求调整
-    const offsetDistance = 30 // 像素距离
+    const offsetDistance = 18 // 像素距离
     const offsetAngle = (ascendingNode + 180) % 360 // 白道中心偏离的方向
 
     return {

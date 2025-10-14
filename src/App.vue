@@ -187,7 +187,7 @@ onMounted(() => {
       <!-- <TwelveLongevity /> -->
 
       <!-- 四象圆环（第八层） -->
-      <!-- <SiXiang /> -->
+      <SiXiang />
 
       <!-- 黄道行星系统（第九层） -->
       <StarOrbit
