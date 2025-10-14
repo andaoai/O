@@ -20,13 +20,26 @@ import {
   createPlanetPositionCalculator,
   type PlanetData
 } from './utils/eclipticPlanets'
+import {
+  getMoonData,
+  getWhitePathParameters,
+  convertEclipticToWhitePath,
+  getMoonPhaseChineseName,
+  type MoonData
+} from './utils/lunarOrbit'
 
 
 // 黄道行星数据
 const eclipticPlanets = ref<PlanetData[]>([])
 
+// 月球数据
+const moonData = ref<MoonData>(getMoonData())
+
 // 黄道轨道半径（所有行星都在同一条黄道上）
 const ECLIPTIC_RADIUS = 120
+
+// 白道轨道半径
+const WHITE_PATH_RADIUS = 100
 
 // 转换行星数据为StarOrbit组件所需的格式
 const celestialBodies = computed(() => {
@@ -65,10 +78,16 @@ const updatePlanetPositions = () => {
   eclipticPlanets.value = getAllPlanetsEclipticPositions(controlledTime.value)
 }
 
+// 更新月球位置（使用控制的时间）
+const updateMoonPosition = () => {
+  moonData.value = getMoonData(controlledTime.value)
+}
+
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
   controlledTime.value = newTime
   updatePlanetPositions()
+  updateMoonPosition()
 }
 
 // 缩放变化处理器
@@ -82,9 +101,45 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
   offsetY.value = newOffset.y
 }
 
+// 计算白道参数
+const whitePathParams = computed(() => {
+  return getWhitePathParameters(controlledTime.value)
+})
+
+// 转换月球数据为MoonOrbit组件所需的格式
+const moonBody = computed(() => {
+  const moon = moonData.value
+  const params = whitePathParams.value
+
+  // 将月球黄道坐标转换为白道坐标
+  const whitePathCoords = convertEclipticToWhitePath(
+    moon.eclipticLongitude,
+    moon.eclipticLatitude,
+    params.inclination,
+    params.ascendingNode
+  )
+
+  return {
+    name: `${moon.chineseName} (${getMoonPhaseChineseName(moon.phase)})`,
+    distance: WHITE_PATH_RADIUS,
+    angle: whitePathCoords.longitude,
+    size: 8,
+    color: moon.color,
+    orbitRadius: WHITE_PATH_RADIUS,
+    orbitEccentricity: 0.0549,  // 月球轨道离心率
+    orbitPeriod: 27.3,  // 恒星周期约27.3天
+    orbitPhase: 0,
+    orbitStyle: 'dashed' as const,
+    orbitWidth: 2,
+    orbitColor: '#8B7D6B',
+    showOrbit: true
+  }
+})
+
 onMounted(() => {
   // 立即更新一次
   updatePlanetPositions()
+  updateMoonPosition()
 })
 
 </script>
@@ -155,26 +210,31 @@ onMounted(() => {
         :default-star-size="6"
       />
 
-      <!-- 月球轨道系统（第十层） -->
+      <!-- 白道月球系统（第十层） -->
       <MoonOrbit
-        :controlled-time="controlledTime"
-        :max-radius="180"
-        :min-radius="80"
-        :moon-orbit-radius="120"
-        :show-moon="true"
-        :show-orbit="true"
-        :show-label="true"
-        :show-phase="true"
+        :moons="[moonBody]"
+        :max-radius="150"
+        :min-radius="50"
+        :offset-distance="whitePathParams.offsetDistance"
+        :offset-angle="whitePathParams.offsetAngle"
+        :show-moons="true"
+        :show-orbits="true"
+        :show-labels="true"
+        :show-white-path="true"
         :animate="true"
-        :animation-speed="0.8"
+        :animation-speed="0.3"
         :enable-rotation="true"
         :rotation-speed="0.2"
-        :label-font-size="14"
-        label-color="#ffffff"
-        orbit-color="#888888"
-        :orbit-width="2"
+        :label-font-size="12"
+        label-color="#F0F0F0"
+        white-path-color="#8B7D6B"
+        :white-path-width="2"
+        orbit-color="#8B7D6B"
+        :orbit-width="1.5"
         :default-moon-size="8"
+        default-moon-color="#F0F0F0"
       />
+
 
       <!-- 太极图（中心） -->
       <Taiji
