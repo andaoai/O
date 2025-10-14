@@ -259,6 +259,53 @@
         </div>
       </div>
     </div>
+
+    <!-- 快捷键提示 -->
+    <div class="shortcuts-hint">
+      <div class="hint-title">快捷键</div>
+      <div class="shortcuts-grid">
+        <div class="shortcut-item">
+          <span class="key">空格</span>
+          <span class="desc">播放/暂停</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">R</span>
+          <span class="desc">重置时间</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">Y/Shift+Y</span>
+          <span class="desc">±1年</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">M/Shift+M</span>
+          <span class="desc">±1月</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">D/Shift+D</span>
+          <span class="desc">±1天</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">H/Shift+H</span>
+          <span class="desc">±1小时</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">1-4</span>
+          <span class="desc">跳转时段</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">+/-</span>
+          <span class="desc">缩放</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">方向键</span>
+          <span class="desc">平移</span>
+        </div>
+        <div class="shortcut-item">
+          <span class="key">0</span>
+          <span class="desc">重置缩放</span>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -567,9 +614,167 @@ const resetOffset = () => {
   updateOffset(0, 0)
 }
 
-// 清理
+// 键盘快捷键处理
+const handleKeyDown = (event: KeyboardEvent) => {
+  // 防止在输入框中触发快捷键
+  if (event.target instanceof HTMLInputElement) {
+    return
+  }
+
+  switch (event.key) {
+    // 播放/暂停
+    case ' ':
+    case 'Space':
+      event.preventDefault()
+      togglePlayPause()
+      break
+
+    // 重置到当前时间
+    case 'r':
+    case 'R':
+      event.preventDefault()
+      resetToNow()
+      break
+
+    // 时间调节 - 年
+    case 'Y':
+    case 'y':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepYear(-1) // Shift+Y = -1年
+      } else {
+        event.preventDefault()
+        stepYear(1)  // Y = +1年
+      }
+      break
+
+    // 时间调节 - 月
+    case 'M':
+    case 'm':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepMonth(-1) // Shift+M = -1月
+      } else {
+        event.preventDefault()
+        stepMonth(1)  // M = +1月
+      }
+      break
+
+    // 时间调节 - 天
+    case 'D':
+    case 'd':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepTime(-86400) // Shift+D = -1天
+      } else {
+        event.preventDefault()
+        stepTime(86400)   // D = +1天
+      }
+      break
+
+    // 时间调节 - 小时
+    case 'H':
+    case 'h':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepTime(-3600) // Shift+H = -1小时
+      } else {
+        event.preventDefault()
+        stepTime(3600)  // H = +1小时
+      }
+      break
+
+    // 快速跳转
+    case '1':
+      event.preventDefault()
+      setTimeOfDay(0, 0)   // 00:00
+      break
+    case '2':
+      event.preventDefault()
+      setTimeOfDay(6, 0)   // 06:00
+      break
+    case '3':
+      event.preventDefault()
+      setTimeOfDay(12, 0)  // 12:00
+      break
+    case '4':
+      event.preventDefault()
+      setTimeOfDay(18, 0)  // 18:00
+      break
+
+    // 缩放控制
+    case '+':
+    case '=':
+      event.preventDefault()
+      zoomIn()
+      break
+    case '-':
+    case '_':
+      event.preventDefault()
+      zoomOut()
+      break
+    case '0':
+      event.preventDefault()
+      resetZoom()
+      break
+
+    // 预设缩放
+    case '5':
+      event.preventDefault()
+      setZoom(0.5)   // 50%
+      break
+    case '6':
+      event.preventDefault()
+      setZoom(0.75)  // 75%
+      break
+    case '7':
+      event.preventDefault()
+      setZoom(1)     // 100%
+      break
+    case '8':
+      event.preventDefault()
+      setZoom(1.25)  // 125%
+      break
+    case '9':
+      event.preventDefault()
+      setZoom(1.5)   // 150%
+      break
+
+    // 平移控制
+    case 'ArrowUp':
+      event.preventDefault()
+      moveUp()
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      moveDown()
+      break
+    case 'ArrowLeft':
+      event.preventDefault()
+      moveLeft()
+      break
+    case 'ArrowRight':
+      event.preventDefault()
+      moveRight()
+      break
+
+    // 重置平移
+    case 'Delete':
+    case 'Backspace':
+      event.preventDefault()
+      resetOffset()
+      break
+  }
+}
+
+// 生命周期钩子
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+})
+
 onUnmounted(() => {
   pause()
+  window.removeEventListener('keydown', handleKeyDown)
 })
 </script>
 
@@ -966,5 +1171,51 @@ onUnmounted(() => {
 
 .offset-btn:nth-child(2) {
   width: 50px; /* 重置按钮稍微宽一些 */
+}
+
+.shortcuts-hint {
+  border-top: 1px solid #444;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.hint-title {
+  font-size: 12px;
+  font-weight: bold;
+  color: #ffcc00;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.shortcuts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.shortcut-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 6px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.key {
+  background: #333;
+  color: #ffcc00;
+  padding: 2px 4px;
+  border-radius: 2px;
+  font-weight: bold;
+  font-family: 'Courier New', monospace;
+  font-size: 9px;
+}
+
+.desc {
+  color: #ccc;
+  font-size: 9px;
 }
 </style>
