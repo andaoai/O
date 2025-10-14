@@ -24,7 +24,10 @@
       "mcp__playwright__browser_click",
       "mcp__playwright__browser_hover",
       "Bash(npm run test:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "mcp__playwright__browser_fill_form",
+      "Bash(node:*)",
+      "Bash(gh pr:*)"
     ],
     "deny": [],
     "ask": []

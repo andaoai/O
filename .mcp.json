@@ -15,6 +15,14 @@
         "@playwright/mcp@latest"
       ],
       "env": {}
+    },
+    "sequential-thinking": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "env": {}
     }
   }
 }
