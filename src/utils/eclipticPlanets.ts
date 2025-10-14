@@ -333,31 +333,44 @@ export function getMoonPosition(date: Date = new Date()): MoonData {
 }
 
 /**
- * 计算月球轨道在平面上的投影中心
- * 由于月球轨道与黄道面有倾角，在平面投影上会形成不同的圆心
+ * 计算月球轨道椭圆的参数
+ * 重新设计：白道椭圆的中心应该在黄道中心，椭圆的长轴通过升交点和降交点
  *
  * @param moonData 月球数据
  * @param baseRadius 基础轨道半径
- * @returns 投影中心的偏移量
+ * @returns 椭圆参数
  */
-export function calculateMoonOrbitCenter(
+export function calculateMoonOrbitEllipse(
   moonData: MoonData,
-  baseRadius: number = 160
-): { x: number, y: number } {
+  baseRadius: number = 120
+): {
+  semiMajorAxis: number    // 半长轴
+  semiMinorAxis: number    // 半短轴
+  rotation: number         // 椭圆旋转角度（弧度）
+} {
   // 将倾角转换为弧度
   const inclination = moonData.orbitalInclination * Math.PI / 180
 
-  // 计算投影偏移
-  // 当轨道有倾角时，在平面上的投影会形成椭圆，中心会偏移
-  const offsetX = baseRadius * Math.sin(inclination) * Math.cos(moonData.ascendingNode * Math.PI / 180)
-  const offsetY = baseRadius * Math.sin(inclination) * Math.sin(moonData.ascendingNode * Math.PI / 180)
+  // 将升交点转换为弧度
+  const ascendingNodeAngle = moonData.ascendingNode * Math.PI / 180
 
-  return { x: offsetX, y: offsetY }
+  // 椭圆参数
+  const semiMajorAxis = baseRadius  // 半长轴（保持原大小）
+  const semiMinorAxis = baseRadius * Math.cos(inclination)  // 半短轴（由于倾角投影）
+
+  // 椭圆旋转角度：升交点方向 + 90度，使长轴对准升交点-降交点连线
+  const rotation = ascendingNodeAngle + Math.PI / 2
+
+  return {
+    semiMajorAxis,
+    semiMinorAxis,
+    rotation
+  }
 }
 
 /**
  * 将月球黄道位置转换为显示坐标
- * 考虑轨道倾角导致的投影变化
+ * 使用椭圆轨道计算，椭圆中心在黄道中心
  *
  * @param moonData 月球数据
  * @param centerX 黄道中心X坐标
@@ -369,21 +382,28 @@ export function convertMoonToDisplayPosition(
   moonData: MoonData,
   centerX: number,
   centerY: number,
-  baseRadius: number = 160
+  baseRadius: number = 120
 ): { x: number, y: number } {
-  // 计算月球轨道的投影中心
-  const orbitCenter = calculateMoonOrbitCenter(moonData, baseRadius)
+  // 获取椭圆参数
+  const ellipse = calculateMoonOrbitEllipse(moonData, baseRadius)
 
-  // 将倾角转换为弧度
-  const inclination = moonData.orbitalInclination * Math.PI / 180
+  // 月球在椭圆轨道上的角度（相对于升交点）
+  // 需要调整角度，因为椭圆已经旋转了
+  const moonAngle = moonData.eclipticLongitude * Math.PI / 180 - ellipse.rotation
 
-  // 计算在倾斜轨道上的位置
-  const angle = moonData.eclipticLongitude * Math.PI / 180
-  const radius = baseRadius * Math.cos(inclination) // 考虑倾角的投影半径
+  // 在椭圆坐标系中的位置
+  const localX = ellipse.semiMajorAxis * Math.cos(moonAngle)
+  const localY = ellipse.semiMinorAxis * Math.sin(moonAngle)
 
-  // 计算实际位置（考虑轨道中心的偏移）
-  const x = centerX + orbitCenter.x + radius * Math.cos(angle)
-  const y = centerY + orbitCenter.y + radius * Math.sin(angle)
+  // 旋转椭圆到正确方向
+  const cosRotation = Math.cos(ellipse.rotation)
+  const sinRotation = Math.sin(ellipse.rotation)
+  const rotatedX = localX * cosRotation - localY * sinRotation
+  const rotatedY = localX * sinRotation + localY * cosRotation
+
+  // 椭圆中心就在黄道中心，不需要偏移
+  const x = centerX + rotatedX
+  const y = centerY + rotatedY
 
   return { x, y }
 }

@@ -31,7 +31,8 @@
       "mcp__playwright__browser_press_key",
       "WebSearch",
       "WebFetch(domain:astronomy.readthedocs.io)",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:en.wikipedia.org)"
     ],
     "deny": [],
     "ask": []

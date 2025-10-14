@@ -5,7 +5,7 @@ import { useAnimation, AnimationType } from '@/composables/useAnimation'
 import {
   getMoonPosition,
   convertMoonToDisplayPosition,
-  calculateMoonOrbitCenter,
+  calculateMoonOrbitEllipse,
   type MoonData
 } from '@/utils/eclipticPlanets'
 
@@ -114,28 +114,51 @@ watch(() => props.controlledTime?.getTime(), (newTimestamp) => {
   }
 }, { immediate: true })
 
-// 生成月球轨道路径（考虑倾角的椭圆轨道）
+// 生成月球轨道路径（简化的椭圆，中心在黄道中心）
 const generateMoonOrbitPath = (centerX: number, centerY: number) => {
   const moon = moonData.value
   const radius = props.moonOrbitRadius
 
-  // 计算月球轨道的投影中心
-  const orbitCenter = calculateMoonOrbitCenter(moon, radius)
+  // 获取椭圆参数
+  const ellipse = calculateMoonOrbitEllipse(moon, radius)
 
-  // 将倾角转换为弧度
-  const inclination = moon.orbitalInclination * Math.PI / 180
-
-  // 计算椭圆参数（考虑倾角的投影）
-  const a = radius // 半长轴
-  const b = radius * Math.cos(inclination) // 半短轴（投影后）
-
-  const actualCenterX = centerX + orbitCenter.x
-  const actualCenterY = centerY + orbitCenter.y
+  // 椭圆中心就在黄道中心，不需要偏移
+  const actualCenterX = centerX
+  const actualCenterY = centerY
 
   // 生成椭圆路径
-  const path = `M ${actualCenterX + a},${actualCenterY} A ${a},${b} 0 1,0 ${actualCenterX + a},${actualCenterY + 0.1}`
+  const a = ellipse.semiMajorAxis
+  const b = ellipse.semiMinorAxis
 
-  return path
+  // 由于椭圆是旋转的，我们需要用SVG的椭圆路径
+  // 但是SVG ellipse不支持旋转，所以我们用路径生成多个点
+  const points = []
+  const numPoints = 72 // 每5度一个点
+
+  for (let i = 0; i <= numPoints; i++) {
+    const angle = (i / numPoints) * 2 * Math.PI
+
+    // 在未旋转的椭圆坐标系中的位置
+    const localX = a * Math.cos(angle)
+    const localY = b * Math.sin(angle)
+
+    // 旋转椭圆
+    const cosRotation = Math.cos(ellipse.rotation)
+    const sinRotation = Math.sin(ellipse.rotation)
+    const rotatedX = localX * cosRotation - localY * sinRotation
+    const rotatedY = localX * sinRotation + localY * cosRotation
+
+    // 转换到屏幕坐标
+    const x = actualCenterX + rotatedX
+    const y = actualCenterY + rotatedY
+
+    points.push(`${i === 0 ? 'M' : 'L'} ${x},${y}`)
+  }
+
+  // 闭合路径
+  points.push('Z')
+
+  return points.join(' ')
 }
 
 // 计算月球当前位置
