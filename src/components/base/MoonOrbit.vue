@@ -40,14 +40,11 @@ interface Props {
   showOrbits?: boolean     // 显示轨道
   showLabels?: boolean     // 显示标签
   showGrid?: boolean       // 显示网格
-  showWhitePath?: boolean  // 显示白道轨道
 
   // 轨道样式
   orbitColor?: string
   orbitWidth?: number
   orbitStyle?: 'solid' | 'dashed' | 'dotted'
-  whitePathColor?: string  // 白道颜色
-  whitePathWidth?: number  // 白道宽度
 
   // 月球样式
   defaultMoonSize?: number
@@ -80,12 +77,9 @@ const props = withDefaults(defineProps<Props>(), {
   showOrbits: true,
   showLabels: true,
   showGrid: false,
-  showWhitePath: true,
-  orbitColor: '#444444',
-  orbitWidth: 1,
-  orbitStyle: 'solid',
-  whitePathColor: '#8B7D6B',
-  whitePathWidth: 2,
+  orbitColor: '#8B7D6B',
+  orbitWidth: 2,
+  orbitStyle: 'dashed',
   defaultMoonSize: 5,
   defaultMoonColor: '#F0F0F0',
   labelColor: '#cccccc',
@@ -140,14 +134,7 @@ const whitePathCenter = computed(() => {
   return { x: centerX, y: centerY }
 })
 
-// 生成白道路径（以白道中心为中心的圆或椭圆）
-const generateWhitePath = (centerX: number, centerY: number) => {
-  const radius = (props.maxRadius + props.minRadius) / 2
-
-  return `M ${centerX + radius},${centerY} A ${radius},${radius} 0 1,0 ${centerX + radius},${centerY + 0.1}`
-}
-
-// 生成轨道路径（考虑离心率的椭圆轨道，以白道中心为中心）
+// 生成月球轨道路径（考虑离心率的椭圆轨道，以白道中心为中心）
 const generateOrbitPath = (moon: Moon, centerX: number, centerY: number) => {
   const radius = moon.orbitRadius || moon.distance
   const eccentricity = moon.orbitEccentricity || 0
@@ -245,30 +232,17 @@ const getMoonColor = (moon: Moon) => {
           />
         </g>
 
-        <!-- 白道轨道（以白道中心为中心） -->
-        <g v-if="showWhitePath" class="white-path">
-          <path
-            :d="generateWhitePath(slotProps.centerX, slotProps.centerY)"
-            fill="none"
-            :stroke="whitePathColor"
-            :stroke-width="whitePathWidth"
-            stroke-dasharray="8,4"
-            opacity="0.8"
-          />
-        </g>
-
-        <!-- 月球轨道 -->
-        <g v-if="showOrbits" class="orbits">
+        <!-- 月球轨道（白道） -->
+        <g v-if="showOrbits" class="moon-orbit-path">
           <path
             v-for="(moon, index) in moons"
-            :key="`orbit-${index}`"
-            v-show="moon.showOrbit !== false"
+            :key="`moon-orbit-${index}`"
             :d="generateOrbitPath(moon, slotProps.centerX, slotProps.centerY)"
             fill="none"
             :stroke="moon.orbitColor || orbitColor"
             :stroke-width="moon.orbitWidth || orbitWidth"
-            :stroke-dasharray="(moon.orbitStyle || orbitStyle) === 'dashed' ? '5,5' : (moon.orbitStyle || orbitStyle) === 'dotted' ? '2,2' : ''"
-            opacity="0.6"
+            :stroke-dasharray="(moon.orbitStyle || orbitStyle) === 'dashed' ? '8,4' : (moon.orbitStyle || orbitStyle) === 'dotted' ? '2,2' : ''"
+            opacity="0.8"
           />
         </g>
 

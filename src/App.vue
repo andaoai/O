@@ -38,8 +38,8 @@ const moonData = ref<MoonData>(getMoonData())
 // 黄道轨道半径（所有行星都在同一条黄道上）
 const ECLIPTIC_RADIUS = 120
 
-// 白道轨道半径
-const WHITE_PATH_RADIUS = 100
+// 白道轨道半径（与黄道相同）
+const WHITE_PATH_RADIUS = 120
 
 // 转换行星数据为StarOrbit组件所需的格式
 const celestialBodies = computed(() => {
@@ -220,17 +220,14 @@ onMounted(() => {
         :show-moons="true"
         :show-orbits="true"
         :show-labels="true"
-        :show-white-path="true"
         :animate="true"
         :animation-speed="0.3"
         :enable-rotation="true"
         :rotation-speed="0.2"
         :label-font-size="12"
         label-color="#F0F0F0"
-        white-path-color="#8B7D6B"
-        :white-path-width="2"
         orbit-color="#8B7D6B"
-        :orbit-width="1.5"
+        :orbit-width="2"
         :default-moon-size="8"
         default-moon-color="#F0F0F0"
       />
