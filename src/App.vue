@@ -141,22 +141,22 @@ onMounted(() => {
       <TwentyEightConstellations />
 
       <!-- 六十甲子圆环（第三层） -->
-      <SixtyJiazi />
+      <!-- <SixtyJiazi /> -->
 
       <!-- 十天干圆环（第四层） -->
-      <HeavenlyStems />
+      <!-- <HeavenlyStems /> -->
 
       <!-- 十二地支圆环（第五层） -->
       <EarthlyBranches />
 
       <!-- 八门圆环（第六层） -->
-      <EightGates />
+      <!-- <EightGates /> -->
 
       <!-- 十二长生圆环（第七层） -->
-      <TwelveLongevity />
+      <!-- <TwelveLongevity /> -->
 
       <!-- 四象圆环（第八层） -->
-      <SiXiang />
+      <!-- <SiXiang /> -->
 
       <!-- 太阳系天体轨道系统（第九层） -->
       <StarOrbit
