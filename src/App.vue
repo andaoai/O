@@ -10,7 +10,7 @@ import SiXiang from './components/SiXiang.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
-import TimeControl from './components/TimeControl.vue'
+import Control from './components/Control.vue'
 import { calculateSolarOrbitAngle, calculateLunarOrbitAngle } from './utils/solarTime'
 
 
@@ -64,6 +64,13 @@ const celestialBodies = ref([
 // 时间控制
 const controlledTime = ref(new Date())
 
+// 缩放控制
+const zoomLevel = ref(1)
+
+// 平移控制
+const offsetX = ref(0)
+const offsetY = ref(0)
+
 // 更新太阳角度（使用控制的时间）
 const updateSolarAngle = () => {
   const solarAngle = calculateSolarOrbitAngle(0, controlledTime.value)
@@ -87,6 +94,17 @@ const handleTimeChange = (newTime: Date) => {
   updateLunarAngle()
 }
 
+// 缩放变化处理器
+const handleZoomChange = (newZoom: number) => {
+  zoomLevel.value = newZoom
+}
+
+// 平移变化处理器
+const handleOffsetChange = (newOffset: { x: number, y: number }) => {
+  offsetX.value = newOffset.x
+  offsetY.value = newOffset.y
+}
+
 onMounted(() => {
   // 立即更新一次
   updateSolarAngle()
@@ -97,8 +115,12 @@ onMounted(() => {
 
 <template>
   <div class="container">
-    <svg width="1200" height="1200" viewBox="0 0 1200 1200">
-      <g transform="translate(600, 600)">
+    <svg
+      :width="1200"
+      :height="1200"
+      viewBox="0 0 1200 1200"
+    >
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel})`">
 
       <!-- 360度刻度尺（最外层） -->
       <CircleScale
@@ -164,10 +186,15 @@ onMounted(() => {
 
     </svg>
 
-    <!-- 时间控制面板 -->
-    <TimeControl
+    <!-- 控制面板 -->
+    <Control
       v-model="controlledTime"
+      v-model:zoom="zoomLevel"
+      v-model:offsetX="offsetX"
+      v-model:offsetY="offsetY"
       @time-change="handleTimeChange"
+      @zoom-change="handleZoomChange"
+      @offset-change="handleOffsetChange"
     />
 
     </div>

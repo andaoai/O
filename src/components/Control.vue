@@ -1,6 +1,6 @@
 <template>
-  <div class="time-control">
-    <h3 class="title">时间控制</h3>
+  <div class="control">
+    <h3 class="title">控制面板</h3>
 
     <!-- 时间显示 -->
     <div class="time-display">
@@ -100,27 +100,165 @@
         </button>
       </div>
     </div>
+
+    <!-- 缩放控制 -->
+    <div class="zoom-control">
+      <label>缩放控制:</label>
+      <div class="zoom-display">
+        {{ internalZoom ? Math.round(internalZoom * 100) + '%' : '100%' }}
+      </div>
+      <div class="zoom-buttons">
+        <button
+          class="zoom-btn"
+          @click="zoomOut"
+        >
+          -
+        </button>
+        <button
+          class="zoom-btn"
+          @click="resetZoom"
+        >
+          重置
+        </button>
+        <button
+          class="zoom-btn"
+          @click="zoomIn"
+        >
+          +
+        </button>
+      </div>
+      <div class="zoom-presets">
+        <button
+          class="preset-btn"
+          @click="setZoom(0.5)"
+        >
+          50%
+        </button>
+        <button
+          class="preset-btn"
+          @click="setZoom(0.75)"
+        >
+          75%
+        </button>
+        <button
+          class="preset-btn"
+          @click="setZoom(1)"
+        >
+          100%
+        </button>
+        <button
+          class="preset-btn"
+          @click="setZoom(1.25)"
+        >
+          125%
+        </button>
+        <button
+          class="preset-btn"
+          @click="setZoom(1.5)"
+        >
+          150%
+        </button>
+      </div>
+    </div>
+
+    <!-- 平移控制 -->
+    <div class="offset-control">
+      <label>平移控制:</label>
+      <div class="offset-display">
+        X: {{ internalOffsetX }} Y: {{ internalOffsetY }}
+      </div>
+      <div class="offset-controls">
+        <div class="offset-row">
+          <button
+            class="offset-btn"
+            @click="moveUp"
+          >
+            ↑
+          </button>
+        </div>
+        <div class="offset-row">
+          <button
+            class="offset-btn"
+            @click="moveLeft"
+          >
+            ←
+          </button>
+          <button
+            class="offset-btn"
+            @click="resetOffset"
+          >
+            重置
+          </button>
+          <button
+            class="offset-btn"
+            @click="moveRight"
+          >
+            →
+          </button>
+        </div>
+        <div class="offset-row">
+          <button
+            class="offset-btn"
+            @click="moveDown"
+          >
+            ↓
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 
 interface Props {
   modelValue?: Date
+  zoom?: number
+  offsetX?: number
+  offsetY?: number
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<{
   'update:modelValue': [value: Date]
   'timeChange': [value: Date]
+  'update:zoom': [value: number]
+  'zoomChange': [value: number]
+  'update:offsetX': [value: number]
+  'update:offsetY': [value: number]
+  'offsetChange': [value: { x: number, y: number }]
 }>()
 
 // 响应式数据
 const currentTime = ref(new Date())
 const isPlaying = ref(false)
 const playSpeed = ref(60) // 默认1分钟/秒
+const internalZoom = ref(1) // 内部缩放状态，默认为1
+const internalOffsetX = ref(0) // 内部X轴偏移，默认为0
+const internalOffsetY = ref(0) // 内部Y轴偏移，默认为0
 let animationId: number | null = null
+
+// 监听 props.zoom 的变化
+watch(() => props.zoom, (newZoom) => {
+  if (newZoom !== undefined && newZoom !== null) {
+    internalZoom.value = newZoom
+  }
+}, { immediate: true })
+
+// 监听 props.offsetX 的变化
+watch(() => props.offsetX, (newOffsetX) => {
+  if (newOffsetX !== undefined && newOffsetX !== null) {
+    internalOffsetX.value = newOffsetX
+  }
+}, { immediate: true })
+
+// 监听 props.offsetY 的变化
+watch(() => props.offsetY, (newOffsetY) => {
+  if (newOffsetY !== undefined && newOffsetY !== null) {
+    internalOffsetY.value = newOffsetY
+  }
+}, { immediate: true })
 
 // 计算属性
 const formattedTime = computed(() => formatTime(currentTime.value))
@@ -218,6 +356,59 @@ const updatePlaySpeed = () => {
   }
 }
 
+// 缩放功能
+const updateZoom = (newZoom: number) => {
+  const clampedZoom = Math.max(0.1, Math.min(3, newZoom)) // 限制在 0.1 到 3 之间
+  internalZoom.value = clampedZoom
+  emit('update:zoom', clampedZoom)
+  emit('zoomChange', clampedZoom)
+}
+
+const zoomIn = () => {
+  updateZoom(internalZoom.value + 0.1)
+}
+
+const zoomOut = () => {
+  updateZoom(internalZoom.value - 0.1)
+}
+
+const resetZoom = () => {
+  updateZoom(1)
+}
+
+const setZoom = (zoom: number) => {
+  updateZoom(zoom)
+}
+
+// 平移功能
+const updateOffset = (newOffsetX: number, newOffsetY: number) => {
+  internalOffsetX.value = newOffsetX
+  internalOffsetY.value = newOffsetY
+  emit('update:offsetX', newOffsetX)
+  emit('update:offsetY', newOffsetY)
+  emit('offsetChange', { x: newOffsetX, y: newOffsetY })
+}
+
+const moveLeft = () => {
+  updateOffset(internalOffsetX.value - 50, internalOffsetY.value)
+}
+
+const moveRight = () => {
+  updateOffset(internalOffsetX.value + 50, internalOffsetY.value)
+}
+
+const moveUp = () => {
+  updateOffset(internalOffsetX.value, internalOffsetY.value - 50)
+}
+
+const moveDown = () => {
+  updateOffset(internalOffsetX.value, internalOffsetY.value + 50)
+}
+
+const resetOffset = () => {
+  updateOffset(0, 0)
+}
+
 // 清理
 onUnmounted(() => {
   pause()
@@ -225,7 +416,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.time-control {
+.control {
   position: fixed;
   right: 20px;
   top: 20px;
@@ -384,5 +575,147 @@ onUnmounted(() => {
 
 .jump-btn:active {
   background: #444;
+}
+
+.zoom-control {
+  text-align: center;
+  border-top: 1px solid #444;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.zoom-control label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.zoom-display {
+  font-size: 18px;
+  font-weight: bold;
+  color: #00ff00;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.zoom-buttons {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  justify-content: center;
+}
+
+.zoom-btn {
+  width: 40px;
+  padding: 6px;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s;
+}
+
+.zoom-btn:hover {
+  background: #444;
+  border-color: #666;
+}
+
+.zoom-btn:active {
+  background: #555;
+}
+
+.zoom-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  gap: 2px;
+}
+
+.preset-btn {
+  padding: 4px 2px;
+  background: #222;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  transition: all 0.2s;
+}
+
+.preset-btn:hover {
+  background: #333;
+  border-color: #555;
+}
+
+.preset-btn:active {
+  background: #444;
+}
+
+.offset-control {
+  text-align: center;
+  border-top: 1px solid #444;
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.offset-control label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: #ccc;
+}
+
+.offset-display {
+  font-size: 14px;
+  font-weight: bold;
+  color: #00ff00;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.offset-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.offset-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+.offset-btn {
+  width: 40px;
+  height: 30px;
+  padding: 4px;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.offset-btn:hover {
+  background: #444;
+  border-color: #666;
+}
+
+.offset-btn:active {
+  background: #555;
+}
+
+.offset-btn:nth-child(2) {
+  width: 50px; /* 重置按钮稍微宽一些 */
 }
 </style>
