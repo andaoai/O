@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
+import SixtyJiazi from './components/SixtyJiazi.vue'
 import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
 import SiXiang from './components/SiXiang.vue'
@@ -117,22 +118,25 @@ onMounted(() => {
       <!-- 二十八星宿圆环（第二层） -->
       <TwentyEightConstellations />
 
-      <!-- 十天干圆环（第二层） -->
+      <!-- 六十甲子圆环（第三层） -->
+      <SixtyJiazi />
+
+      <!-- 十天干圆环（第四层） -->
       <HeavenlyStems />
 
-      <!-- 十二地支圆环（第三层） -->
+      <!-- 十二地支圆环（第五层） -->
       <EarthlyBranches />
 
-      <!-- 八门圆环（第四层） -->
+      <!-- 八门圆环（第六层） -->
       <EightGates />
 
-      <!-- 十二长生圆环（第五层） -->
+      <!-- 十二长生圆环（第七层） -->
       <TwelveLongevity />
 
-      <!-- 四象圆环（第六层） -->
+      <!-- 四象圆环（第八层） -->
       <SiXiang />
 
-      <!-- 太阳系天体轨道系统（第七层） -->
+      <!-- 太阳系天体轨道系统（第九层） -->
       <StarOrbit
         :stars="celestialBodies"
         :max-radius="90"
