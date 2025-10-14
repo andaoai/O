@@ -9,6 +9,7 @@ import TwelveLongevity from './components/TwelveLongevity.vue'
 import SiXiang from './components/SiXiang.vue'
 import Taiji from './components/Taiji.vue'
 import StarOrbit from './components/base/StarOrbit.vue'
+import MoonOrbit from './components/base/MoonOrbit.vue'
 import CircleScale from './components/base/CircleScale.vue'
 import Control from './components/Control.vue'
 import { calculateSolarOrbitAngle, calculateLunarOrbitAngle } from './utils/solarTime'
@@ -152,6 +153,27 @@ onMounted(() => {
         orbit-color="#666666"
         :orbit-width="2"
         :default-star-size="6"
+      />
+
+      <!-- 月球轨道系统（第十层） -->
+      <MoonOrbit
+        :controlled-time="controlledTime"
+        :max-radius="180"
+        :min-radius="80"
+        :moon-orbit-radius="120"
+        :show-moon="true"
+        :show-orbit="true"
+        :show-label="true"
+        :show-phase="true"
+        :animate="true"
+        :animation-speed="0.8"
+        :enable-rotation="true"
+        :rotation-speed="0.2"
+        :label-font-size="14"
+        label-color="#ffffff"
+        orbit-color="#888888"
+        :orbit-width="2"
+        :default-moon-size="8"
       />
 
       <!-- 太极图（中心） -->

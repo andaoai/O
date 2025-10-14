@@ -28,7 +28,9 @@
       "mcp__playwright__browser_fill_form",
       "Bash(node:*)",
       "Bash(gh pr:*)",
-      "mcp__playwright__browser_press_key"
+      "mcp__playwright__browser_press_key",
+      "WebSearch",
+      "WebFetch(domain:astronomy.readthedocs.io)"
     ],
     "deny": [],
     "ask": []

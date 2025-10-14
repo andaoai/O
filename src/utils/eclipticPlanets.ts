@@ -237,6 +237,148 @@ export function calculateDisplayRadius(
  * @param observer 观测者位置
  * @returns 行星详细信息
  */
+/**
+ * 月球数据接口
+ */
+export interface MoonData {
+  name: string
+  chineseName: string
+  color: string
+  magnitude: number
+  // 黄道位置（0-360度）
+  eclipticLongitude: number
+  // 黄道纬度（度）
+  eclipticLatitude: number
+  // 距离地球的距离（千米）
+  distanceFromEarth: number
+  // 月球轨道参数
+  orbitalInclination: number  // 轨道倾角（相对黄道面）
+  ascendingNode: number       // 升交点黄道经度
+  orbitalPhase: number        // 月相（0-1）
+}
+
+/**
+ * 获取月球的黄道位置
+ * 使用astronomy-engine计算月球的位置
+ *
+ * @param date 日期时间，默认为当前时间
+ * @returns 月球数据
+ */
+export function getMoonPosition(date: Date = new Date()): MoonData {
+  try {
+    const astroTime = new Astronomy.AstroTime(date)
+
+    // 使用正确的API计算月球位置
+    const moonEcliptic = Astronomy.EclipticGeoMoon(astroTime)
+
+    // 计算月相
+    const moonPhaseValue = Astronomy.MoonPhase(astroTime)
+
+    // 计算月球的地心向量（用于距离）
+    const moonVector = Astronomy.GeoVector(Astronomy.Body.Moon, astroTime, true)
+
+    // 使用固定的升交点值作为默认值（月球的升交点大约在0度附近）
+    // 实际的升交点会以18.6年为周期变化，但对于日常演示我们可以使用固定值
+    const ascendingNode = 0 // 简化为0度，即春分点方向
+
+    // 将月相经度转换为月相值（0-1）
+    // 月相经度：0°=新月，90°=上弦月，180°=满月，270°=下弦月
+    const orbitalPhase = (moonPhaseValue % 360) / 360
+
+    return {
+      name: 'Moon',
+      chineseName: '月球',
+      color: '#f0f0f0',
+      magnitude: orbitalPhase === 0.5 ? -12.6 : -12.6 + orbitalPhase * 2, // 满月最亮
+      eclipticLongitude: moonEcliptic.lon,
+      eclipticLatitude: moonEcliptic.lat,
+      distanceFromEarth: moonVector.Length() * 149597870.7, // 转换为千米
+      orbitalInclination: 5.145, // 月球轨道相对黄道面的倾角
+      ascendingNode: ascendingNode, // 升交点黄道经度
+      orbitalPhase: orbitalPhase // 月相（0-1，0为新月，0.5为满月）
+    }
+  } catch (error) {
+    console.error('计算月球位置失败:', error)
+    return {
+      name: 'Moon',
+      chineseName: '月球',
+      color: '#f0f0f0',
+      magnitude: -12.6,
+      eclipticLongitude: 0,
+      eclipticLatitude: 0,
+      distanceFromEarth: 384400,
+      orbitalInclination: 5.145,
+      ascendingNode: 0,
+      orbitalPhase: 0
+    }
+  }
+}
+
+/**
+ * 计算月球轨道在平面上的投影中心
+ * 由于月球轨道与黄道面有倾角，在平面投影上会形成不同的圆心
+ *
+ * @param moonData 月球数据
+ * @param baseRadius 基础轨道半径
+ * @returns 投影中心的偏移量
+ */
+export function calculateMoonOrbitCenter(
+  moonData: MoonData,
+  baseRadius: number = 160
+): { x: number, y: number } {
+  // 将倾角转换为弧度
+  const inclination = moonData.orbitalInclination * Math.PI / 180
+
+  // 计算投影偏移
+  // 当轨道有倾角时，在平面上的投影会形成椭圆，中心会偏移
+  const offsetX = baseRadius * Math.sin(inclination) * Math.cos(moonData.ascendingNode * Math.PI / 180)
+  const offsetY = baseRadius * Math.sin(inclination) * Math.sin(moonData.ascendingNode * Math.PI / 180)
+
+  return { x: offsetX, y: offsetY }
+}
+
+/**
+ * 将月球黄道位置转换为显示坐标
+ * 考虑轨道倾角导致的投影变化
+ *
+ * @param moonData 月球数据
+ * @param centerX 黄道中心X坐标
+ * @param centerY 黄道中心Y坐标
+ * @param baseRadius 基础轨道半径
+ * @returns 显示坐标
+ */
+export function convertMoonToDisplayPosition(
+  moonData: MoonData,
+  centerX: number,
+  centerY: number,
+  baseRadius: number = 160
+): { x: number, y: number } {
+  // 计算月球轨道的投影中心
+  const orbitCenter = calculateMoonOrbitCenter(moonData, baseRadius)
+
+  // 将倾角转换为弧度
+  const inclination = moonData.orbitalInclination * Math.PI / 180
+
+  // 计算在倾斜轨道上的位置
+  const angle = moonData.eclipticLongitude * Math.PI / 180
+  const radius = baseRadius * Math.cos(inclination) // 考虑倾角的投影半径
+
+  // 计算实际位置（考虑轨道中心的偏移）
+  const x = centerX + orbitCenter.x + radius * Math.cos(angle)
+  const y = centerY + orbitCenter.y + radius * Math.sin(angle)
+
+  return { x, y }
+}
+
+/**
+ * 获取行星的详细信息
+ * 包括当前位置、亮度等信息
+ *
+ * @param body 天体对象
+ * @param date 日期时间
+ * @param observer 观测者位置
+ * @returns 行星详细信息
+ */
 export function getPlanetInfo(
   body: Astronomy.Body,
   date: Date = new Date(),
