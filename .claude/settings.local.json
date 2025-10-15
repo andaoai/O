@@ -34,7 +34,9 @@
       "mcp__context7__get-library-docs",
       "WebFetch(domain:en.wikipedia.org)",
       "mcp__sequential-thinking__sequentialthinking",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

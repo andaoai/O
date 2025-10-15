@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import PolarCanvas from './base/PolarCanvas.vue'
+import { AstroTime, SunPosition, MakeTime } from 'astronomy-engine'
 
 /**
  * 太阳位置接口
@@ -22,8 +23,10 @@ interface SunPosition {
 interface Props {
   /** 黄道半径 */
   radius?: number
-  /** 太阳位置 */
+  /** 太阳位置（可选，如果不提供则根据时间计算） */
   sunPosition?: SunPosition
+  /** 观测时间（用于计算太阳位置） */
+  time?: Date
   /** 是否启用动画 */
   enableAnimation?: boolean
   /** 动画速度 */
@@ -42,14 +45,58 @@ const props = withDefaults(defineProps<Props>(), {
   showSunLabel: true
 })
 
+// 缓存太阳位置计算结果
+const cachedSunPosition = ref<SunPosition>({
+  longitude: 0,
+  symbol: '☉',
+  color: '#ffdd00',
+  size: 20
+})
+
 /**
- * 默认太阳位置（当前日期的太阳黄经）
+ * 使用 astronomy-engine 计算太阳的真实黄经位置
  */
-const defaultSunPosition = computed(() => {
-  const now = new Date()
-  const yearStart = new Date(now.getFullYear(), 0, 1)
-  const dayOfYear = Math.floor((now.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000))
-  const longitude = (dayOfYear * 360 / 365.25) % 360
+const calculateSunPosition = (time: Date): SunPosition => {
+  try {
+    // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
+    // MakeTime 接受单个 Date 对象作为参数
+    const astroTime = MakeTime(time)
+
+    // 使用 SunPosition 函数计算太阳的黄道坐标
+    const sunEcliptic = SunPosition(astroTime)
+
+    if (sunEcliptic) {
+      // 获取黄经（度数）， astronomy-engine 已经返回度数
+      const longitude = sunEcliptic.elon
+
+      // 根据黄经确定太阳颜色（可选：根据季节变化）
+      let color = '#ffdd00'
+      if (longitude >= 80 && longitude < 100) {
+        color = '#ff6666' // 夏至 - 偏红
+      } else if (longitude >= 170 && longitude < 190) {
+        color = '#ff8844' // 秋分 - 偏橙
+      } else if (longitude >= 260 && longitude < 280) {
+        color = '#6666ff' // 冬至 - 偏蓝
+      } else if (longitude >= 350 || longitude < 10) {
+        color = '#00ff88' // 春分 - 偏绿
+      }
+
+      return {
+        longitude,
+        symbol: '☉',
+        color,
+        size: 20
+      }
+    }
+  } catch (error) {
+    console.warn('计算太阳位置失败，使用简单计算:', error)
+  }
+
+  // 如果天文计算失败，使用简单计算作为后备
+  const yearStart = new Date(time.getFullYear(), 0, 1)
+  const dayOfYear = Math.floor((time.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000))
+  // 添加280度偏移以大致匹配春分点（3月21日左右在0度）
+  const longitude = (dayOfYear * 360 / 365.25 + 280) % 360
 
   return {
     longitude,
@@ -57,14 +104,33 @@ const defaultSunPosition = computed(() => {
     color: '#ffdd00',
     size: 20
   }
+}
+
+/**
+ * 默认太阳位置（使用 astronomy-engine 计算）
+ */
+const defaultSunPosition = computed(() => {
+  const time = props.time || new Date()
+  return calculateSunPosition(time)
 })
 
 /**
  * 当前太阳位置
  */
 const currentSunPosition = computed(() => {
-  return props.sunPosition || defaultSunPosition.value
+  return props.sunPosition || cachedSunPosition.value
 })
+
+// 监听时间变化，更新太阳位置
+watch(
+  () => props.time,
+  (newTime) => {
+    if (newTime && !props.sunPosition) {
+      cachedSunPosition.value = calculateSunPosition(newTime)
+    }
+  },
+  { immediate: true }
+)
 
 /**
  * 获取太阳在黄道上的坐标
@@ -98,6 +164,29 @@ const getSunCoordinates = (longitude: number) => {
           stroke-width="2"
           opacity="0.8"
         />
+
+        <!-- 春分点标记（0度） -->
+        <g class="vernal-equinox">
+          <line
+            :x1="slotProps.centerX + radius * 0.9"
+            :y1="slotProps.centerY"
+            :x2="slotProps.centerX + radius * 1.1"
+            :y2="slotProps.centerY"
+            stroke="#00ff88"
+            stroke-width="2"
+            opacity="0.8"
+          />
+          <text
+            :x="slotProps.centerX + radius * 1.25"
+            :y="slotProps.centerY"
+            fill="#00ff88"
+            font-size="12"
+            text-anchor="start"
+            dominant-baseline="middle"
+          >
+            春分
+          </text>
+        </g>
 
         <!-- 太阳 -->
         <g>
@@ -162,11 +251,15 @@ const getSunCoordinates = (longitude: number) => {
   transform-origin: center;
 }
 
-.solar-term {
+.solar-ecliptic {
   transition: all 0.3s ease;
 }
 
-.solar-term:hover {
+.vernal-equinox {
+  transition: all 0.3s ease;
+}
+
+.vernal-equinox:hover {
   filter: brightness(1.3);
 }
 </style>

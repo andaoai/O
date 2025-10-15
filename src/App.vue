@@ -68,12 +68,10 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
       <!-- 太阳黄道圆环（第二层） -->
       <SolarEcliptic
         :radius="160"
-        :sun-position="{ longitude: ((controlledTime.getMonth() * 30) + (controlledTime.getDate() * 360 / 365)) % 360 }"
+        :time="controlledTime"
         :enable-animation="true"
         :animation-speed="0.1"
-        :show-labels="false"
-        :show-degrees="false"
-        :show-sun-path="false"
+        :show-sun-label="true"
       />
 
       <!-- 二十八星宿圆环（第三层） -->
