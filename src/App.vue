@@ -7,7 +7,7 @@ import SixtyJiazi from './components/SixtyJiazi.vue'
 import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
 import SiXiang from './components/SiXiang.vue'
-import CircleScale from './components/base/CircleScale.vue'
+import DegreeScale from './components/DegreeScale.vue'
 import Control from './components/Control.vue'
 
 
@@ -49,7 +49,8 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel})`">
 
       <!-- 360度刻度尺（最外层） -->
-      <CircleScale
+      <!-- scale-interval使用6度间隔，共60个刻度，对应六十甲子 -->
+      <DegreeScale
         :radius="480"
         :inner-radius="460"
         :show-sectors="true"
@@ -57,7 +58,7 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
         :sector-opacity="0.1"
         :show-labels="true"
         label-color="#888888"
-        :scale-interval="5"
+        :scale-interval="6"
         :show-circle="true"
         circle-color="#666666"
         :circle-width="1"

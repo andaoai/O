@@ -74,7 +74,7 @@ const ELEMENTS = ['木', '火', '土', '金', '水']
  * @param date 日期
  * @returns 节气信息
  */
-export function getSolarTermInfo(date: Date): SolarTermInfo | null {
+export function getSolarTermInfo(date: Date): SolarTermInfo | undefined {
   try {
     // 简化的节气计算（基于月份的近似计算）
     const month = date.getMonth() + 1 // 1-12月
@@ -84,9 +84,9 @@ export function getSolarTermInfo(date: Date): SolarTermInfo | null {
     const termIndex = Math.floor((month - 1) * 2 + (day >= 15 ? 1 : 0))
 
     if (termIndex >= 0 && termIndex < 24) {
-      const termName = SOLAR_TERMS[termIndex]
+      const termName = SOLAR_TERMS[termIndex] || '立春'
       const nextIndex = (termIndex + 1) % 24
-      const nextTermName = SOLAR_TERMS[nextIndex]
+      const nextTermName = SOLAR_TERMS[nextIndex] || '立春'
 
       // 简化计算：下一个节气在下个月的同一天左右
       const daysToNext = termIndex % 2 === 1 ? 15 : 15
@@ -100,10 +100,10 @@ export function getSolarTermInfo(date: Date): SolarTermInfo | null {
       }
     }
 
-    return null
+    return undefined
   } catch (error) {
     console.error('获取节气信息失败:', error)
-    return null
+    return undefined
   }
 }
 
@@ -117,50 +117,58 @@ export function getGanzhiInfo(date: Date): GanzhiInfo {
   try {
     // 年干支计算（基于公历年份的简化计算）
     const year = date.getFullYear()
-    const yearStemIndex = (year - 4) % 10
-    const yearBranchIndex = (year - 4) % 12
-    const yearGanzhi = HEAVEN_STEMS[yearStemIndex] + EARTH_BRANCHES[yearBranchIndex]
+    const yearStemIndex = Math.abs((year - 4) % 10)
+    const yearBranchIndex = Math.abs((year - 4) % 12)
+    const yearStem = HEAVEN_STEMS[yearStemIndex] || '甲'
+    const yearBranch = EARTH_BRANCHES[yearBranchIndex] || '子'
+    const yearGanzhi = yearStem + yearBranch
 
     // 月干支（简化计算）
     const month = date.getMonth() + 1
-    const monthStemIndex = (yearStemIndex * 2 + month - 2) % 10
-    const monthBranchIndex = (month - 1) % 12
-    const monthGanzhi = HEAVEN_STEMS[monthStemIndex] + EARTH_BRANCHES[monthBranchIndex]
+    const monthStemIndex = Math.abs((yearStemIndex * 2 + month - 2) % 10)
+    const monthBranchIndex = Math.abs((month - 1) % 12)
+    const monthStem = HEAVEN_STEMS[monthStemIndex] || '甲'
+    const monthBranch = EARTH_BRANCHES[monthBranchIndex] || '子'
+    const monthGanzhi = monthStem + monthBranch
 
     // 日干支（基于1900年1月1日为庚子日的简化计算）
     const baseDate = new Date(1900, 0, 1) // 1900年1月1日，庚子日
     const daysDiff = Math.floor((date.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
-    const dayGanzhiIndex = daysDiff % 60
-    const dayGanzhi = HEAVEN_STEMS[dayGanzhiIndex % 10] + EARTH_BRANCHES[dayGanzhiIndex % 12]
+    const dayGanzhiIndex = Math.abs(daysDiff % 60)
+    const dayStem = HEAVEN_STEMS[dayGanzhiIndex % 10] || '甲'
+    const dayBranch = EARTH_BRANCHES[dayGanzhiIndex % 12] || '子'
+    const dayGanzhi = dayStem + dayBranch
 
     // 时干支
     const hour = date.getHours()
-    const hourBranchIndex = Math.floor((hour + 1) / 2) % 12
-    const hourStemIndex = (dayGanzhiIndex * 2 + hourBranchIndex) % 10
-    const hourGanzhi = HEAVEN_STEMS[hourStemIndex] + EARTH_BRANCHES[hourBranchIndex]
+    const hourBranchIndex = Math.abs(Math.floor((hour + 1) / 2) % 12)
+    const hourStemIndex = Math.abs((dayGanzhiIndex * 2 + hourBranchIndex) % 10)
+    const hourStem = HEAVEN_STEMS[hourStemIndex] || '甲'
+    const hourBranch = EARTH_BRANCHES[hourBranchIndex] || '子'
+    const hourGanzhi = hourStem + hourBranch
 
     return {
       year: {
-        stem: HEAVEN_STEMS[yearStemIndex],
-        branch: EARTH_BRANCHES[yearBranchIndex],
+        stem: yearStem,
+        branch: yearBranch,
         full: yearGanzhi,
-        element: ELEMENTS[Math.floor(yearStemIndex / 2)],
-        animal: ANIMALS[yearBranchIndex]
+        element: ELEMENTS[Math.floor(yearStemIndex / 2)] || '木',
+        animal: ANIMALS[yearBranchIndex] || '鼠'
       },
       month: {
-        stem: HEAVEN_STEMS[monthStemIndex],
-        branch: EARTH_BRANCHES[monthBranchIndex],
+        stem: monthStem,
+        branch: monthBranch,
         full: monthGanzhi
       },
       day: {
-        stem: HEAVEN_STEMS[dayGanzhiIndex % 10],
-        branch: EARTH_BRANCHES[dayGanzhiIndex % 12],
+        stem: dayStem,
+        branch: dayBranch,
         full: dayGanzhi,
-        element: ELEMENTS[Math.floor((dayGanzhiIndex % 10) / 2)]
+        element: ELEMENTS[Math.floor((dayGanzhiIndex % 10) / 2)] || '木'
       },
       hour: {
-        stem: HEAVEN_STEMS[hourStemIndex],
-        branch: EARTH_BRANCHES[hourBranchIndex],
+        stem: hourStem,
+        branch: hourBranch,
         full: hourGanzhi
       }
     }
