@@ -75,14 +75,14 @@ const totalRotation = computed(() => {
 })
 
 // 角度转换为笛卡尔坐标
-// 0度在上方，90度在左边，180度在下方，270度在右边
+// 使用标准坐标系统：0度在右边，90度在上方，180度在左边，270度在下方
 const polarToCartesian = (
   angle: number,
   radius: number,
   centerX: number = props.centerX,
   centerY: number = props.centerY
 ): Point => {
-  const angleRad = ((270 - angle) * Math.PI) / 180
+  const angleRad = (angle * Math.PI) / 180
   return {
     x: centerX + Math.cos(angleRad) * radius,
     y: centerY + Math.sin(angleRad) * radius

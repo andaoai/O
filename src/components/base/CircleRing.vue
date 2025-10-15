@@ -125,7 +125,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     const position = polarToCartesian(midAngle, textRadius)
 
     // 计算文字旋转角度，让文字底部指向圆心
-    const textRotation = (270 - midAngle) + 90
+    const textRotation = midAngle + 90
 
     // 检查是否为双字符标签且启用垂直排列（用于十二长生）
     const isTwoCharacter = item.label.length === 2 && props.verticalTwoChar

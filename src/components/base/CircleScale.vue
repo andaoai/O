@@ -139,7 +139,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     const position = polarToCartesian(midAngle, textRadius)
 
     // 计算文字旋转角度，让文字底部指向圆心
-    const textRotation = (270 - midAngle) + 90
+    const textRotation = midAngle + 90
 
     return {
       x: position.x,
