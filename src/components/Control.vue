@@ -61,6 +61,8 @@
           <option value="60">1分钟/秒</option>
           <option value="3600">1小时/秒</option>
           <option value="86400">1天/秒</option>
+          <option value="1296000">15天/秒</option>
+          <option value="2592000">1个月/秒</option>
         </select>
       </div>
 
