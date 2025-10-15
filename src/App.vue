@@ -6,6 +6,7 @@ import TwentyEightConstellations from './components/TwentyEightConstellations.vu
 import SixtyJiazi from './components/SixtyJiazi.vue'
 import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
+import tiangankongwang from './components/tianggankongwang.vue'
 import SiXiang from './components/SiXiang.vue'
 import DegreeScale from './components/DegreeScale.vue'
 import SolarEcliptic from './components/SolarEcliptic.vue'
@@ -82,10 +83,10 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
 
       <!-- 十天干圆环（第五层） -->
       <!-- <HeavenlyStems /> -->
-
+      <tiangankongwang />
       <!-- 十二地支圆环（第六层） -->
       <EarthlyBranches />
-
+      
       <!-- 八门圆环（第七层） -->
       <!-- <EightGates /> -->
 
