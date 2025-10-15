@@ -161,45 +161,7 @@
       </div>
     </div>
 
-    <!-- 快速跳转 -->
-    <div class="quick-jump">
-      <label>快速跳转:</label>
-      <div class="jump-buttons">
-        <button
-          class="jump-btn"
-          @click="setTimeOfDay(0, 0)"
-          title="数字键1"
-        >
-          00:00
-          <span class="key-hint">1</span>
-        </button>
-        <button
-          class="jump-btn"
-          @click="setTimeOfDay(6, 0)"
-          title="数字键2"
-        >
-          06:00
-          <span class="key-hint">2</span>
-        </button>
-        <button
-          class="jump-btn"
-          @click="setTimeOfDay(12, 0)"
-          title="数字键3"
-        >
-          12:00
-          <span class="key-hint">3</span>
-        </button>
-        <button
-          class="jump-btn"
-          @click="setTimeOfDay(18, 0)"
-          title="数字键4"
-        >
-          18:00
-          <span class="key-hint">4</span>
-        </button>
-      </div>
-    </div>
-
+  
     <!-- 缩放控制 -->
     <div class="zoom-control">
       <label>缩放控制:</label>
@@ -565,13 +527,6 @@ const stepYear = (years: number) => {
   updateTime(newTime)
 }
 
-// 设置一天中的特定时间
-const setTimeOfDay = (hours: number, minutes: number) => {
-  pause()
-  const newTime = new Date(currentTime.value)
-  newTime.setHours(hours, minutes, 0, 0)
-  updateTime(newTime)
-}
 
 // 更新播放速度
 const updatePlaySpeed = () => {
@@ -704,24 +659,7 @@ const handleKeyDown = (event: KeyboardEvent) => {
       }
       break
 
-    // 快速跳转
-    case '1':
-      event.preventDefault()
-      setTimeOfDay(0, 0)   // 00:00
-      break
-    case '2':
-      event.preventDefault()
-      setTimeOfDay(6, 0)   // 06:00
-      break
-    case '3':
-      event.preventDefault()
-      setTimeOfDay(12, 0)  // 12:00
-      break
-    case '4':
-      event.preventDefault()
-      setTimeOfDay(18, 0)  // 18:00
-      break
-
+  
     // 缩放控制
     case '+':
     case '=':
@@ -1071,46 +1009,6 @@ onUnmounted(() => {
   border-color: #777;
 }
 
-.quick-jump {
-  text-align: center;
-}
-
-.quick-jump label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #ccc;
-}
-
-.jump-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 4px;
-}
-
-.jump-btn {
-  padding: 6px 2px;
-  background: #222;
-  border: 1px solid #444;
-  border-radius: 4px;
-  color: #fff;
-  cursor: pointer;
-  font-size: 9px;
-  transition: all 0.2s;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-}
-
-.jump-btn:hover {
-  background: #333;
-  border-color: #555;
-}
-
-.jump-btn:active {
-  background: #444;
-}
 
 .zoom-control {
   text-align: center;
@@ -1271,10 +1169,6 @@ onUnmounted(() => {
   padding: 1px 2px;
 }
 
-.jump-btn .key-hint {
-  font-size: 7px;
-  padding: 1px 2px;
-}
 
 .zoom-btn .key-hint {
   font-size: 7px;
