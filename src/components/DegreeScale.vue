@@ -454,8 +454,8 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
             :y="label.y"
             :fill="labelColor"
             font-size="12"
-            text-anchor="middle"        <!-- 水平居中 -->
-            dominant-baseline="central" <!-- 垂直居中 -->
+            text-anchor="middle"
+            dominant-baseline="central"
             font-weight="bold"
             :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
           >
