@@ -8,6 +8,7 @@ import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
 import SiXiang from './components/SiXiang.vue'
 import DegreeScale from './components/DegreeScale.vue'
+import SolarEcliptic from './components/SolarEcliptic.vue'
 import Control from './components/Control.vue'
 
 
@@ -64,25 +65,36 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
         :circle-width="1"
       />
 
-      <!-- 二十八星宿圆环（第二层） -->
+      <!-- 太阳黄道圆环（第二层） -->
+      <SolarEcliptic
+        :radius="160"
+        :sun-position="{ longitude: ((controlledTime.getMonth() * 30) + (controlledTime.getDate() * 360 / 365)) % 360 }"
+        :enable-animation="true"
+        :animation-speed="0.1"
+        :show-labels="false"
+        :show-degrees="false"
+        :show-sun-path="false"
+      />
+
+      <!-- 二十八星宿圆环（第三层） -->
       <TwentyEightConstellations />
 
-      <!-- 六十甲子圆环（第三层） -->
+      <!-- 六十甲子圆环（第四层） -->
       <!-- <SixtyJiazi /> -->
 
-      <!-- 十天干圆环（第四层） -->
+      <!-- 十天干圆环（第五层） -->
       <!-- <HeavenlyStems /> -->
 
-      <!-- 十二地支圆环（第五层） -->
+      <!-- 十二地支圆环（第六层） -->
       <EarthlyBranches />
 
-      <!-- 八门圆环（第六层） -->
+      <!-- 八门圆环（第七层） -->
       <!-- <EightGates /> -->
 
-      <!-- 十二长生圆环（第七层） -->
+      <!-- 十二长生圆环（第八层） -->
       <!-- <TwelveLongevity /> -->
 
-      <!-- 四象圆环（第八层） -->
+      <!-- 四象圆环（第九层） -->
       <SiXiang />
       </g>
 
