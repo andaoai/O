@@ -26,6 +26,9 @@ const offsetY = ref(0)
 // 旋转方向控制
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 
+// 旋转角度控制
+const rotationAngle = ref(0)
+
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
   controlledTime.value = newTime
@@ -47,6 +50,11 @@ const handleRotationDirectionChange = (newDirection: 'clockwise' | 'counterclock
   rotationDirection.value = newDirection
 }
 
+// 旋转角度变化处理器
+const handleRotationAngleChange = (newAngle: number) => {
+  rotationAngle.value = newAngle
+}
+
 </script>
 
 <template>
@@ -56,7 +64,7 @@ const handleRotationDirectionChange = (newDirection: 'clockwise' | 'counterclock
       :height="1200"
       viewBox="0 0 1200 1200"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
 
       <!-- 360度刻度尺（最外层） -->
       <!-- scale-interval使用6度间隔，共60个刻度，对应六十甲子 -->
@@ -116,10 +124,12 @@ const handleRotationDirectionChange = (newDirection: 'clockwise' | 'counterclock
       v-model:offsetX="offsetX"
       v-model:offsetY="offsetY"
       v-model:rotation-direction="rotationDirection"
+      v-model:rotation-angle="rotationAngle"
       @time-change="handleTimeChange"
       @zoom-change="handleZoomChange"
       @offset-change="handleOffsetChange"
       @rotation-direction-change="handleRotationDirectionChange"
+      @rotation-angle-change="handleRotationAngleChange"
     />
 
   </div>

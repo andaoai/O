@@ -103,6 +103,8 @@ interface Props {
   showMoonLabel?: boolean
   /** 是否显示轨道交点 */
   showOrbitalNodes?: boolean
+  /** 旋转方向 */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -118,7 +120,8 @@ const props = withDefaults(defineProps<Props>(), {
   showMoon: true,
   showWhiteWay: true,
   showMoonLabel: true,
-  showOrbitalNodes: true
+  showOrbitalNodes: true,
+  rotationDirection: 'clockwise'
 })
 
 // 缓存太阳位置计算结果
@@ -465,6 +468,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
     :enable-animation="enableAnimation"
     :animation-speed="animationSpeed"
     :rotation="rotation"
+    :rotation-direction="rotationDirection"
     :center-x="0"
     :center-y="0"
   >
@@ -499,6 +503,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             font-size="12"
             text-anchor="start"
             dominant-baseline="middle"
+            :transform="`rotate(${rotationDirection === 'counterclockwise' ? -90 : 90} ${slotProps.centerX + radius * 1.25} ${slotProps.centerY})`"
           >
             春分
           </text>
