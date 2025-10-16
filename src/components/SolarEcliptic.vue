@@ -432,9 +432,9 @@ const getPlanetCoordinates = (longitude: number, latitude: number, baseRadius: n
  */
 const generateMoonOrbitPath = () => {
   const points = []
-  const steps = 360 // 生成360个点来形成完整的轨迹
+  const steps = 40 // 减少到40个点
 
-  for (let i = 0; i < steps; i++) {
+  for (let i = 0; i < steps - 2; i++) {  // 少生成两个点，避免路径闭合
     // 计算轨迹上的时间点（从当前时间开始，计算一个完整月周期）
     const daysOffset = (i / steps) * 29.53 // 月球轨道周期约29.53天
     const orbitTime = new Date((props.time || new Date()).getTime() + daysOffset * 24 * 60 * 60 * 1000)
@@ -574,8 +574,8 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               fill="none"
               stroke="#ffffff"
               stroke-width="1.5"
-              stroke-dasharray="5,3"
-              opacity="0.6"
+              stroke-dasharray="12,6"
+              opacity="0.7"
             />
 
             <!-- 白道标签 -->
@@ -588,7 +588,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               dominant-baseline="bottom"
               opacity="0.8"
             >
-              白道（月球轨道）
+              白道（月球轨道）- {{ moonOrbitPath.length }}个点
             </text>
           </g>
 
