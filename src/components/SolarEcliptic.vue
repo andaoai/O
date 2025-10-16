@@ -127,7 +127,7 @@ const props = withDefaults(defineProps<Props>(), {
 // 缓存太阳位置计算结果
 const cachedSunPosition = ref<SunPosition>({
   longitude: 0,
-  symbol: '☉',
+  symbol: '日',
   color: '#ffdd00',
   size: 20
 })
@@ -136,35 +136,35 @@ const cachedSunPosition = ref<SunPosition>({
 const PLANETS_CONFIG = {
   mercury: {
     name: '水星',
-    symbol: '☿',
+    symbol: '水',
     color: '#8C8C8C',
     size: 8,
     body: Body.Mercury
   },
   venus: {
     name: '金星',
-    symbol: '♀',
+    symbol: '金',
     color: '#FFC649',
     size: 14,
     body: Body.Venus
   },
   mars: {
     name: '火星',
-    symbol: '♂',
+    symbol: '火',
     color: '#CD5C5C',
     size: 10,
     body: Body.Mars
   },
   jupiter: {
     name: '木星',
-    symbol: '♃',
+    symbol: '木',
     color: '#DAA520',
     size: 18,
     body: Body.Jupiter
   },
   saturn: {
     name: '土星',
-    symbol: '♄',
+    symbol: '土',
     color: '#F4E7D7',
     size: 16,
     body: Body.Saturn
@@ -178,7 +178,7 @@ const cachedPlanetPositions = ref<Record<string, PlanetPosition>>({})
 const cachedMoonPosition = ref<MoonPosition>({
   longitude: 0,
   latitude: 0,
-  symbol: '☽',
+  symbol: '月',
   color: '#c0c0c0',
   size: 12
 })
@@ -242,7 +242,7 @@ const calculateMoonPosition = (time: Date): MoonPosition => {
   return {
     longitude,
     latitude,
-    symbol: '☽',
+    symbol: '月',
     color: '#c0c0c0',
     size: 12,
     distance
@@ -313,7 +313,7 @@ const calculateSunPosition = (time: Date): SunPosition => {
 
   return {
     longitude,
-    symbol: '☉',
+    symbol: '日',
     color: '#ffdd00',
     size: 20
   }
@@ -496,17 +496,6 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             stroke-width="2"
             opacity="0.8"
           />
-          <text
-            :x="slotProps.centerX + radius * 1.25"
-            :y="slotProps.centerY"
-            fill="#00ff88"
-            font-size="12"
-            text-anchor="start"
-            dominant-baseline="middle"
-            :transform="`rotate(${rotationDirection === 'counterclockwise' ? -90 : 90} ${slotProps.centerX + radius * 1.25} ${slotProps.centerY})`"
-          >
-            春分
-          </text>
         </g>
 
         <!-- 太阳 -->
@@ -535,10 +524,22 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             :fill="currentSunPosition.color || '#ffdd00'"
           />
 
+          <!-- 太阳符号 -->
+          <text
+            :x="slotProps.centerX + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).x"
+            :y="slotProps.centerY + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).y"
+            fill="#333"
+            font-size="14"
+            font-weight="bold"
+            text-anchor="middle"
+            dominant-baseline="middle"
+          >
+            {{ currentSunPosition.symbol }}
+          </text>
           </g>
 
         <!-- 太阳文字标签 -->
-        <g v-if="showSunLabel" class="sun-label">
+        <!-- <g v-if="showSunLabel" class="sun-label">
           <text
             :x="slotProps.centerX + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).x"
             :y="slotProps.centerY + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).y + (currentSunPosition.size || 20) + 20"
@@ -547,9 +548,9 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             text-anchor="middle"
             dominant-baseline="top"
           >
-            太阳 {{ Math.round(currentSunPosition.longitude) }}°
+            太阳
           </text>
-        </g>
+        </g> -->
 
         <!-- 白道（月球轨道） -->
         <g v-if="showWhiteWay" class="white-way">
@@ -566,19 +567,6 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               stroke-dasharray="12,6"
               opacity="0.7"
             />
-
-            <!-- 白道标签 -->
-            <text
-              :x="slotProps.centerX"
-              :y="slotProps.centerY - radius - 30"
-              fill="#ffffff"
-              font-size="11"
-              text-anchor="middle"
-              dominant-baseline="bottom"
-              opacity="0.8"
-            >
-              白道（月球轨道）- {{ generateMoonOrbitPath(slotProps.polarToCartesian).length }}个点
-            </text>
           </g>
 
           <!-- 轨道交点 -->
@@ -592,7 +580,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
                 fill="#00ff00"
                 opacity="0.9"
               />
-              <text
+              <!-- <text
                 :x="slotProps.centerX + getSunCoordinates(lunarOrbit.ascendingNodeLongitude, slotProps.polarToCartesian).x"
                 :y="slotProps.centerY + getSunCoordinates(lunarOrbit.ascendingNodeLongitude, slotProps.polarToCartesian).y + 15"
                 fill="#00ff00"
@@ -601,7 +589,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
                 dominant-baseline="top"
               >
                 升交点 {{ Math.round(lunarOrbit.ascendingNodeLongitude) }}°
-              </text>
+              </text> -->
             </g>
 
             <!-- 降交点（红点） -->
@@ -613,7 +601,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
                 fill="#ff0000"
                 opacity="0.9"
               />
-              <text
+              <!-- <text
                 :x="slotProps.centerX + getSunCoordinates(lunarOrbit.descendingNodeLongitude, slotProps.polarToCartesian).x"
                 :y="slotProps.centerY + getSunCoordinates(lunarOrbit.descendingNodeLongitude, slotProps.polarToCartesian).y + 15"
                 fill="#ff0000"
@@ -622,7 +610,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
                 dominant-baseline="top"
               >
                 降交点 {{ Math.round(lunarOrbit.descendingNodeLongitude) }}°
-              </text>
+              </text> -->
             </g>
           </g>
 
@@ -662,8 +650,21 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             :fill="moonPosition.color || '#c0c0c0'"
           />
 
+          <!-- 月亮符号 -->
+          <text
+            :x="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).x"
+            :y="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).y"
+            fill="#333"
+            font-size="12"
+            font-weight="bold"
+            text-anchor="middle"
+            dominant-baseline="middle"
+          >
+            {{ moonPosition.symbol }}
+          </text>
+
           <!-- 月亮文字标签 -->
-          <g v-if="showMoonLabel" class="moon-label">
+          <!-- <g v-if="showMoonLabel" class="moon-label">
             <text
               :x="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).x"
               :y="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).y + (moonPosition.size || 12) + 15"
@@ -672,12 +673,12 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               text-anchor="middle"
               dominant-baseline="top"
             >
-              月亮 {{ Math.round(moonPosition.longitude) }}°
+              月亮
               <tspan v-if="Math.abs(moonPosition.latitude) > 0.5" font-size="9">
                 {{ moonPosition.latitude > 0 ? ' 北' : ' 南' }}{{ Math.abs(Math.round(moonPosition.latitude)) }}°
               </tspan>
             </text>
-          </g>
+          </g> -->
         </g>
 
         <!-- 五星 -->
@@ -705,9 +706,22 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               opacity="0.9"
             />
 
+            <!-- 行星符号 -->
+            <text
+              :x="slotProps.centerX + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).x"
+              :y="slotProps.centerY + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).y"
+              fill="#fff"
+              font-size="11"
+              font-weight="bold"
+              text-anchor="middle"
+              dominant-baseline="middle"
+            >
+              {{ planet.symbol }}
+            </text>
+
 
             <!-- 行星文字标签 -->
-            <g v-if="showPlanetLabels" class="planet-label">
+            <!-- <g v-if="showPlanetLabels" class="planet-label">
               <text
                 :x="slotProps.centerX + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).x"
                 :y="slotProps.centerY + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).y + (planet.size || 10) + 15"
@@ -717,12 +731,12 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
                 dominant-baseline="top"
               >
                 {{ planet.name }}
-                <!-- {{ Math.round(planet.longitude) }}° -->
-                <!-- <tspan v-if="Math.abs(planet.latitude) > 0.5" font-size="9">
+                {{ Math.round(planet.longitude) }}°
+                <tspan v-if="Math.abs(planet.latitude) > 0.5" font-size="9">
                   {{ planet.latitude > 0 ? ' 北' : ' 南' }}{{ Math.abs(Math.round(planet.latitude)) }}°
-                </tspan> -->
+                </tspan>
               </text>
-            </g>
+            </g> -->
           </g>
         </g>
       </g>
