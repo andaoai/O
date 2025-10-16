@@ -1,297 +1,260 @@
 <template>
-  <div class="control">
-    <h3 class="title">控制面板</h3>
-
-    <!-- 时间显示 -->
-    <div class="time-display">
-      <div class="current-time">
-        {{ formatTime(currentTime) }}
-      </div>
-      <div class="date-display">
-        {{ formatDate(currentTime) }}
-      </div>
-
-      <!-- 农历和干支信息 -->
-      <div class="lunar-display">
-        <div class="lunar-date">{{ chineseCalendar.lunarDate }}</div>
-        <div class="ganzhi-year">{{ chineseCalendar.ganzhi.year.full }}年 {{ chineseCalendar.ganzhi.year.animal }}</div>
-      </div>
-
-      <!-- 节气信息 -->
-      <div v-if="chineseCalendar.solarTerm" class="solar-term-display">
-        <div class="solar-term-text">
-          {{ getSolarTermDescription(chineseCalendar.solarTerm) }}
-        </div>
-      </div>
-
-      <!-- 日干支 -->
-      <div class="daily-ganzhi">
-        {{ chineseCalendar.ganzhi.day.full }}日 {{ chineseCalendar.ganzhi.hour.full }}时
-      </div>
-    </div>
-
-    <!-- 控制按钮 -->
-    <div class="control-buttons">
-      <button
-        class="control-btn"
-        @click="togglePlayPause"
-        :class="{ active: isPlaying }"
-        title="空格键"
-      >
-        {{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}
-        <span class="key-hint">空格</span>
-      </button>
-
-      <button
-        class="control-btn"
-        @click="resetToNow"
-        title="R键"
-      >
-        ⟲ 现在
-        <span class="key-hint">R</span>
-      </button>
-    </div>
-
-    <!-- 时间调节 -->
-    <div class="time-adjustment">
-      <div class="speed-control">
-        <label>播放速度:</label>
-        <select v-model="playSpeed" @change="updatePlaySpeed">
-          <option value="1">1x</option>
-          <option value="60">1分钟/秒</option>
-          <option value="3600">1小时/秒</option>
-          <option value="86400">1天/秒</option>
-          <option value="1296000">15天/秒</option>
-          <option value="2592000">1个月/秒</option>
-        </select>
-      </div>
-
-      <div class="manual-controls">
+  <div
+    class="control"
+    :class="{
+      'dragging': isDragging
+    }"
+    :style="panelStyle"
+    @mousedown="handleMouseDown"
+  >
+    <!-- 标题栏：可拖拽 -->
+    <div class="control-header" :class="{ 'minimal': allCollapsed }">
+      <h3 v-if="!allCollapsed" class="title">控制面板</h3>
+      <div v-else class="minimal-time">{{ formatTime(currentTime) }}</div>
+      <div class="header-controls">
         <button
-          class="step-btn year-btn negative"
-          @click="stepYear(-1)"
-          title="Shift+Y"
+          class="header-btn"
+          @click="toggleAllModules"
+          :title="allCollapsed ? '展开所有' : '折叠所有'"
         >
-          -1年
-          <span class="key-hint">⇧Y</span>
-        </button>
-        <button
-          class="step-btn month-btn negative"
-          @click="stepMonth(-1)"
-          title="Shift+M"
-        >
-          -1月
-          <span class="key-hint">⇧M</span>
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(-86400)"
-          title="Shift+D"
-        >
-          -1天
-          <span class="key-hint">⇧D</span>
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(-3600)"
-          title="Shift+H"
-        >
-          -1小时
-          <span class="key-hint">⇧H</span>
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(3600)"
-          title="H"
-        >
-          +1小时
-          <span class="key-hint">H</span>
-        </button>
-        <button
-          class="step-btn"
-          @click="stepTime(86400)"
-          title="D"
-        >
-          +1天
-          <span class="key-hint">D</span>
-        </button>
-        <button
-          class="step-btn month-btn"
-          @click="stepMonth(1)"
-          title="M"
-        >
-          +1月
-          <span class="key-hint">M</span>
-        </button>
-        <button
-          class="step-btn year-btn"
-          @click="stepYear(1)"
-          title="Y"
-        >
-          +1年
-          <span class="key-hint">Y</span>
+          {{ allCollapsed ? '⊕' : '⊖' }}
         </button>
       </div>
     </div>
 
-    <!-- 时间选择器 -->
-    <div class="time-selector">
-      <label>时间选择:</label>
-      <div class="time-inputs">
-        <div class="date-input-group">
-          <label>日期:</label>
-          <input
-            type="text"
-            v-model="dateInput"
-            @change="onDateChange"
-            @blur="onDateChange"
-            placeholder="YYYY-MM-DD"
-            class="time-input"
-          />
-        </div>
-        <div class="clock-input-group">
-          <label>时间:</label>
-          <input
-            type="text"
-            v-model="timeInput"
-            @change="onTimeChange"
-            @blur="onTimeChange"
-            placeholder="HH:MM:SS"
-            class="time-input"
-          />
+    <!-- 时间显示模块 -->
+    <div class="module" :class="{ collapsed: modules.time.collapsed }">
+      <div class="module-header" @click="toggleModule('time')">
+        <span class="module-title">时间信息</span>
+        <span class="module-toggle">{{ modules.time.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.time.collapsed" class="module-content">
+        <div class="time-display">
+          <div class="current-time">{{ formatTime(currentTime) }}</div>
+          <div class="date-display">{{ formatDate(currentTime) }}</div>
+          <div class="lunar-display">
+            <div class="lunar-date">{{ chineseCalendar.lunarDate }}</div>
+            <div class="ganzhi-year">{{ chineseCalendar.ganzhi.year.full }}年 {{ chineseCalendar.ganzhi.year.animal }}</div>
+          </div>
+          <div v-if="chineseCalendar.solarTerm" class="solar-term-display">
+            <div class="solar-term-text">
+              {{ getSolarTermDescription(chineseCalendar.solarTerm) }}
+            </div>
+          </div>
+          <div class="daily-ganzhi">
+            {{ chineseCalendar.ganzhi.day.full }}日 {{ chineseCalendar.ganzhi.hour.full }}时
+          </div>
         </div>
       </div>
     </div>
 
-  
-    <!-- 缩放控制 -->
-    <div class="zoom-control">
-      <label>缩放控制:</label>
-      <div class="zoom-display">
-        {{ internalZoom ? Math.round(internalZoom * 100) + '%' : '100%' }}
+    <!-- 播放控制模块 -->
+    <div class="module" :class="{ collapsed: modules.playback.collapsed }">
+      <div class="module-header" @click="toggleModule('playback')">
+        <span class="module-title">播放控制</span>
+        <span class="module-toggle">{{ modules.playback.collapsed ? '▶' : '▼' }}</span>
       </div>
-      <div class="zoom-buttons">
-        <button
-          class="zoom-btn"
-          @click="zoomOut"
-          title="-键"
-        >
-          -
-          <span class="key-hint">-</span>
-        </button>
-        <button
-          class="zoom-btn"
-          @click="resetZoom"
-          title="0键"
-        >
-          重置
-          <span class="key-hint">0</span>
-        </button>
-        <button
-          class="zoom-btn"
-          @click="zoomIn"
-          title="+键"
-        >
-          +
-          <span class="key-hint">+</span>
-        </button>
-      </div>
-      <div class="zoom-presets">
-        <button
-          class="preset-btn"
-          @click="setZoom(0.5)"
-        >
-          50%
-        </button>
-        <button
-          class="preset-btn"
-          @click="setZoom(0.75)"
-        >
-          75%
-        </button>
-        <button
-          class="preset-btn"
-          @click="setZoom(1)"
-        >
-          100%
-        </button>
-        <button
-          class="preset-btn"
-          @click="setZoom(1.25)"
-        >
-          125%
-        </button>
-        <button
-          class="preset-btn"
-          @click="setZoom(1.5)"
-        >
-          150%
-        </button>
-      </div>
-    </div>
-
-    <!-- 平移控制 -->
-    <div class="offset-control">
-      <label>平移控制:</label>
-      <div class="offset-display">
-        X: {{ internalOffsetX }} Y: {{ internalOffsetY }}
-      </div>
-      <div class="offset-controls">
-        <div class="offset-row">
+      <div v-if="!modules.playback.collapsed" class="module-content">
+        <div class="control-buttons">
           <button
-            class="offset-btn"
-            @click="moveUp"
-            title="方向键↑"
+            class="control-btn"
+            @click="togglePlayPause"
+            :class="{ active: isPlaying }"
+            title="空格键"
           >
-            ↑
-            <span class="key-hint">↑</span>
-          </button>
-        </div>
-        <div class="offset-row">
-          <button
-            class="offset-btn"
-            @click="moveLeft"
-            title="方向键←"
-          >
-            ←
-            <span class="key-hint">←</span>
+            {{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}
+            <span class="key-hint">空格</span>
           </button>
           <button
-            class="offset-btn"
-            @click="resetOffset"
-            title="Delete/Backspace"
+            class="control-btn"
+            @click="resetToNow"
+            title="R键"
           >
+            ⟲ 现在
+            <span class="key-hint">R</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 播放速度模块 -->
+    <div class="module" :class="{ collapsed: modules.speed.collapsed }">
+      <div class="module-header" @click="toggleModule('speed')">
+        <span class="module-title">播放速度</span>
+        <span class="module-toggle">{{ modules.speed.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.speed.collapsed" class="module-content">
+        <div class="speed-control">
+          <select v-model="playSpeed" @change="updatePlaySpeed">
+            <option value="1">1x</option>
+            <option value="60">1分钟/秒</option>
+            <option value="3600">1小时/秒</option>
+            <option value="86400">1天/秒</option>
+            <option value="1296000">15天/秒</option>
+            <option value="2592000">1个月/秒</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 时间调节模块 -->
+    <div class="module" :class="{ collapsed: modules.adjustment.collapsed }">
+      <div class="module-header" @click="toggleModule('adjustment')">
+        <span class="module-title">时间调节</span>
+        <span class="module-toggle">{{ modules.adjustment.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.adjustment.collapsed" class="module-content">
+        <div class="manual-controls">
+          <button class="step-btn year-btn negative" @click="stepYear(-1)" title="Shift+Y">
+            -1年
+            <span class="key-hint">⇧Y</span>
+          </button>
+          <button class="step-btn month-btn negative" @click="stepMonth(-1)" title="Shift+M">
+            -1月
+            <span class="key-hint">⇧M</span>
+          </button>
+          <button class="step-btn" @click="stepTime(-86400)" title="Shift+D">
+            -1天
+            <span class="key-hint">⇧D</span>
+          </button>
+          <button class="step-btn" @click="stepTime(-3600)" title="Shift+H">
+            -1小时
+            <span class="key-hint">⇧H</span>
+          </button>
+          <button class="step-btn" @click="stepTime(3600)" title="H">
+            +1小时
+            <span class="key-hint">H</span>
+          </button>
+          <button class="step-btn" @click="stepTime(86400)" title="D">
+            +1天
+            <span class="key-hint">D</span>
+          </button>
+          <button class="step-btn month-btn" @click="stepMonth(1)" title="M">
+            +1月
+            <span class="key-hint">M</span>
+          </button>
+          <button class="step-btn year-btn" @click="stepYear(1)" title="Y">
+            +1年
+            <span class="key-hint">Y</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 时间选择模块 -->
+    <div class="module" :class="{ collapsed: modules.selector.collapsed }">
+      <div class="module-header" @click="toggleModule('selector')">
+        <span class="module-title">时间选择</span>
+        <span class="module-toggle">{{ modules.selector.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.selector.collapsed" class="module-content">
+        <div class="time-inputs">
+          <div class="date-input-group">
+            <label>日期:</label>
+            <input
+              type="text"
+              v-model="dateInput"
+              @change="onDateChange"
+              @blur="onDateChange"
+              placeholder="YYYY-MM-DD"
+              class="time-input"
+            />
+          </div>
+          <div class="clock-input-group">
+            <label>时间:</label>
+            <input
+              type="text"
+              v-model="timeInput"
+              @change="onTimeChange"
+              @blur="onTimeChange"
+              placeholder="HH:MM:SS"
+              class="time-input"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 缩放控制模块 -->
+    <div class="module" :class="{ collapsed: modules.zoom.collapsed }">
+      <div class="module-header" @click="toggleModule('zoom')">
+        <span class="module-title">缩放控制</span>
+        <span class="module-toggle">{{ modules.zoom.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.zoom.collapsed" class="module-content">
+        <div class="zoom-display">
+          {{ internalZoom ? Math.round(internalZoom * 100) + '%' : '100%' }}
+        </div>
+        <div class="zoom-buttons">
+          <button class="zoom-btn" @click="zoomOut" title="-键">
+            -
+            <span class="key-hint">-</span>
+          </button>
+          <button class="zoom-btn" @click="resetZoom" title="0键">
             重置
-            <span class="key-hint">Del</span>
+            <span class="key-hint">0</span>
           </button>
-          <button
-            class="offset-btn"
-            @click="moveRight"
-            title="方向键→"
-          >
-            →
-            <span class="key-hint">→</span>
+          <button class="zoom-btn" @click="zoomIn" title="+键">
+            +
+            <span class="key-hint">+</span>
           </button>
         </div>
-        <div class="offset-row">
-          <button
-            class="offset-btn"
-            @click="moveDown"
-            title="方向键↓"
-          >
-            ↓
-            <span class="key-hint">↓</span>
-          </button>
+        <div class="zoom-presets">
+          <button class="preset-btn" @click="setZoom(0.5)">50%</button>
+          <button class="preset-btn" @click="setZoom(0.75)">75%</button>
+          <button class="preset-btn" @click="setZoom(1)">100%</button>
+          <button class="preset-btn" @click="setZoom(1.25)">125%</button>
+          <button class="preset-btn" @click="setZoom(1.5)">150%</button>
         </div>
       </div>
     </div>
 
+    <!-- 平移控制模块 -->
+    <div class="module" :class="{ collapsed: modules.offset.collapsed }">
+      <div class="module-header" @click="toggleModule('offset')">
+        <span class="module-title">平移控制</span>
+        <span class="module-toggle">{{ modules.offset.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.offset.collapsed" class="module-content">
+        <div class="offset-display">
+          X: {{ internalOffsetX }} Y: {{ internalOffsetY }}
+        </div>
+        <div class="offset-controls">
+          <div class="offset-row">
+            <button class="offset-btn" @click="moveUp" title="方向键↑">
+              ↑
+              <span class="key-hint">↑</span>
+            </button>
+          </div>
+          <div class="offset-row">
+            <button class="offset-btn" @click="moveLeft" title="方向键←">
+              ←
+              <span class="key-hint">←</span>
+            </button>
+            <button class="offset-btn" @click="resetOffset" title="Delete/Backspace">
+              重置
+              <span class="key-hint">Del</span>
+            </button>
+            <button class="offset-btn" @click="moveRight" title="方向键→">
+              →
+              <span class="key-hint">→</span>
+            </button>
+          </div>
+          <div class="offset-row">
+            <button class="offset-btn" @click="moveDown" title="方向键↓">
+              ↓
+              <span class="key-hint">↓</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
-import { getChineseCalendarInfo, getSolarTermDescription, type ChineseCalendarInfo } from '@/utils/chineseCalendar'
+import { getChineseCalendarInfo, getSolarTermDescription } from '@/utils/chineseCalendar'
 
 interface Props {
   modelValue?: Date
@@ -314,11 +277,39 @@ const emit = defineEmits<{
 // 响应式数据
 const currentTime = ref(new Date())
 const isPlaying = ref(false)
-const playSpeed = ref(60) // 默认1分钟/秒
-const internalZoom = ref(1) // 内部缩放状态，默认为1
-const internalOffsetX = ref(0) // 内部X轴偏移，默认为0
-const internalOffsetY = ref(0) // 内部Y轴偏移，默认为0
+const playSpeed = ref(60)
+const internalZoom = ref(1)
+const internalOffsetX = ref(0)
+const internalOffsetY = ref(0)
 let animationId: number | null = null
+let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
+
+// 模块折叠状态
+const modules = ref({
+  time: { collapsed: false },
+  playback: { collapsed: false },
+  speed: { collapsed: false },
+  adjustment: { collapsed: false },
+  selector: { collapsed: false },
+  zoom: { collapsed: false },
+  offset: { collapsed: false }
+})
+
+// 从localStorage恢复状态
+const savedState = localStorage.getItem('control-panel-modules-state')
+if (savedState) {
+  try {
+    const state = JSON.parse(savedState)
+    const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset']
+    validKeys.forEach(key => {
+      if (state[key] && modules.value[key]) {
+        modules.value[key].collapsed = state[key].collapsed
+      }
+    })
+  } catch (e) {
+    console.error('Failed to load panel state:', e)
+  }
+}
 
 // 时间选择器的响应式数据
 const dateInput = ref('')
@@ -327,21 +318,96 @@ const timeInput = ref('')
 // 中国历法信息
 const chineseCalendar = computed(() => getChineseCalendarInfo(currentTime.value))
 
-// 监听 props.zoom 的变化
+// 拖拽相关
+const isDragging = ref(false)
+const dragStartX = ref(0)
+const dragStartY = ref(0)
+const panelPositionX = ref(0)
+const panelPositionY = ref(0)
+
+// 保存位置到localStorage
+const savedPosition = localStorage.getItem('control-panel-position')
+if (savedPosition) {
+  const pos = JSON.parse(savedPosition)
+  panelPositionX.value = pos.x || 0
+  panelPositionY.value = pos.y || 0
+}
+
+// 计算面板样式
+const panelStyle = computed(() => {
+  const basePosition = {
+    right: `${20 - panelPositionX.value}px`,
+    top: `${20 + panelPositionY.value}px`
+  }
+
+  // 计算展开的模块数量
+  const expandedCount = Object.values(modules.value).filter(m => !m.collapsed).length
+
+  if (expandedCount === 0) {
+    // 所有模块都折叠，只显示标题栏和时间
+    return {
+      ...basePosition,
+      width: '200px',
+      height: '44px',
+      overflow: 'hidden'
+    }
+  }
+
+  // 根据展开的模块数量调整高度
+  const minHeight = 60 + expandedCount * 40 // 标题栏 + 每个模块最小高度
+  const availableHeight = window.innerHeight - (20 + panelPositionY.value) // 从面板顶部到网页底部的可用空间
+  const height = Math.max(minHeight, availableHeight) // 使用最大高度，让面板可以延伸到网页底部
+
+  return {
+    ...basePosition,
+    width: '260px',
+    maxHeight: `${height}px`,
+    overflowY: 'auto' as const
+  }
+})
+
+// 计算是否所有模块都折叠了
+const allCollapsed = computed(() => {
+  return Object.values(modules.value).every(m => m.collapsed)
+})
+
+// 切换模块折叠状态
+const toggleModule = (moduleName: ModuleKey) => {
+  modules.value[moduleName].collapsed = !modules.value[moduleName].collapsed
+  saveModuleState()
+}
+
+// 切换所有模块
+const toggleAllModules = () => {
+  const shouldCollapse = !allCollapsed.value
+  const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset']
+  validKeys.forEach(key => {
+    modules.value[key].collapsed = shouldCollapse
+  })
+  saveModuleState()
+}
+
+// 定义模块键类型以支持类型安全的索引访问
+type ModuleKey = 'time' | 'playback' | 'speed' | 'adjustment' | 'selector' | 'zoom' | 'offset'
+
+// 保存模块状态
+const saveModuleState = () => {
+  localStorage.setItem('control-panel-modules-state', JSON.stringify(modules.value))
+}
+
+// 监听 props 的变化
 watch(() => props.zoom, (newZoom) => {
   if (newZoom !== undefined && newZoom !== null) {
     internalZoom.value = newZoom
   }
 }, { immediate: true })
 
-// 监听 props.offsetX 的变化
 watch(() => props.offsetX, (newOffsetX) => {
   if (newOffsetX !== undefined && newOffsetX !== null) {
     internalOffsetX.value = newOffsetX
   }
 }, { immediate: true })
 
-// 监听 props.offsetY 的变化
 watch(() => props.offsetY, (newOffsetY) => {
   if (newOffsetY !== undefined && newOffsetY !== null) {
     internalOffsetY.value = newOffsetY
@@ -350,23 +416,18 @@ watch(() => props.offsetY, (newOffsetY) => {
 
 // 更新时间选择器的值
 const updateDateTimeInputs = (date: Date) => {
-  // 格式化日期为 YYYY-MM-DD
   const year = date.getFullYear()
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
   dateInput.value = `${year}-${month}-${day}`
 
-  // 格式化时间为 HH:MM:SS
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
   const seconds = String(date.getSeconds()).padStart(2, '0')
   timeInput.value = `${hours}:${minutes}:${seconds}`
 }
 
-// 计算属性
-const formattedTime = computed(() => formatTime(currentTime.value))
-
-// 监听时间变化，更新时间选择器的值
+// 监听时间变化
 watch(() => currentTime.value, (newTime) => {
   updateDateTimeInputs(newTime)
 }, { immediate: true })
@@ -414,8 +475,8 @@ const play = () => {
   const startModelTime = currentTime.value.getTime()
 
   const animate = () => {
-    const elapsed = (Date.now() - startTime) / 1000 // 秒
-    const timeDelta = elapsed * playSpeed.value * 1000 // 毫秒
+    const elapsed = (Date.now() - startTime) / 1000
+    const timeDelta = elapsed * playSpeed.value * 1000
 
     const newTime = new Date(startModelTime + timeDelta)
     updateTime(newTime)
@@ -449,7 +510,6 @@ const onDateChange = () => {
   const dateParts = dateInput.value.split('-').map(Number)
   const timeParts = timeInput.value.split(':').map(Number)
 
-  // 验证解析的数字是否有效
   if (dateParts.length !== 3 || timeParts.length !== 3) return
   if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
 
@@ -474,7 +534,6 @@ const onTimeChange = () => {
   const dateParts = dateInput.value.split('-').map(Number)
   const timeParts = timeInput.value.split(':').map(Number)
 
-  // 验证解析的数字是否有效
   if (dateParts.length !== 3 || timeParts.length !== 3) return
   if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
 
@@ -505,7 +564,6 @@ const stepMonth = (months: number) => {
   const currentMonth = newTime.getMonth()
   const currentYear = newTime.getFullYear()
 
-  // 计算新的年份和月份
   let newMonth = currentMonth + months
   let newYear = currentYear
 
@@ -529,7 +587,6 @@ const stepYear = (years: number) => {
   updateTime(newTime)
 }
 
-
 // 更新播放速度
 const updatePlaySpeed = () => {
   if (isPlaying.value) {
@@ -540,7 +597,7 @@ const updatePlaySpeed = () => {
 
 // 缩放功能
 const updateZoom = (newZoom: number) => {
-  const clampedZoom = Math.max(0.1, Math.min(3, newZoom)) // 限制在 0.1 到 3 之间
+  const clampedZoom = Math.max(0.1, Math.min(3, newZoom))
   internalZoom.value = clampedZoom
   emit('update:zoom', clampedZoom)
   emit('zoomChange', clampedZoom)
@@ -591,78 +648,114 @@ const resetOffset = () => {
   updateOffset(0, 0)
 }
 
+// 拖拽功能
+const handleMouseDown = (e: MouseEvent) => {
+  if (!(e.target as HTMLElement).closest('.control-header')) {
+    return
+  }
+
+  isDragging.value = true
+  dragStartX.value = e.clientX
+  dragStartY.value = e.clientY
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+  e.preventDefault()
+}
+
+const handleMouseMove = (e: MouseEvent) => {
+  if (!isDragging.value) return
+
+  const deltaX = e.clientX - dragStartX.value
+  const deltaY = e.clientY - dragStartY.value
+
+  panelPositionX.value += deltaX  // 修复：应该是 += 而不是 -=
+  panelPositionY.value += deltaY
+
+  const maxOffsetX = window.innerWidth - 100
+  const maxOffsetY = window.innerHeight - 100
+
+  panelPositionX.value = Math.max(-maxOffsetX, Math.min(20, panelPositionX.value))
+  panelPositionY.value = Math.max(-maxOffsetY, Math.min(window.innerHeight - 200, panelPositionY.value))
+
+  dragStartX.value = e.clientX
+  dragStartY.value = e.clientY
+}
+
+const handleMouseUp = () => {
+  isDragging.value = false
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+
+  localStorage.setItem('control-panel-position', JSON.stringify({
+    x: panelPositionX.value,
+    y: panelPositionY.value
+  }))
+}
+
 // 键盘快捷键处理
 const handleKeyDown = (event: KeyboardEvent) => {
-  // 防止在输入框中触发快捷键
   if (event.target instanceof HTMLInputElement) {
     return
   }
 
   switch (event.key) {
-    // 播放/暂停
     case ' ':
     case 'Space':
       event.preventDefault()
       togglePlayPause()
       break
 
-    // 重置到当前时间
     case 'r':
     case 'R':
       event.preventDefault()
       resetToNow()
       break
 
-    // 时间调节 - 年
     case 'Y':
     case 'y':
       if (event.shiftKey) {
         event.preventDefault()
-        stepYear(-1) // Shift+Y = -1年
+        stepYear(-1)
       } else {
         event.preventDefault()
-        stepYear(1)  // Y = +1年
+        stepYear(1)
       }
       break
 
-    // 时间调节 - 月
     case 'M':
     case 'm':
       if (event.shiftKey) {
         event.preventDefault()
-        stepMonth(-1) // Shift+M = -1月
+        stepMonth(-1)
       } else {
         event.preventDefault()
-        stepMonth(1)  // M = +1月
+        stepMonth(1)
       }
       break
 
-    // 时间调节 - 天
     case 'D':
     case 'd':
       if (event.shiftKey) {
         event.preventDefault()
-        stepTime(-86400) // Shift+D = -1天
+        stepTime(-86400)
       } else {
         event.preventDefault()
-        stepTime(86400)   // D = +1天
+        stepTime(86400)
       }
       break
 
-    // 时间调节 - 小时
     case 'H':
     case 'h':
       if (event.shiftKey) {
         event.preventDefault()
-        stepTime(-3600) // Shift+H = -1小时
+        stepTime(-3600)
       } else {
         event.preventDefault()
-        stepTime(3600)  // H = +1小时
+        stepTime(3600)
       }
       break
 
-  
-    // 缩放控制
     case '+':
     case '=':
       event.preventDefault()
@@ -678,29 +771,27 @@ const handleKeyDown = (event: KeyboardEvent) => {
       resetZoom()
       break
 
-    // 预设缩放
     case '5':
       event.preventDefault()
-      setZoom(0.5)   // 50%
+      setZoom(0.5)
       break
     case '6':
       event.preventDefault()
-      setZoom(0.75)  // 75%
+      setZoom(0.75)
       break
     case '7':
       event.preventDefault()
-      setZoom(1)     // 100%
+      setZoom(1)
       break
     case '8':
       event.preventDefault()
-      setZoom(1.25)  // 125%
+      setZoom(1.25)
       break
     case '9':
       event.preventDefault()
-      setZoom(1.5)   // 150%
+      setZoom(1.5)
       break
 
-    // 平移控制
     case 'ArrowUp':
       event.preventDefault()
       moveUp()
@@ -718,7 +809,6 @@ const handleKeyDown = (event: KeyboardEvent) => {
       moveRight()
       break
 
-    // 重置平移
     case 'Delete':
     case 'Backspace':
       event.preventDefault()
@@ -730,47 +820,185 @@ const handleKeyDown = (event: KeyboardEvent) => {
 // 生命周期钩子
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('resize', handleResize)
+
+  // 添加时间更新定时器
+  timeUpdateInterval = setInterval(() => {
+    if (!isPlaying.value) {
+      // 只有在非播放状态时才更新时间，避免干扰播放功能
+      currentTime.value = new Date()
+    }
+  }, 1000)
 })
 
 onUnmounted(() => {
   pause()
   window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('resize', handleResize)
+  document.removeEventListener('mousemove', handleMouseMove)
+  document.removeEventListener('mouseup', handleMouseUp)
+
+  // 清理时间更新定时器
+  if (timeUpdateInterval) {
+    clearInterval(timeUpdateInterval)
+    timeUpdateInterval = null
+  }
 })
+
+// 窗口大小变化处理
+const handleResize = () => {
+  const maxOffsetX = window.innerWidth - 100
+  const maxOffsetY = window.innerHeight - 100
+
+  panelPositionX.value = Math.max(-maxOffsetX, Math.min(20, panelPositionX.value))
+  panelPositionY.value = Math.max(-maxOffsetY, Math.min(window.innerHeight - 200, panelPositionY.value))
+}
 </script>
 
 <style scoped>
 .control {
   position: fixed;
-  right: 20px;
-  top: 20px;
-  width: 260px;
-  background: rgba(0, 0, 0, 0.9);
-  border: 1px solid #444;
+  background: #000000;
+  border: 1px solid #333;
   border-radius: 8px;
-  padding: 12px;
   color: #fff;
   font-family: 'Arial', sans-serif;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
   z-index: 1000;
+  transition: transform 0.1s ease;
+  user-select: none;
+  overflow: hidden;
 }
 
-.title {
-  margin: 0 0 12px 0;
+.control.dragging {
+  transform: scale(1.02);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.7);
+  cursor: move;
+}
+
+/* 标题栏样式 */
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #000000;
+  border-bottom: 1px solid #333;
+  cursor: move;
+  transition: all 0.3s ease;
+}
+
+.control-header.minimal {
+  background: #000000;
+}
+
+.control-header .title {
+  margin: 0;
   font-size: 14px;
   font-weight: bold;
-  text-align: center;
   color: #ffcc00;
-  border-bottom: 1px solid #444;
-  padding-bottom: 6px;
 }
 
+.minimal-time {
+  font-size: 16px;
+  font-weight: bold;
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  flex: 1;
+  text-align: center;
+}
+
+.header-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.header-btn {
+  width: 24px;
+  height: 24px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.header-btn:hover {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #fff;
+}
+
+/* 模块样式 */
+.module {
+  border-bottom: 1px solid #222;
+  transition: all 0.3s ease;
+}
+
+.module:last-child {
+  border-bottom: none;
+}
+
+.module.collapsed {
+  background: #0a0a0a;
+}
+
+.module-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease;
+}
+
+.module-header:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.module-title {
+  font-size: 12px;
+  color: #ccc;
+  font-weight: bold;
+}
+
+.module-toggle {
+  font-size: 10px;
+  color: #888;
+  transition: transform 0.2s ease;
+}
+
+.module-content {
+  padding: 8px 12px;
+  border-top: 1px solid #222;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 时间显示 */
 .time-display {
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .current-time {
-  font-size: 20px;
+  font-size: 16px;
   font-weight: bold;
   color: #00ff00;
   margin-bottom: 4px;
@@ -778,67 +1006,71 @@ onUnmounted(() => {
 }
 
 .date-display {
-  font-size: 12px;
+  font-size: 11px;
   color: #888;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
 .lunar-display {
-  margin-bottom: 6px;
-  padding: 4px 0;
-  border-top: 1px solid #333;
-  border-bottom: 1px solid #333;
+  margin-bottom: 4px;
+  padding: 3px 0;
+  border-top: 1px solid #222;
+  border-bottom: 1px solid #222;
 }
 
 .lunar-date {
-  font-size: 11px;
+  font-size: 10px;
   color: #ff9900;
   font-weight: bold;
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 .ganzhi-year {
-  font-size: 10px;
+  font-size: 9px;
   color: #ccaa00;
 }
 
 .solar-term-display {
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .solar-term-text {
-  font-size: 10px;
+  font-size: 9px;
   color: #66ccff;
   font-weight: bold;
 }
 
 .daily-ganzhi {
-  font-size: 10px;
+  font-size: 9px;
   color: #99cc99;
   font-style: italic;
 }
 
+/* 控制按钮 */
 .control-buttons {
   display: flex;
   gap: 6px;
-  margin-bottom: 12px;
   justify-content: center;
 }
 
 .control-btn {
-  padding: 8px 12px;
-  background: #333;
-  border: 1px solid #555;
+  padding: 6px 10px;
+  background: #1a1a1a;
+  border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .control-btn:hover {
-  background: #444;
-  border-color: #666;
+  background: #2a2a2a;
+  border-color: #444;
 }
 
 .control-btn.active {
@@ -847,117 +1079,32 @@ onUnmounted(() => {
   border-color: #ffcc00;
 }
 
-.control-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.key-hint {
-  font-size: 8px;
-  color: #ffcc00;
-  font-weight: bold;
-  background: #333;
-  padding: 1px 3px;
-  border-radius: 2px;
-  margin-top: 1px;
-}
-
-.time-adjustment {
-  margin-bottom: 12px;
-}
-
-.time-selector {
-  text-align: center;
-  margin-bottom: 16px;
-}
-
-.time-selector label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #ccc;
-}
-
-.time-inputs {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.date-input-group, .clock-input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.date-input-group label, .clock-input-group label {
-  font-size: 11px;
-  color: #aaa;
-  margin-bottom: 2px;
-}
-
-.time-input {
-  width: 100%;
-  padding: 6px 8px;
-  background: #333;
-  border: 1px solid #555;
-  border-radius: 4px;
-  color: #fff;
-  font-size: 12px;
-  font-family: 'Courier New', monospace;
-  transition: all 0.2s;
-}
-
-.time-input:focus {
-  outline: none;
-  border-color: #ffcc00;
-  background: #444;
-  box-shadow: 0 0 4px rgba(255, 204, 0, 0.3);
-}
-
-.time-input:hover {
-  border-color: #666;
-  background: #3a3a3a;
-}
-
-.speed-control {
-  margin-bottom: 12px;
-  text-align: center;
-}
-
-.speed-control label {
-  display: block;
-  margin-bottom: 4px;
-  font-size: 12px;
-  color: #ccc;
-}
-
+/* 速度控制 */
 .speed-control select {
   width: 100%;
   padding: 4px;
-  background: #333;
-  border: 1px solid #555;
+  background: #1a1a1a;
+  border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
-  font-size: 12px;
+  font-size: 11px;
 }
 
+/* 手动控制 */
 .manual-controls {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr;
-  gap: 4px;
+  gap: 3px;
 }
 
 .step-btn {
-  padding: 6px 4px;
-  background: #333;
-  border: 1px solid #555;
+  padding: 4px 3px;
+  background: #1a1a1a;
+  border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 10px;
+  font-size: 9px;
   transition: all 0.2s;
   display: flex;
   flex-direction: column;
@@ -966,90 +1113,88 @@ onUnmounted(() => {
 }
 
 .step-btn:hover {
-  background: #444;
-  border-color: #666;
-}
-
-.step-btn:active {
-  background: #555;
+  background: #2a2a2a;
+  border-color: #444;
 }
 
 .month-btn {
-  background: #444;
-  border-color: #666;
-}
-
-.month-btn:hover {
-  background: #555;
-  border-color: #777;
+  background: #1f1f1f;
+  border-color: #3a3a3a;
 }
 
 .year-btn {
-  background: #555;
-  border-color: #777;
+  background: #2a2a2a;
+  border-color: #444;
   color: #ffcc00;
 }
 
-.year-btn:hover {
-  background: #666;
-  border-color: #888;
-}
-
 .negative {
-  background: #444;
-  border-color: #666;
   color: #ff6666;
 }
 
-.month-btn.negative:hover {
-  background: #555;
-  border-color: #777;
+/* 时间输入 */
+.time-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.year-btn.negative:hover {
-  background: #555;
-  border-color: #777;
+.date-input-group, .clock-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
-
-.zoom-control {
-  text-align: center;
-  border-top: 1px solid #444;
-  padding-top: 16px;
-  margin-top: 16px;
+.date-input-group label, .clock-input-group label {
+  font-size: 10px;
+  color: #aaa;
 }
 
-.zoom-control label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #ccc;
+.time-input {
+  width: 100%;
+  padding: 4px 6px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  transition: all 0.2s;
 }
 
+.time-input:focus {
+  outline: none;
+  border-color: #ffcc00;
+  background: #2a2a2a;
+  box-shadow: 0 0 4px rgba(255, 204, 0, 0.3);
+}
+
+/* 缩放控制 */
 .zoom-display {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
   color: #00ff00;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  text-align: center;
   font-family: 'Courier New', monospace;
 }
 
 .zoom-buttons {
   display: flex;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: 3px;
+  margin-bottom: 6px;
   justify-content: center;
 }
 
 .zoom-btn {
-  width: 40px;
-  padding: 6px;
-  background: #333;
-  border: 1px solid #555;
+  width: 32px;
+  padding: 4px;
+  background: #1a1a1a;
+  border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: bold;
   transition: all 0.2s;
   display: flex;
@@ -1059,12 +1204,8 @@ onUnmounted(() => {
 }
 
 .zoom-btn:hover {
-  background: #444;
-  border-color: #666;
-}
-
-.zoom-btn:active {
-  background: #555;
+  background: #2a2a2a;
+  border-color: #444;
 }
 
 .zoom-presets {
@@ -1074,44 +1215,28 @@ onUnmounted(() => {
 }
 
 .preset-btn {
-  padding: 4px 2px;
-  background: #222;
-  border: 1px solid #444;
+  padding: 3px 2px;
+  background: #151515;
+  border: 1px solid #2a2a2a;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 9px;
+  font-size: 8px;
   transition: all 0.2s;
 }
 
 .preset-btn:hover {
-  background: #333;
-  border-color: #555;
+  background: #1f1f1f;
+  border-color: #3a3a3a;
 }
 
-.preset-btn:active {
-  background: #444;
-}
-
-.offset-control {
-  text-align: center;
-  border-top: 1px solid #444;
-  padding-top: 16px;
-  margin-top: 16px;
-}
-
-.offset-control label {
-  display: block;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: #ccc;
-}
-
+/* 平移控制 */
 .offset-display {
-  font-size: 14px;
+  font-size: 11px;
   font-weight: bold;
   color: #00ff00;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  text-align: center;
   font-family: 'Courier New', monospace;
 }
 
@@ -1119,25 +1244,25 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .offset-row {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
 }
 
 .offset-btn {
-  width: 40px;
-  height: 30px;
-  padding: 4px;
-  background: #333;
-  border: 1px solid #555;
+  width: 32px;
+  height: 26px;
+  padding: 3px;
+  background: #1a1a1a;
+  border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   transition: all 0.2s;
   display: flex;
@@ -1148,38 +1273,86 @@ onUnmounted(() => {
 }
 
 .offset-btn:hover {
-  background: #444;
-  border-color: #666;
-}
-
-.offset-btn:active {
-  background: #555;
+  background: #2a2a2a;
+  border-color: #444;
 }
 
 .offset-btn:nth-child(2) {
-  width: 50px; /* 重置按钮稍微宽一些 */
+  width: 40px;
 }
 
-/* 为不同按钮的快捷键提示设置不同样式 */
-.control-btn .key-hint {
-  font-size: 9px;
-  padding: 1px 4px;
-}
-
-.step-btn .key-hint {
+/* 快捷键提示 */
+.key-hint {
   font-size: 7px;
+  color: #ffcc00;
+  font-weight: bold;
+  background: #1a1a1a;
   padding: 1px 2px;
+  border-radius: 2px;
+  margin-top: 1px;
 }
 
-
-.zoom-btn .key-hint {
-  font-size: 7px;
-  padding: 1px 2px;
+/* 隐藏滚动条但保持滚动功能 */
+.control::-webkit-scrollbar {
+  display: none;
 }
 
-.offset-btn .key-hint {
-  font-size: 6px;
-  padding: 1px 2px;
-  margin-top: 0;
+.control {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .control {
+    width: 220px !important;
+    max-width: 90vw;
+    right: 10px;
+    top: 10px;
+  }
+
+  .current-time {
+    font-size: 14px;
+  }
+
+  .manual-controls {
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 2px;
+  }
+
+  .zoom-presets {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .control {
+    width: 200px !important;
+    right: 5px;
+    top: 5px;
+  }
+
+  .control-header {
+    padding: 8px 10px;
+  }
+
+  .module-header {
+    padding: 6px 10px;
+  }
+
+  .current-time {
+    font-size: 12px;
+  }
+
+  .control-btn {
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+
+  .header-btn {
+    width: 20px;
+    height: 20px;
+    font-size: 10px;
+  }
 }
 </style>
