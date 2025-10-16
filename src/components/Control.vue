@@ -282,7 +282,6 @@ const internalZoom = ref(1)
 const internalOffsetX = ref(0)
 const internalOffsetY = ref(0)
 let animationId: number | null = null
-let timeUpdateInterval: ReturnType<typeof setInterval> | null = null
 
 // 模块折叠状态
 const modules = ref({
@@ -822,13 +821,8 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('resize', handleResize)
 
-  // 添加时间更新定时器
-  timeUpdateInterval = setInterval(() => {
-    if (!isPlaying.value) {
-      // 只有在非播放状态时才更新时间，避免干扰播放功能
-      currentTime.value = new Date()
-    }
-  }, 1000)
+  // 移除自动刷新定时器，避免持续刷新
+  // 时间只在用户操作时更新
 })
 
 onUnmounted(() => {
@@ -838,11 +832,7 @@ onUnmounted(() => {
   document.removeEventListener('mousemove', handleMouseMove)
   document.removeEventListener('mouseup', handleMouseUp)
 
-  // 清理时间更新定时器
-  if (timeUpdateInterval) {
-    clearInterval(timeUpdateInterval)
-    timeUpdateInterval = null
-  }
+  // 定时器已移除，无需清理
 })
 
 // 窗口大小变化处理
