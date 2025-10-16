@@ -23,6 +23,9 @@ const zoomLevel = ref(1)
 const offsetX = ref(0)
 const offsetY = ref(0)
 
+// 旋转方向控制
+const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
+
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
   controlledTime.value = newTime
@@ -37,6 +40,11 @@ const handleZoomChange = (newZoom: number) => {
 const handleOffsetChange = (newOffset: { x: number, y: number }) => {
   offsetX.value = newOffset.x
   offsetY.value = newOffset.y
+}
+
+// 旋转方向变化处理器
+const handleRotationDirectionChange = (newDirection: 'clockwise' | 'counterclockwise') => {
+  rotationDirection.value = newDirection
 }
 
 </script>
@@ -64,6 +72,7 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
         :show-circle="true"
         circle-color="#666666"
         :circle-width="1"
+        :rotation-direction="rotationDirection"
       />
 
       <!-- 太阳黄道圆环（第二层） -->
@@ -73,20 +82,21 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
         :enable-animation="true"
         :animation-speed="0.1"
         :show-sun-label="true"
+        :rotation-direction="rotationDirection"
       />
 
       <!-- 二十八星宿圆环（第三层） -->
-      <TwentyEightConstellations />
+      <TwentyEightConstellations :rotation-direction="rotationDirection" />
 
       <!-- 六十甲子圆环（第四层） -->
       <!-- <SixtyJiazi /> -->
 
       <!-- 十天干圆环（第五层） -->
       <!-- <HeavenlyStems /> -->
-      <tiangankongwang />
+      <tiangankongwang :rotation-direction="rotationDirection" />
       <!-- 十二地支圆环（第六层） -->
-      <EarthlyBranches />
-      
+      <EarthlyBranches :rotation-direction="rotationDirection" />
+
       <!-- 八门圆环（第七层） -->
       <!-- <EightGates /> -->
 
@@ -94,7 +104,7 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
       <!-- <TwelveLongevity /> -->
 
       <!-- 四象圆环（第九层） -->
-      <SiXiang />
+      <SiXiang :rotation-direction="rotationDirection" />
       </g>
 
     </svg>
@@ -105,9 +115,11 @@ const handleOffsetChange = (newOffset: { x: number, y: number }) => {
       v-model:zoom="zoomLevel"
       v-model:offsetX="offsetX"
       v-model:offsetY="offsetY"
+      v-model:rotation-direction="rotationDirection"
       @time-change="handleTimeChange"
       @zoom-change="handleZoomChange"
       @offset-change="handleOffsetChange"
+      @rotation-direction-change="handleRotationDirectionChange"
     />
 
   </div>

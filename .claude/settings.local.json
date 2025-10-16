@@ -37,7 +37,9 @@
       "Bash(npm run lint)",
       "Bash(npm install:*)",
       "Bash(cat:*)",
-      "mcp__playwright__browser_drag"
+      "mcp__playwright__browser_drag",
+      "mcp__playwright__browser_select_option",
+      "mcp__playwright__browser_close"
     ],
     "deny": [],
     "ask": []

@@ -249,6 +249,44 @@
         </div>
       </div>
     </div>
+
+    <!-- 旋转方向控制模块 -->
+    <div class="module" :class="{ collapsed: modules.rotation.collapsed }">
+      <div class="module-header" @click="toggleModule('rotation')">
+        <span class="module-title">旋转方向</span>
+        <span class="module-toggle">{{ modules.rotation.collapsed ? '▶' : '▼' }}</span>
+      </div>
+      <div v-if="!modules.rotation.collapsed" class="module-content">
+        <div class="rotation-control">
+          <div class="rotation-display">
+            当前: {{ internalRotationDirection === 'clockwise' ? '顺时针' : '逆时针' }}
+          </div>
+          <div class="rotation-buttons">
+            <button
+              class="rotation-btn"
+              @click="updateRotationDirection('clockwise')"
+              :class="{ active: internalRotationDirection === 'clockwise' }"
+              title="顺时针旋转"
+            >
+              顺时针
+              <span class="rotation-icon">↻</span>
+            </button>
+            <button
+              class="rotation-btn"
+              @click="updateRotationDirection('counterclockwise')"
+              :class="{ active: internalRotationDirection === 'counterclockwise' }"
+              title="逆时针旋转"
+            >
+              逆时针
+              <span class="rotation-icon">↺</span>
+            </button>
+          </div>
+          <div class="rotation-hint">
+            快捷键: C
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -261,6 +299,7 @@ interface Props {
   zoom?: number
   offsetX?: number
   offsetY?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
 const props = defineProps<Props>()
@@ -272,6 +311,8 @@ const emit = defineEmits<{
   'update:offsetX': [value: number]
   'update:offsetY': [value: number]
   'offsetChange': [value: { x: number, y: number }]
+  'update:rotationDirection': [value: 'clockwise' | 'counterclockwise']
+  'rotationDirectionChange': [value: 'clockwise' | 'counterclockwise']
 }>()
 
 // 响应式数据
@@ -281,6 +322,7 @@ const playSpeed = ref(60)
 const internalZoom = ref(1)
 const internalOffsetX = ref(0)
 const internalOffsetY = ref(0)
+const internalRotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 let animationId: number | null = null
 
 // 模块折叠状态
@@ -291,7 +333,8 @@ const modules = ref({
   adjustment: { collapsed: false },
   selector: { collapsed: false },
   zoom: { collapsed: false },
-  offset: { collapsed: false }
+  offset: { collapsed: false },
+  rotation: { collapsed: false }
 })
 
 // 从localStorage恢复状态
@@ -299,7 +342,7 @@ const savedState = localStorage.getItem('control-panel-modules-state')
 if (savedState) {
   try {
     const state = JSON.parse(savedState)
-    const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset']
+    const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset', 'rotation']
     validKeys.forEach(key => {
       if (state[key] && modules.value[key]) {
         modules.value[key].collapsed = state[key].collapsed
@@ -379,7 +422,7 @@ const toggleModule = (moduleName: ModuleKey) => {
 // 切换所有模块
 const toggleAllModules = () => {
   const shouldCollapse = !allCollapsed.value
-  const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset']
+  const validKeys: ModuleKey[] = ['time', 'playback', 'speed', 'adjustment', 'selector', 'zoom', 'offset', 'rotation']
   validKeys.forEach(key => {
     modules.value[key].collapsed = shouldCollapse
   })
@@ -387,7 +430,7 @@ const toggleAllModules = () => {
 }
 
 // 定义模块键类型以支持类型安全的索引访问
-type ModuleKey = 'time' | 'playback' | 'speed' | 'adjustment' | 'selector' | 'zoom' | 'offset'
+type ModuleKey = 'time' | 'playback' | 'speed' | 'adjustment' | 'selector' | 'zoom' | 'offset' | 'rotation'
 
 // 保存模块状态
 const saveModuleState = () => {
@@ -410,6 +453,12 @@ watch(() => props.offsetX, (newOffsetX) => {
 watch(() => props.offsetY, (newOffsetY) => {
   if (newOffsetY !== undefined && newOffsetY !== null) {
     internalOffsetY.value = newOffsetY
+  }
+}, { immediate: true })
+
+watch(() => props.rotationDirection, (newDirection) => {
+  if (newDirection) {
+    internalRotationDirection.value = newDirection
   }
 }, { immediate: true })
 
@@ -627,6 +676,18 @@ const updateOffset = (newOffsetX: number, newOffsetY: number) => {
   emit('offsetChange', { x: newOffsetX, y: newOffsetY })
 }
 
+// 旋转方向控制
+const toggleRotationDirection = () => {
+  const newDirection = internalRotationDirection.value === 'clockwise' ? 'counterclockwise' : 'clockwise'
+  updateRotationDirection(newDirection)
+}
+
+const updateRotationDirection = (direction: 'clockwise' | 'counterclockwise') => {
+  internalRotationDirection.value = direction
+  emit('update:rotationDirection', direction)
+  emit('rotationDirectionChange', direction)
+}
+
 const moveLeft = () => {
   updateOffset(internalOffsetX.value - 50, internalOffsetY.value)
 }
@@ -812,6 +873,12 @@ const handleKeyDown = (event: KeyboardEvent) => {
     case 'Backspace':
       event.preventDefault()
       resetOffset()
+      break
+
+    case 'c':
+    case 'C':
+      event.preventDefault()
+      toggleRotationDirection()
       break
   }
 }
@@ -1280,6 +1347,62 @@ const handleResize = () => {
   padding: 1px 2px;
   border-radius: 2px;
   margin-top: 1px;
+}
+
+/* 旋转方向控制 */
+.rotation-control {
+  text-align: center;
+}
+
+.rotation-display {
+  font-size: 12px;
+  color: #00ff00;
+  margin-bottom: 8px;
+  font-family: 'Courier New', monospace;
+}
+
+.rotation-buttons {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.rotation-btn {
+  flex: 1;
+  padding: 6px 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 10px;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.rotation-btn:hover {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+.rotation-btn.active {
+  background: #ffcc00;
+  color: #000;
+  border-color: #ffcc00;
+}
+
+.rotation-icon {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.rotation-hint {
+  font-size: 9px;
+  color: #888;
+  font-style: italic;
 }
 
 /* 隐藏滚动条但保持滚动功能 */
