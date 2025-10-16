@@ -533,6 +533,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             font-weight="bold"
             text-anchor="middle"
             dominant-baseline="middle"
+            :transform="`rotate(${rotationDirection === 'counterclockwise' ? -currentSunPosition.longitude + 90 : currentSunPosition.longitude + 90}, ${slotProps.centerX + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).x}, ${slotProps.centerY + getSunCoordinates(currentSunPosition.longitude, slotProps.polarToCartesian).y})`"
           >
             {{ currentSunPosition.symbol }}
           </text>
@@ -659,6 +660,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
             font-weight="bold"
             text-anchor="middle"
             dominant-baseline="middle"
+            :transform="`rotate(${rotationDirection === 'counterclockwise' ? -moonPosition.longitude + 90 : moonPosition.longitude + 90}, ${slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).x}, ${slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius, slotProps.polarToCartesian).y})`"
           >
             {{ moonPosition.symbol }}
           </text>
@@ -715,6 +717,7 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
               font-weight="bold"
               text-anchor="middle"
               dominant-baseline="middle"
+              :transform="`rotate(${rotationDirection === 'counterclockwise' ? -planet.longitude + 90 : planet.longitude + 90}, ${slotProps.centerX + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).x}, ${slotProps.centerY + getPlanetCoordinates(planet.longitude, planet.latitude, radius, slotProps.polarToCartesian).y})`"
             >
               {{ planet.symbol }}
             </text>
