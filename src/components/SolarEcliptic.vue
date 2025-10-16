@@ -355,6 +355,11 @@ const lunarOrbit = computed(() => {
   return cachedLunarOrbit.value || calculateLunarOrbit(time)
 })
 
+// 计算白道轨迹路径（优化性能）
+const moonOrbitPath = computed(() => {
+  return generateMoonOrbitPath()
+})
+
 // 监听时间变化，更新太阳、行星和月亮位置
 watch(
   () => props.time,
@@ -423,39 +428,46 @@ const getPlanetCoordinates = (longitude: number, latitude: number, baseRadius: n
 }
 
 /**
- * 获取白道圆心坐标（相对于黄道圆心的偏移）
+ * 生成白道轨迹点（基于月亮实际运动轨迹）
  */
-const getWhiteWayCenter = () => {
-  const angleRad = lunarOrbit.value.orbitCenterAngle * Math.PI / 180
-  const offset = lunarOrbit.value.orbitCenterOffset
+const generateMoonOrbitPath = () => {
+  const points = []
+  const steps = 360 // 生成360个点来形成完整的轨迹
 
-  return {
-    x: Math.cos(angleRad) * offset,
-    y: Math.sin(angleRad) * offset
+  for (let i = 0; i < steps; i++) {
+    // 计算轨迹上的时间点（从当前时间开始，计算一个完整月周期）
+    const daysOffset = (i / steps) * 29.53 // 月球轨道周期约29.53天
+    const orbitTime = new Date((props.time || new Date()).getTime() + daysOffset * 24 * 60 * 60 * 1000)
+
+    // 计算该时间点的月亮位置
+    const moonPos = calculateMoonPosition(orbitTime)
+
+    // 转换为坐标
+    const coords = getMoonCoordinates(moonPos.longitude, moonPos.latitude, props.radius)
+    points.push({ x: coords.x, y: coords.y })
   }
+
+  return points
 }
 
 /**
- * 获取月亮在白道上的坐标
+ * 获取月亮的坐标（基于黄道坐标系）
  */
 const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: number) => {
-  // 先获取白道圆心
-  const centerOffset = getWhiteWayCenter()
-
-  // 计算月亮在白道上的位置
   const rad = longitude * Math.PI / 180
   const latRad = latitude * Math.PI / 180
 
-  // 白道半径与黄道相同，但圆心偏移
-  const x = Math.cos(rad) * baseRadius + centerOffset.x
-  const y = Math.sin(rad) * baseRadius + centerOffset.y
+  // 计算黄道半径上的位置
+  const x = Math.cos(rad) * baseRadius
+  const y = Math.sin(rad) * baseRadius
 
-  // 黄纬偏移（在白道基础上的额外偏移）
-  const latOffset = Math.sin(latRad) * 100
+  // 黄纬偏移 - 使用垂直于黄道面的方向
+  // 正数黄纬向北偏移（在屏幕上是向外），负数向南偏移（向内）
+  const latOffset = Math.sin(latRad) * 300 // 增大缩放因子，让黄纬偏移更加明显
 
-  // 计算垂直于白道面的方向
-  const perpX = Math.cos(rad)
-  const perpY = Math.sin(rad)
+  // 计算垂直于黄道面的方向（从中心向外）
+  const perpX = x / baseRadius
+  const perpY = y / baseRadius
 
   return {
     x: x + perpX * latOffset,
@@ -552,40 +564,33 @@ const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: num
 
         <!-- 白道（月球轨道） -->
         <g v-if="showWhiteWay" class="white-way">
-          <!-- 白道圆圈（与黄道半径相同但圆心偏移） -->
+          <!-- 白道轨迹（基于月亮实际运动轨迹） -->
           <g>
-            <!-- 白道圆心标记 -->
-            <circle
-              :cx="slotProps.centerX + getWhiteWayCenter().x"
-              :cy="slotProps.centerY + getWhiteWayCenter().y"
-              r="3"
-              fill="#ffffff"
-              opacity="0.8"
+            <!-- 生成白道路径 -->
+            <path
+              :d="moonOrbitPath.map((point, index) =>
+                `${index === 0 ? 'M' : 'L'} ${slotProps.centerX + point.x} ${slotProps.centerY + point.y}`
+              ).join(' ')"
+              fill="none"
+              stroke="#ffffff"
+              stroke-width="1.5"
+              stroke-dasharray="5,3"
+              opacity="0.6"
             />
+
+            <!-- 白道标签 -->
             <text
-              :x="slotProps.centerX + getWhiteWayCenter().x"
-              :y="slotProps.centerY + getWhiteWayCenter().y - 10"
+              :x="slotProps.centerX"
+              :y="slotProps.centerY - radius - 30"
               fill="#ffffff"
-              font-size="10"
+              font-size="11"
               text-anchor="middle"
               dominant-baseline="bottom"
               opacity="0.8"
             >
-              白道圆心
+              白道（月球轨道）
             </text>
           </g>
-
-          <!-- 绘制白道轨道圆 -->
-          <circle
-            :cx="slotProps.centerX + getWhiteWayCenter().x"
-            :cy="slotProps.centerY + getWhiteWayCenter().y"
-            :r="radius"
-            fill="none"
-            stroke="#ffffff"
-            stroke-width="1.5"
-            stroke-dasharray="5,3"
-            opacity="0.6"
-          />
 
           <!-- 轨道交点 -->
           <g v-if="showOrbitalNodes" class="orbital-nodes">
