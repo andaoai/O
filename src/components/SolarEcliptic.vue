@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import PolarCanvas from './base/PolarCanvas.vue'
-import { AstroTime, SunPosition, MakeTime, GeoVector, Body, Ecliptic } from 'astronomy-engine'
+import { AstroTime, SunPosition, MakeTime, GeoVector, Body, Ecliptic, EclipticGeoMoon, SearchMoonNode, NextMoonNode, NodeEventInfo, NodeEventKind } from 'astronomy-engine'
 
 /**
  * 太阳位置接口
@@ -36,6 +36,40 @@ interface PlanetPosition {
 }
 
 /**
+ * 月亮位置接口
+ */
+interface MoonPosition {
+  /** 当前黄经度数 */
+  longitude: number
+  /** 当前黄纬度数 */
+  latitude: number
+  /** 月亮符号 */
+  symbol?: string
+  /** 颜色 */
+  color?: string
+  /** 大小 */
+  size?: number
+  /** 距地距离（千米） */
+  distance?: number
+}
+
+/**
+ * 白道轨道参数接口
+ */
+interface LunarOrbitInfo {
+  /** 轨道倾角（度） */
+  inclination: number
+  /** 升交点黄经（度） */
+  ascendingNodeLongitude: number
+  /** 降交点黄经（度） */
+  descendingNodeLongitude: number
+  /** 白道圆心相对于黄道圆心的偏移方向（度） */
+  orbitCenterAngle: number
+  /** 白道圆心偏移量 */
+  orbitCenterOffset: number
+}
+
+/**
  * 组件属性接口
  */
 interface Props {
@@ -61,6 +95,14 @@ interface Props {
   observerLatitude?: number
   /** 观测者经度（度） */
   observerLongitude?: number
+  /** 是否显示月亮 */
+  showMoon?: boolean
+  /** 是否显示白道 */
+  showWhiteWay?: boolean
+  /** 是否显示月亮文字标签 */
+  showMoonLabel?: boolean
+  /** 是否显示轨道交点 */
+  showOrbitalNodes?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -72,7 +114,11 @@ const props = withDefaults(defineProps<Props>(), {
   showPlanets: true,
   showPlanetLabels: true,
   observerLatitude: 39.9042,  // 北京纬度
-  observerLongitude: 116.4074  // 北京经度
+  observerLongitude: 116.4074, // 北京经度
+  showMoon: true,
+  showWhiteWay: true,
+  showMoonLabel: true,
+  showOrbitalNodes: true
 })
 
 // 缓存太阳位置计算结果
@@ -125,6 +171,24 @@ const PLANETS_CONFIG = {
 // 缓存行星位置计算结果
 const cachedPlanetPositions = ref<Record<string, PlanetPosition>>({})
 
+// 缓存月亮位置计算结果
+const cachedMoonPosition = ref<MoonPosition>({
+  longitude: 0,
+  latitude: 0,
+  symbol: '☽',
+  color: '#c0c0c0',
+  size: 12
+})
+
+// 缓存白道轨道参数
+const cachedLunarOrbit = ref<LunarOrbitInfo>({
+  inclination: 5.145, // 月球轨道倾角（黄白交角）
+  ascendingNodeLongitude: 0,
+  descendingNodeLongitude: 180,
+  orbitCenterAngle: 0,
+  orbitCenterOffset: 0
+})
+
 /**
  * 使用 astronomy-engine 计算行星的黄道位置
  */
@@ -154,6 +218,79 @@ const calculatePlanetPosition = (time: Date, planetKey: keyof typeof PLANETS_CON
     color: config.color,
     size: config.size,
     name: config.name
+  }
+}
+
+/**
+ * 使用 astronomy-engine 计算月亮的黄道位置
+ */
+const calculateMoonPosition = (time: Date): MoonPosition => {
+  // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
+  const astroTime = MakeTime(time)
+
+  // 使用 EclipticGeoMoon 函数计算月亮的黄道坐标
+  const moonEcliptic = EclipticGeoMoon(astroTime)
+
+  // 提取黄经、黄纬和距离
+  const longitude = (moonEcliptic.lon + 360) % 360
+  const latitude = moonEcliptic.lat
+  const distance = moonEcliptic.dist
+
+  return {
+    longitude,
+    latitude,
+    symbol: '☽',
+    color: '#c0c0c0',
+    size: 12,
+    distance
+  }
+}
+
+/**
+ * 计算白道轨道参数（包括升交点和降交点）
+ */
+const calculateLunarOrbit = (time: Date): LunarOrbitInfo => {
+  const astroTime = MakeTime(time)
+
+  // 搜索最近的节点
+  let firstNode = SearchMoonNode(astroTime)
+  let secondNode = NextMoonNode(firstNode)
+
+  // 判断第一个节点是升交点还是降交点
+  let ascendingNode: NodeEventInfo
+  let descendingNode: NodeEventInfo
+
+  if (firstNode.kind === NodeEventKind.Ascending) {
+    ascendingNode = firstNode
+    descendingNode = secondNode
+  } else {
+    // 第一个是降交点，那么第二个就是升交点
+    ascendingNode = secondNode
+    descendingNode = firstNode
+  }
+
+  // 获取升交点和降交点的时刻
+  const ascendingTime = ascendingNode.time
+  const descendingTime = descendingNode.time
+
+  // 计算升交点和降交点的黄经
+  const ascendingMoonPos = EclipticGeoMoon(ascendingTime)
+  const descendingMoonPos = EclipticGeoMoon(descendingTime)
+
+  const ascendingLongitude = (ascendingMoonPos.lon + 360) % 360
+  const descendingLongitude = (descendingMoonPos.lon + 360) % 360
+
+  // 计算白道圆心偏移
+  // 白道相对于黄道有约5度的倾角，圆心偏移用于可视化这个倾斜
+  const orbitCenterAngle = (ascendingLongitude + 90) % 360 // 升交点后90度为最大偏移方向
+  const orbitCenterOffset = props.radius * Math.tan(5.145 * Math.PI / 180) * 0.5 // 基于倾角计算偏移量
+
+  return {
+    inclination: 5.145, // 黄白交角
+    ascendingNodeLongitude: ascendingLongitude,
+    descendingNodeLongitude: descendingLongitude,
+    orbitCenterAngle,
+    orbitCenterOffset
   }
 }
 
@@ -206,7 +343,19 @@ const planetPositions = computed(() => {
   return positions
 })
 
-// 监听时间变化，更新太阳和行星位置
+// 计算月亮位置
+const moonPosition = computed(() => {
+  const time = props.time || new Date()
+  return cachedMoonPosition.value || calculateMoonPosition(time)
+})
+
+// 计算白道轨道参数
+const lunarOrbit = computed(() => {
+  const time = props.time || new Date()
+  return cachedLunarOrbit.value || calculateLunarOrbit(time)
+})
+
+// 监听时间变化，更新太阳、行星和月亮位置
 watch(
   () => props.time,
   (newTime) => {
@@ -220,6 +369,12 @@ watch(
       Object.keys(PLANETS_CONFIG).forEach(key => {
         cachedPlanetPositions.value[key] = calculatePlanetPosition(newTime, key as keyof typeof PLANETS_CONFIG)
       })
+
+      // 更新月亮位置
+      cachedMoonPosition.value = calculateMoonPosition(newTime)
+
+      // 更新白道轨道参数
+      cachedLunarOrbit.value = calculateLunarOrbit(newTime)
     }
   },
   { immediate: true }
@@ -264,6 +419,47 @@ const getPlanetCoordinates = (longitude: number, latitude: number, baseRadius: n
       x: perpX,
       y: perpY
     }
+  }
+}
+
+/**
+ * 获取白道圆心坐标（相对于黄道圆心的偏移）
+ */
+const getWhiteWayCenter = () => {
+  const angleRad = lunarOrbit.value.orbitCenterAngle * Math.PI / 180
+  const offset = lunarOrbit.value.orbitCenterOffset
+
+  return {
+    x: Math.cos(angleRad) * offset,
+    y: Math.sin(angleRad) * offset
+  }
+}
+
+/**
+ * 获取月亮在白道上的坐标
+ */
+const getMoonCoordinates = (longitude: number, latitude: number, baseRadius: number) => {
+  // 先获取白道圆心
+  const centerOffset = getWhiteWayCenter()
+
+  // 计算月亮在白道上的位置
+  const rad = longitude * Math.PI / 180
+  const latRad = latitude * Math.PI / 180
+
+  // 白道半径与黄道相同，但圆心偏移
+  const x = Math.cos(rad) * baseRadius + centerOffset.x
+  const y = Math.sin(rad) * baseRadius + centerOffset.y
+
+  // 黄纬偏移（在白道基础上的额外偏移）
+  const latOffset = Math.sin(latRad) * 100
+
+  // 计算垂直于白道面的方向
+  const perpX = Math.cos(rad)
+  const perpY = Math.sin(rad)
+
+  return {
+    x: x + perpX * latOffset,
+    y: y + perpY * latOffset
   }
 }
 </script>
@@ -352,6 +548,142 @@ const getPlanetCoordinates = (longitude: number, latitude: number, baseRadius: n
           >
             太阳 {{ Math.round(currentSunPosition.longitude) }}°
           </text>
+        </g>
+
+        <!-- 白道（月球轨道） -->
+        <g v-if="showWhiteWay" class="white-way">
+          <!-- 白道圆圈（与黄道半径相同但圆心偏移） -->
+          <g>
+            <!-- 白道圆心标记 -->
+            <circle
+              :cx="slotProps.centerX + getWhiteWayCenter().x"
+              :cy="slotProps.centerY + getWhiteWayCenter().y"
+              r="3"
+              fill="#ffffff"
+              opacity="0.8"
+            />
+            <text
+              :x="slotProps.centerX + getWhiteWayCenter().x"
+              :y="slotProps.centerY + getWhiteWayCenter().y - 10"
+              fill="#ffffff"
+              font-size="10"
+              text-anchor="middle"
+              dominant-baseline="bottom"
+              opacity="0.8"
+            >
+              白道圆心
+            </text>
+          </g>
+
+          <!-- 绘制白道轨道圆 -->
+          <circle
+            :cx="slotProps.centerX + getWhiteWayCenter().x"
+            :cy="slotProps.centerY + getWhiteWayCenter().y"
+            :r="radius"
+            fill="none"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            stroke-dasharray="5,3"
+            opacity="0.6"
+          />
+
+          <!-- 轨道交点 -->
+          <g v-if="showOrbitalNodes" class="orbital-nodes">
+            <!-- 升交点（绿点） -->
+            <g class="ascending-node">
+              <circle
+                :cx="slotProps.centerX + getSunCoordinates(lunarOrbit.ascendingNodeLongitude).x"
+                :cy="slotProps.centerY + getSunCoordinates(lunarOrbit.ascendingNodeLongitude).y"
+                r="6"
+                fill="#00ff00"
+                opacity="0.9"
+              />
+              <text
+                :x="slotProps.centerX + getSunCoordinates(lunarOrbit.ascendingNodeLongitude).x"
+                :y="slotProps.centerY + getSunCoordinates(lunarOrbit.ascendingNodeLongitude).y + 15"
+                fill="#00ff00"
+                font-size="11"
+                text-anchor="middle"
+                dominant-baseline="top"
+              >
+                升交点 {{ Math.round(lunarOrbit.ascendingNodeLongitude) }}°
+              </text>
+            </g>
+
+            <!-- 降交点（红点） -->
+            <g class="descending-node">
+              <circle
+                :cx="slotProps.centerX + getSunCoordinates(lunarOrbit.descendingNodeLongitude).x"
+                :cy="slotProps.centerY + getSunCoordinates(lunarOrbit.descendingNodeLongitude).y"
+                r="6"
+                fill="#ff0000"
+                opacity="0.9"
+              />
+              <text
+                :x="slotProps.centerX + getSunCoordinates(lunarOrbit.descendingNodeLongitude).x"
+                :y="slotProps.centerY + getSunCoordinates(lunarOrbit.descendingNodeLongitude).y + 15"
+                fill="#ff0000"
+                font-size="11"
+                text-anchor="middle"
+                dominant-baseline="top"
+              >
+                降交点 {{ Math.round(lunarOrbit.descendingNodeLongitude) }}°
+              </text>
+            </g>
+          </g>
+
+          <!-- 黄道圆心标记（黄点） -->
+          <circle
+            :cx="slotProps.centerX"
+            :cy="slotProps.centerY"
+            r="4"
+            fill="#ffdd00"
+            opacity="0.6"
+          />
+        </g>
+
+        <!-- 月亮 -->
+        <g v-if="showMoon" class="moon">
+          <!-- 月亮光晕 -->
+          <circle
+            :cx="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).x"
+            :cy="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).y"
+            :r="(moonPosition.size || 12) + 6"
+            fill="#c0c0c0"
+            opacity="0.2"
+          />
+          <circle
+            :cx="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).x"
+            :cy="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).y"
+            :r="(moonPosition.size || 12) + 3"
+            fill="#c0c0c0"
+            opacity="0.4"
+          />
+
+          <!-- 月亮本体 -->
+          <circle
+            :cx="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).x"
+            :cy="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).y"
+            :r="moonPosition.size || 12"
+            :fill="moonPosition.color || '#c0c0c0'"
+          />
+
+          <!-- 月亮文字标签 -->
+          <g v-if="showMoonLabel" class="moon-label">
+            <text
+              :x="slotProps.centerX + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).x"
+              :y="slotProps.centerY + getMoonCoordinates(moonPosition.longitude, moonPosition.latitude, radius).y + (moonPosition.size || 12) + 15"
+              fill="#c0c0c0"
+              font-size="11"
+              text-anchor="middle"
+              dominant-baseline="top"
+            >
+              月亮 {{ Math.round(moonPosition.longitude) }}°
+              <tspan v-if="Math.abs(moonPosition.latitude) > 0.5" font-size="9">
+                {{ moonPosition.latitude > 0 ? ' 北' : ' 南' }}{{ Math.abs(Math.round(moonPosition.latitude)) }}°
+              </tspan>
+            </text>
+          </g>
         </g>
 
         <!-- 五星 -->
@@ -457,5 +789,42 @@ const getPlanetCoordinates = (longitude: number, latitude: number, baseRadius: n
   to {
     stroke-dashoffset: -4;
   }
+}
+
+/* 白道样式 */
+.white-way {
+  transition: all 0.3s ease;
+}
+
+.white-way circle {
+  transition: all 0.3s ease;
+}
+
+.orbital-nodes {
+  transition: all 0.3s ease;
+}
+
+.orbital-nodes circle {
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+.ascending-node:hover,
+.descending-node:hover {
+  filter: brightness(1.5) drop-shadow(0 0 8px currentColor);
+}
+
+/* 月亮样式 */
+.moon {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.moon:hover {
+  filter: brightness(1.3) drop-shadow(0 0 8px currentColor);
+}
+
+.moon-label text {
+  font-family: 'Microsoft YaHei', sans-serif;
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.5);
 }
 </style>
