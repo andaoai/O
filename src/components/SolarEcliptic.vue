@@ -129,44 +129,31 @@ const cachedPlanetPositions = ref<Record<string, PlanetPosition>>({})
  * 使用 astronomy-engine 计算行星的黄道位置
  */
 const calculatePlanetPosition = (time: Date, planetKey: keyof typeof PLANETS_CONFIG): PlanetPosition => {
-  try {
-    const config = PLANETS_CONFIG[planetKey]
+  const config = PLANETS_CONFIG[planetKey]
 
-    // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
-    const astroTime = new AstroTime(time)
+  // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
+  const astroTime = new AstroTime(time)
 
-    // 获取行星的地心向量（已考虑光行差）
-    const geoVector = GeoVector(config.body, astroTime, true)
+  // 获取行星的地心向量（已考虑光行差）
+  const geoVector = GeoVector(config.body, astroTime, true)
 
-    // 将赤道坐标转换为黄道坐标
-    const eclipticCoords = Ecliptic(geoVector)
+  // 将赤道坐标转换为黄道坐标
+  const eclipticCoords = Ecliptic(geoVector)
 
-    // 提取黄经和黄纬
-    const longitude = eclipticCoords.elon
-    const latitude = eclipticCoords.elat
+  // 提取黄经和黄纬
+  const longitude = eclipticCoords.elon
+  const latitude = eclipticCoords.elat
 
-    // 调整经度到 0-360 范围
-    const normalizedLongitude = (longitude + 360) % 360
+  // 调整经度到 0-360 范围
+  const normalizedLongitude = (longitude + 360) % 360
 
-    return {
-      longitude: normalizedLongitude,
-      latitude: latitude,
-      symbol: config.symbol,
-      color: config.color,
-      size: config.size,
-      name: config.name
-    }
-  } catch (error) {
-    console.warn(`计算${planetKey}位置失败:`, error)
-    // 返回默认位置
-    return {
-      longitude: 0,
-      latitude: 0,
-      symbol: PLANETS_CONFIG[planetKey].symbol,
-      color: PLANETS_CONFIG[planetKey].color,
-      size: PLANETS_CONFIG[planetKey].size,
-      name: PLANETS_CONFIG[planetKey].name
-    }
+  return {
+    longitude: normalizedLongitude,
+    latitude: latitude,
+    symbol: config.symbol,
+    color: config.color,
+    size: config.size,
+    name: config.name
   }
 }
 
@@ -174,34 +161,15 @@ const calculatePlanetPosition = (time: Date, planetKey: keyof typeof PLANETS_CON
  * 使用 astronomy-engine 计算太阳的真实黄经位置
  */
 const calculateSunPosition = (time: Date): SunPosition => {
-  try {
-    // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
-    // MakeTime 接受单个 Date 对象作为参数
-    const astroTime = MakeTime(time)
+  // 将 JavaScript Date 转换为 astronomy-engine 的 AstroTime
+  // MakeTime 接受单个 Date 对象作为参数
+  const astroTime = MakeTime(time)
 
-    // 使用 SunPosition 函数计算太阳的黄道坐标
-    const sunEcliptic = SunPosition(astroTime)
+  // 使用 SunPosition 函数计算太阳的黄道坐标
+  const sunEcliptic = SunPosition(astroTime)
 
-    if (sunEcliptic) {
-      // 获取黄经（度数）， astronomy-engine 已经返回度数
-      const longitude = sunEcliptic.elon
-
-      return {
-        longitude,
-        symbol: '☉',
-        color: '#ffdd00',
-        size: 20
-      }
-    }
-  } catch (error) {
-    console.warn('计算太阳位置失败，使用简单计算:', error)
-  }
-
-  // 如果天文计算失败，使用简单计算作为后备
-  const yearStart = new Date(time.getFullYear(), 0, 1)
-  const dayOfYear = Math.floor((time.getTime() - yearStart.getTime()) / (24 * 60 * 60 * 1000))
-  // 添加280度偏移以大致匹配春分点（3月21日左右在0度）
-  const longitude = (dayOfYear * 360 / 365.25 + 280) % 360
+  // 获取黄经（度数）， astronomy-engine 已经返回度数
+  const longitude = sunEcliptic.elon
 
   return {
     longitude,
