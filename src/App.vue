@@ -10,7 +10,9 @@ import tiangankongwang from './components/tianggankongwang.vue'
 import SiXiang from './components/SiXiang.vue'
 import DegreeScale from './components/DegreeScale.vue'
 import SolarEcliptic from './components/SolarEcliptic.vue'
+import TwentyFourSolarTerms from './components/TwentyFourSolarTerms.vue'
 import Control from './components/Control.vue'
+import CustomRing from './components/CustomRing.vue'
 
 
 // 时间控制
@@ -83,7 +85,15 @@ const handleRotationAngleChange = (newAngle: number) => {
         :rotation-direction="rotationDirection"
       />
 
-      <!-- 太阳黄道圆环（第二层） -->
+      <!-- 二十四节气圆环（第二层） -->
+      <!-- <TwentyFourSolarTerms
+        :radius="460"
+        :inner-radius="440"
+        :show-sectors="false"
+        :rotation-direction="rotationDirection"
+      /> -->
+
+      <!-- 太阳黄道圆环（第三层） -->
       <SolarEcliptic
         :radius="160"
         :time="controlledTime"
@@ -94,14 +104,52 @@ const handleRotationAngleChange = (newAngle: number) => {
       />
 
       <!-- 二十八星宿圆环（第三层） -->
-      <TwentyEightConstellations :rotation-direction="rotationDirection" />
+      <!-- <TwentyEightConstellations :rotation-direction="rotationDirection" /> -->
 
       <!-- 六十甲子圆环（第四层） -->
       <!-- <SixtyJiazi /> -->
 
       <!-- 十天干圆环（第五层） -->
       <!-- <HeavenlyStems /> -->
-      <tiangankongwang :rotation-direction="rotationDirection" />
+
+      <!-- 多个天干空亡圆环，不同半径和起始度数 -->
+      <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="310"
+        :inner-radius="280"
+        :start-degree="-90"
+      />
+      <!-- <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="340"
+        :inner-radius="310"
+        :start-degree="-30"
+      />
+      
+      <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="370"
+        :inner-radius="340"
+        :start-degree="30"
+      />
+      <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="400"
+        :inner-radius="370"
+        :start-degree="90"
+      />
+      <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="430"
+        :inner-radius="400"
+        :start-degree="150"
+      />
+      <tiangankongwang
+        :rotation-direction="rotationDirection"
+        :radius="460"
+        :inner-radius="430"
+        :start-degree="210"
+      /> -->
       <!-- 十二地支圆环（第六层） -->
       <EarthlyBranches :rotation-direction="rotationDirection" />
 
@@ -112,7 +160,7 @@ const handleRotationAngleChange = (newAngle: number) => {
       <!-- <TwelveLongevity /> -->
 
       <!-- 四象圆环（第九层） -->
-      <SiXiang :rotation-direction="rotationDirection" />
+      <!-- <SiXiang :rotation-direction="rotationDirection" /> -->
       </g>
 
     </svg>

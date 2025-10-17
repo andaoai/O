@@ -2,7 +2,7 @@
 import CircleRing from './base/CircleRing.vue'
 
 // 地支组件内部起始度数设置
-const startDegree = 0  // 地支起始度数
+const startDegree = -90  // 地支起始度数
 
 // 十二地支，每个30度，子从345度开始
 const earthlyBranches = [
