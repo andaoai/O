@@ -213,6 +213,13 @@ interface Props {
    * - 360: 1个刻度
    */
   scaleInterval?: number
+
+  /**
+   * 旋转方向
+   * 控制整个刻度环的旋转方向
+   * 影响文字的旋转方向以确保文字始终指向圆心
+   */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
 /**
@@ -233,7 +240,8 @@ const props = withDefaults(defineProps<Props>(), {
   showSectors: true,       // 显示扇形区域
   sectorColor: '#ffffff',  // 白色扇形
   sectorOpacity: 0.1,      // 淡淡的扇形背景
-  scaleInterval: 5         // 默认5度间隔（72个刻度）
+  scaleInterval: 5,        // 默认5度间隔（72个刻度）
+  rotationDirection: 'clockwise'  // 默认顺时针
 })
 
 /**
@@ -347,8 +355,11 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
 
     // 计算文字的旋转角度
     // 文字应该始终"站立"，底部指向圆心
-    // SVG中文字默认从左到右，所以需要 +90 度
-    const textRotation = midAngle + 90
+    // 注意：PolarCanvas 在 counterclockwise 模式下会将角度取反进行坐标转换
+    // 但 getMidAngle 返回的仍是原始角度值，所以需要相应调整
+    const textRotation = props.rotationDirection === 'counterclockwise'
+      ? -midAngle + 90  // 逆时针体系：角度取反后再加90度
+      : midAngle + 90   // 顺时针体系：直接加90度
 
     // 存储标签数据
     labels.push({
@@ -372,6 +383,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     :enable-animation="enableAnimation"
     :animation-speed="animationSpeed"
     :rotation="rotation"
+    :rotation-direction="rotationDirection"
     :center-x="0"
     :center-y="0"
   >

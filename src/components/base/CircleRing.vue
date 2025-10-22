@@ -104,6 +104,8 @@ interface Props {
   startDegree?: number
   /** 是否对双字符标签进行垂直排列（用于十二长生等） */
   verticalTwoChar?: boolean
+  /** 旋转方向 */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
 /**
@@ -126,7 +128,8 @@ const props = withDefaults(defineProps<Props>(), {
   enableAnimation: false,  // 默认不启用动画
   animationSpeed: 0.5,     // 缓慢旋转速度
   startDegree: 0,          // 从正右方开始
-  verticalTwoChar: false   // 默认水平排列
+  verticalTwoChar: false,  // 默认水平排列
+  rotationDirection: 'clockwise'  // 默认顺时针
 })
 
 /**
@@ -231,8 +234,12 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
     const position = polarToCartesian(midAngle, textRadius)
 
-    // 计算文字旋转角度（文字底部指向圆心）
-    const textRotation = midAngle + 90
+    // 计算文字旋转角度（文字顶部指向圆心）
+    // 注意：PolarCanvas 在 counterclockwise 模式下会将角度取反进行坐标转换
+    // 但 getMidAngle 返回的仍是原始角度值，所以需要相应调整
+    const textRotation = props.rotationDirection === 'counterclockwise'
+      ? -midAngle + 90  // 逆时针体系：角度取反后再加90度
+      : midAngle + 90   // 顺时针体系：直接加90度
 
     // 检查是否为双字符标签且启用垂直排列
     // 主要用于十二长生（长生、沐浴、冠带、临官等）
@@ -259,6 +266,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     :enable-animation="enableAnimation"
     :animation-speed="animationSpeed"
     :rotation="rotation"
+    :rotation-direction="rotationDirection"
     :center-x="0"
     :center-y="0"
   >

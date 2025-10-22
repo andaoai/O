@@ -91,6 +91,8 @@ interface Props {
   maxRadius?: number
   /** 最小半径（像素），用于限制绘制范围 */
   minRadius?: number
+  /** 旋转方向 */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
 /**
@@ -105,18 +107,27 @@ const props = withDefaults(defineProps<Props>(), {
   enableAnimation: false, // 默认不启用动画
   animationSpeed: 0.5,    // 缓慢旋转速度
   maxRadius: 280,        // 默认最大半径
-  minRadius: 0            // 默认最小半径
+  minRadius: 0,           // 默认最小半径
+  rotationDirection: 'clockwise'  // 默认顺时针
 })
 
 // 使用统一的动画系统
 // 生成唯一的动画ID，确保多个组件实例不会冲突
 const animationId = `polar-canvas-${Date.now()}-${Math.random()}`
+
+// 根据旋转方向调整动画速度
+const adjustedAnimationSpeed = computed(() => {
+  return props.rotationDirection === 'counterclockwise'
+    ? -props.animationSpeed
+    : props.animationSpeed
+})
+
 const { start, stop, setSpeed, getValue, setValue } = useAnimation(
   animationId,
   AnimationType.ROTATION,
   {
     enabled: props.enableAnimation,
-    speed: props.animationSpeed
+    speed: adjustedAnimationSpeed.value
   }
 )
 
@@ -139,8 +150,16 @@ watch(() => props.enableAnimation, (enabled) => {
  * 监听动画速度变化
  * 动态调整动画速度
  */
-watch(() => props.animationSpeed, (newSpeed) => {
-  setSpeed(newSpeed)
+watch(() => props.animationSpeed, () => {
+  setSpeed(adjustedAnimationSpeed.value)
+})
+
+/**
+ * 监听旋转方向变化
+ * 动态调整动画方向
+ */
+watch(() => props.rotationDirection, () => {
+  setSpeed(adjustedAnimationSpeed.value)
 })
 
 /**
@@ -170,8 +189,13 @@ const polarToCartesian = (
   centerX: number = props.centerX,
   centerY: number = props.centerY
 ): Point => {
+  // 根据旋转方向调整角度
+  const adjustedAngle = props.rotationDirection === 'counterclockwise'
+    ? -angle
+    : angle
+
   // 将角度转换为弧度（JavaScript的Math函数使用弧度）
-  const angleRad = (angle * Math.PI) / 180
+  const angleRad = (adjustedAngle * Math.PI) / 180
   return {
     x: centerX + Math.cos(angleRad) * radius,
     y: centerY + Math.sin(angleRad) * radius
