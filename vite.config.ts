@@ -17,4 +17,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  base: '/O/',  // GitHub Pages 仓库名称
+  build: {
+    outDir: 'dist',
+    assetsDir: 'assets'
+  }
 })
