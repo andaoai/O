@@ -86,12 +86,12 @@ const handleRotationAngleChange = (newAngle: number) => {
       />
 
       <!-- 二十四节气圆环（第二层） -->
-      <!-- <TwentyFourSolarTerms
+      <TwentyFourSolarTerms
         :radius="460"
         :inner-radius="440"
         :show-sectors="false"
         :rotation-direction="rotationDirection"
-      /> -->
+      />
 
       <!-- 太阳黄道圆环（第三层） -->
       <SolarEcliptic
@@ -104,7 +104,7 @@ const handleRotationAngleChange = (newAngle: number) => {
       />
 
       <!-- 二十八星宿圆环（第三层） -->
-      <!-- <TwentyEightConstellations :rotation-direction="rotationDirection" /> -->
+      <TwentyEightConstellations :rotation-direction="rotationDirection" />
 
       <!-- 六十甲子圆环（第四层） -->
       <!-- <SixtyJiazi /> -->

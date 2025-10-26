@@ -68,7 +68,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   radius: 400,              // 适合作为外层圆环
   innerRadius: 420,         // 形成适中的环宽
-  startDegree: -7.5 - 45,          // 立春在15度位置
+  startDegree:  - 45,          // 立春在15度位置
   showLabels: true,
   showSectors: true,
   sectorOpacity: 0.2,
