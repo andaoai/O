@@ -1,37 +1,64 @@
 /**
+ * Chinese Calendar Utilities using tyme4ts
+ *
+ * This module provides accurate Chinese lunar calendar calculations,
+ * solar terms, and ganzhi (stem-branch) information using the tyme4ts library.
+ *
+ * Key features:
+ * - Accurate lunar calendar with leap months
+ * - Precise solar term calculations (astronomical)
+ * - Correct ganzhi (year, month, day, hour)
+ * - Based on traditional Chinese calendar algorithms
+ */
+
+import {
+  SolarDay,
+  SolarTime,
+  LunarDay,
+  SolarTerm,
+  SixtyCycle,
+  HeavenStem,
+  EarthBranch
+} from 'tyme4ts'
+
+/**
  * 节气信息接口
  */
 export interface SolarTermInfo {
-  name: string        // 节气名称
-  index: number       // 节气索引 (0-23)
-  isStart: boolean    // 是否是节气开始
+  name: string // 节气名称
+  index: number // 节气索引 (0-23)
+  isStart: boolean // 是否是节气开始
   nextTermName: string // 下一个节气名称
-  daysToNext: number  // 距离下一个节气的天数
+  daysToNext: number // 距离下一个节气的天数
 }
 
 /**
  * 干支历信息接口
  */
 export interface GanzhiInfo {
-  year: {         // 年干支
-    stem: string      // 天干
-    branch: string    // 地支
-    full: string      // 完整干支
-    element: string   // 五行
-    animal: string    // 生肖
+  year: {
+    // 年干支
+    stem: string // 天干
+    branch: string // 地支
+    full: string // 完整干支
+    element: string // 五行
+    animal: string // 生肖
   }
-  month: {        // 月干支
+  month: {
+    // 月干支
     stem: string
     branch: string
     full: string
   }
-  day: {          // 日干支
+  day: {
+    // 日干支
     stem: string
     branch: string
     full: string
     element: string
   }
-  hour: {         // 时干支
+  hour: {
+    // 时干支
     stem: string
     branch: string
     full: string
@@ -42,65 +69,71 @@ export interface GanzhiInfo {
  * 中国历法信息
  */
 export interface ChineseCalendarInfo {
-  solarDate: string         // 公历日期
-  lunarDate: string         // 农历日期
+  solarDate: string // 公历日期
+  lunarDate: string // 农历日期
   solarTerm?: SolarTermInfo // 节气信息
-  ganzhi: GanzhiInfo         // 干支信息
+  ganzhi: GanzhiInfo // 干支信息
 }
 
-// 24节气名称
-const SOLAR_TERMS = [
-  '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
-  '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
-  '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
-  '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'
-]
-
-// 天干
-const HEAVEN_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
-
-// 地支
-const EARTH_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
-
-// 生肖
-const ANIMALS = ['鼠', '牛', '虎', '兔', '龙', '蛇', '马', '羊', '猴', '鸡', '狗', '猪']
-
-// 五行
+// 五行映射
 const ELEMENTS = ['木', '火', '土', '金', '水']
 
 /**
+ * 从天干获取五行属性
+ */
+function getElementFromStem(stem: string): string {
+  const stemIndex = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'].indexOf(stem)
+  if (stemIndex === -1 || stemIndex >= 10) return '木'
+  const elementIndex = Math.floor(stemIndex / 2)
+  return ELEMENTS[elementIndex] || '木'
+}
+
+/**
  * 获取当前时间的节气信息
+ *
+ * Uses tyme4ts SolarTerm for precise astronomical calculation.
+ * Solar terms vary annually (e.g., 立春 can be Feb 3-5)
  *
  * @param date 日期
  * @returns 节气信息
  */
 export function getSolarTermInfo(date: Date): SolarTermInfo | undefined {
   try {
-    // 简化的节气计算（基于月份的近似计算）
-    const month = date.getMonth() + 1 // 1-12月
-    const day = date.getDate()
+    const solarDay = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
 
-    // 每个节气大约间隔15天
-    const termIndex = Math.floor((month - 1) * 2 + (day >= 15 ? 1 : 0))
+    // Get current solar term (precise astronomical calculation)
+    const currentTerm = solarDay.getTerm()
+    const termIndex = currentTerm.getIndex()
+    const termName = currentTerm.getName()
 
-    if (termIndex >= 0 && termIndex < 24) {
-      const termName = SOLAR_TERMS[termIndex] || '立春'
-      const nextIndex = (termIndex + 1) % 24
-      const nextTermName = SOLAR_TERMS[nextIndex] || '立春'
+    // Get next term
+    const nextTerm = currentTerm.next(1)
+    if (!nextTerm) {
+      return undefined
+    }
+    const nextTermName = nextTerm.getName()
 
-      // 简化计算：下一个节气在下个月的同一天左右
-      const daysToNext = termIndex % 2 === 1 ? 15 : 15
+    // Calculate days to next term
+    let daysToNext = 0
+    let testDay = solarDay
 
-      return {
-        name: termName,
-        index: termIndex,
-        isStart: day >= 15,
-        nextTermName: nextTermName,
-        daysToNext: daysToNext
-      }
+    // Count days until we reach the next term
+    while (testDay.getTerm().getIndex() !== nextTerm.getIndex() && daysToNext < 30) {
+      testDay = testDay.next(1)
+      daysToNext++
     }
 
-    return undefined
+    // Check if today is the start of a term
+    const tomorrowTerm = solarDay.next(1).getTerm()
+    const isStart = currentTerm.getIndex() !== tomorrowTerm.getIndex()
+
+    return {
+      name: termName,
+      index: termIndex,
+      isStart: isStart,
+      nextTermName: nextTermName,
+      daysToNext: daysToNext
+    }
   } catch (error) {
     console.error('获取节气信息失败:', error)
     return undefined
@@ -110,50 +143,68 @@ export function getSolarTermInfo(date: Date): SolarTermInfo | undefined {
 /**
  * 获取当前时间的干支信息
  *
+ * Uses tyme4ts SixtyCycle for accurate ganzhi calculations.
+ * Month ganzhi is based on solar terms (not calendar months).
+ * Hour ganzhi uses traditional 2-hour periods.
+ *
  * @param date 日期
  * @returns 干支信息
  */
 export function getGanzhiInfo(date: Date): GanzhiInfo {
   try {
-    // 年干支计算（基于公历年份的简化计算）
-    const year = date.getFullYear()
-    const yearStemIndex = Math.abs((year - 4) % 10)
-    const yearBranchIndex = Math.abs((year - 4) % 12)
-    const yearStem = HEAVEN_STEMS[yearStemIndex] || '甲'
-    const yearBranch = EARTH_BRANCHES[yearBranchIndex] || '子'
-    const yearGanzhi = yearStem + yearBranch
+    // Create SolarDay from date
+    const solarDay = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
 
-    // 月干支（简化计算）
-    const month = date.getMonth() + 1
-    const monthStemIndex = Math.abs((yearStemIndex * 2 + month - 2) % 10)
-    const monthBranchIndex = Math.abs((month - 1) % 12)
-    const monthStem = HEAVEN_STEMS[monthStemIndex] || '甲'
-    const monthBranch = EARTH_BRANCHES[monthBranchIndex] || '子'
-    const monthGanzhi = monthStem + monthBranch
+    // Create SolarTime for hour ganzhi
+    const solarTime = SolarTime.fromYmdHms(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds()
+    )
 
-    // 日干支（基于1900年1月1日为庚子日的简化计算）
-    const baseDate = new Date(1900, 0, 1) // 1900年1月1日，庚子日
-    const daysDiff = Math.floor((date.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24))
-    const dayGanzhiIndex = Math.abs(daysDiff % 60)
-    const dayStem = HEAVEN_STEMS[dayGanzhiIndex % 10] || '甲'
-    const dayBranch = EARTH_BRANCHES[dayGanzhiIndex % 12] || '子'
-    const dayGanzhi = dayStem + dayBranch
+    // Convert to LunarDay for year/month ganzhi
+    const lunarDay = solarDay.getLunarDay()
 
-    // 时干支
-    const hour = date.getHours()
-    const hourBranchIndex = Math.abs(Math.floor((hour + 1) / 2) % 12)
-    const hourStemIndex = Math.abs((dayGanzhiIndex * 2 + hourBranchIndex) % 10)
-    const hourStem = HEAVEN_STEMS[hourStemIndex] || '甲'
-    const hourBranch = EARTH_BRANCHES[hourBranchIndex] || '子'
-    const hourGanzhi = hourStem + hourBranch
+    // YEAR GANZHI (年干支)
+    const yearSixtyCycle = lunarDay.getYearSixtyCycle()
+    const yearStem = yearSixtyCycle.getHeavenStem().getName()
+    const yearBranch = yearSixtyCycle.getEarthBranch().getName()
+    const yearGanzhi = yearSixtyCycle.getName()
+
+    // Get zodiac animal from earthly branch
+    const yearBranchObj = EarthBranch.fromName(yearBranch)
+    const zodiac = yearBranchObj.getZodiac().getName()
+
+    // MONTH GANZHI (月干支)
+    // Note: Month ganzhi changes at 立春, not Jan 1
+    const monthSixtyCycle = lunarDay.getMonthSixtyCycle()
+    const monthStem = monthSixtyCycle.getHeavenStem().getName()
+    const monthBranch = monthSixtyCycle.getEarthBranch().getName()
+    const monthGanzhi = monthSixtyCycle.getName()
+
+    // DAY GANZHI (日干支)
+    const daySixtyCycle = solarDay.getSixtyCycleDay().getSixtyCycle()
+    const dayStem = daySixtyCycle.getHeavenStem().getName()
+    const dayBranch = daySixtyCycle.getEarthBranch().getName()
+    const dayGanzhi = daySixtyCycle.getName()
+
+    // HOUR GANZHI (时干支)
+    // Traditional Chinese hours: 23:00-01:00 = 子时, 01:00-03:00 = 丑时, etc.
+    const hourSixtyCycle = solarTime.getSixtyCycleHour().getSixtyCycle()
+    const hourStem = hourSixtyCycle.getHeavenStem().getName()
+    const hourBranch = hourSixtyCycle.getEarthBranch().getName()
+    const hourGanzhi = hourSixtyCycle.getName()
 
     return {
       year: {
         stem: yearStem,
         branch: yearBranch,
         full: yearGanzhi,
-        element: ELEMENTS[Math.floor(yearStemIndex / 2)] || '木',
-        animal: ANIMALS[yearBranchIndex] || '鼠'
+        element: getElementFromStem(yearStem),
+        animal: zodiac
       },
       month: {
         stem: monthStem,
@@ -164,7 +215,7 @@ export function getGanzhiInfo(date: Date): GanzhiInfo {
         stem: dayStem,
         branch: dayBranch,
         full: dayGanzhi,
-        element: ELEMENTS[Math.floor((dayGanzhiIndex % 10) / 2)] || '木'
+        element: getElementFromStem(dayStem)
       },
       hour: {
         stem: hourStem,
@@ -174,7 +225,7 @@ export function getGanzhiInfo(date: Date): GanzhiInfo {
     }
   } catch (error) {
     console.error('获取干支信息失败:', error)
-    // 返回默认值
+    // Return default values on error
     return {
       year: { stem: '甲', branch: '子', full: '甲子', element: '木', animal: '鼠' },
       month: { stem: '甲', branch: '子', full: '甲子' },
@@ -187,21 +238,23 @@ export function getGanzhiInfo(date: Date): GanzhiInfo {
 /**
  * 获取完整的中国历法信息
  *
+ * Main entry point that combines all calendar information.
+ *
  * @param date 日期
  * @returns 中国历法信息
  */
 export function getChineseCalendarInfo(date: Date): ChineseCalendarInfo {
   try {
-    // 格式化公历日期
+    // Format solar date
     const solarDate = date.toLocaleDateString('zh-CN')
 
-    // 简化农历日期计算
+    // Get accurate lunar date using tyme4ts
     const lunarDate = getLunarDate(date)
 
-    // 获取节气信息
+    // Get solar term info (precise astronomical calculation)
     const solarTerm = getSolarTermInfo(date)
 
-    // 获取干支信息
+    // Get ganzhi info (traditional algorithms)
     const ganzhi = getGanzhiInfo(date)
 
     return {
@@ -221,28 +274,32 @@ export function getChineseCalendarInfo(date: Date): ChineseCalendarInfo {
 }
 
 /**
- * 简化农历日期计算
+ * 农历日期计算（使用 tyme4ts）
+ *
+ * Converts solar (Gregorian) date to lunar date.
+ * Automatically handles:
+ * - Leap months (闰月) - e.g., "闰四月"
+ * - Month lengths (29 or 30 days)
+ * - Traditional month names (正月, 二月, ..., 腊月)
+ * - Traditional day names (初一, 初二, ..., 三十)
  *
  * @param date 公历日期
- * @returns 农历日期字符串
+ * @returns 农历日期字符串 (e.g., "农历正月初一", "农历闰四月十五")
  */
 function getLunarDate(date: Date): string {
   try {
-    // 简化的农历计算（仅供参考）
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const day = date.getDate()
+    // Create SolarDay from Date object
+    const solarDay = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
 
-    // 简化映射表（实际应该使用复杂的天文计算）
-    const lunarMonths = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月']
-    const lunarDays = ['初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
-                      '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
-                      '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十']
+    // Convert to LunarDay (handles leap months automatically)
+    const lunarDay = solarDay.getLunarDay()
 
-    const lunarMonth = lunarMonths[(month - 1) % 12]
-    const lunarDay = lunarDays[Math.min(day - 1, 29)]
-
-    return `${lunarMonth}${lunarDay}`
+    // Return formatted string
+    // Examples:
+    // - "农历正月初一" (Lunar New Year)
+    // - "农历闰四月十五" (leap month)
+    // - "农历腊月三十" (New Year's Eve)
+    return lunarDay.toString()
   } catch (error) {
     console.error('计算农历日期失败:', error)
     return '农历日期计算失败'
