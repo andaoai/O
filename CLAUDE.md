@@ -8,10 +8,13 @@ This is a **Chinese Astronomical Rings visualization system** (中华天文圆�
 
 - 360-degree degree scales with customizable intervals
 - Solar ecliptic system using astronomy-engine for precise calculations
+- Lunar orbit/white path system (白道) with moon position tracking
 - 28 constellations (二十八星宿) organized by four celestial symbols
+- 24 solar terms (二十四节气) based on solar position
 - 12 earthly branches (十二地支)
+- 10 heavenly stems with void positions (天干空亡)
 - Four celestial symbols (四象): Azure Dragon, Vermilion Bird, White Tiger, Black Tortoise
-- Unified control panel for time, zoom, and pan controls
+- Unified control panel for time, zoom, rotation, and pan controls
 - Chinese calendar integration with tyme4ts
 
 ## Architecture
@@ -38,11 +41,23 @@ SolarEcliptic (sun position component)
 ├── Integrates astronomy-engine for precise calculations
 └── Real-time solar position with seasonal colors
 
-Traditional Components (being refactored)
-├── TwentyEightConstellations - 28 Chinese constellations
-├── EarthlyBranches - 12 earthly branches
-├── SiXiang - Four celestial symbols
-└── [Commented out pending refactoring] SixtyJiazi, HeavenlyStems, EightGates, TwelveLongevity
+Active Traditional Components
+├── TwentyFourSolarTerms - 24 solar terms (节气) with astronomical precision
+├── TwentyEightConstellations - 28 Chinese constellations (星宿)
+├── EarthlyBranches - 12 earthly branches (地支)
+├── TiangangKongwang - 10 heavenly stems with void positions (天干空亡)
+└── CustomRing - Generic customizable ring component
+
+Legacy Components (temporarily disabled in App.vue, available for use)
+├── SixtyJiazi - 60 Jiazi system
+├── HeavenlyStems - 10 heavenly stems
+├── EightGates - 8 gates system
+├── TwelveLongevity - 12 longevity stages
+└── SiXiang - Four celestial symbols
+
+Orbit System Components
+├── OrbitSystem - Generic orbital visualization component
+└── CircleRing - Legacy ring component (still used by some traditional components)
 ```
 
 ### State Management
@@ -55,10 +70,11 @@ Uses **Pinia** for state management with:
 
 ### Key Libraries
 
-- **astronomy-engine (v2.1.19)**: High-precision astronomical calculations for solar position
+- **astronomy-engine (v2.1.19)**: High-precision astronomical calculations for solar and lunar positions
 - **tyme4ts (v1.3.7)**: Traditional Chinese calendar calculations
 - **Vue 3.5.22**: Composition API with `<script setup>` syntax
 - **TypeScript**: Full type safety throughout
+- **gh-pages (v6.3.0)**: GitHub Pages deployment via npm script
 
 ## Development Commands
 
@@ -84,6 +100,9 @@ npm run test:unit
 
 # End-to-end testing
 npm run test:e2e
+
+# Deploy to GitHub Pages
+npm run deploy
 ```
 
 ### Test Commands
@@ -108,17 +127,20 @@ src/
 ├── components/
 │   ├── base/                      # Base components
 │   │   ├── PolarCanvas.vue        # 🆕 Base polar coordinate canvas
-│   │   ├── OrbitSystem.vue        # 🆕 Orbit system component
+│   │   ├── OrbitSystem.vue        # 🆕 Orbit system component (lunar orbits)
 │   │   └── CircleRing.vue         # Legacy ring component
 │   ├── DegreeScale.vue            # 🆕 Flexible degree scale component
 │   ├── SolarEcliptic.vue          # 🆕 Solar ecliptic with astronomy-engine
-│   ├── TwentyEightConstellations.vue
-│   ├── EarthlyBranches.vue
-│   ├── SiXiang.vue
-│   ├── SixtyJiazi.vue            # 🔄 Commented out pending refactoring
-│   ├── HeavenlyStems.vue         # 🔄 Commented out pending refactoring
-│   ├── EightGates.vue            # 🔄 Commented out pending refactoring
-│   ├── TwelveLongevity.vue       # 🔄 Commented out pending refactoring
+│   ├── TwentyFourSolarTerms.vue   # ✅ 24 solar terms (active)
+│   ├── TwentyEightConstellations.vue # ✅ 28 constellations (active)
+│   ├── EarthlyBranches.vue        # ✅ 12 earthly branches (active)
+│   ├── tianggankongwang.vue       # ✅ Heavenly stems with void (active)
+│   ├── SiXiang.vue                # ⏸️ Four celestial symbols (available, not in App.vue)
+│   ├── SixtyJiazi.vue            # ⏸️ 60 Jiazi system (available, not in App.vue)
+│   ├── HeavenlyStems.vue         # ⏸️ 10 heavenly stems (available, not in App.vue)
+│   ├── EightGates.vue            # ⏸️ 8 gates system (available, not in App.vue)
+│   ├── TwelveLongevity.vue       # ⏸️ 12 longevity stages (available, not in App.vue)
+│   ├── CustomRing.vue            # 🆕 Generic customizable ring
 │   └── Control.vue               # 🆕 Unified control panel
 ├── composables/
 │   └── useAnimation.ts           # 🆕 Animation control composable
@@ -128,6 +150,11 @@ src/
 ├── router/                       # Vue Router configuration
 └── types/                        # TypeScript type definitions
 ```
+
+**Legend:**
+- 🆕 Newly created/fully refactored
+- ✅ Active and currently used in App.vue
+- ⏸️ Available but not currently used in App.vue (can be enabled as needed)
 
 ## Key Components and Usage
 
@@ -183,7 +210,7 @@ Precise solar position calculation using astronomy-engine:
 
 ### Control Panel
 
-Unified time, zoom, and pan controls with keyboard shortcuts:
+Unified time, zoom, rotation, and pan controls with keyboard shortcuts:
 
 ```vue
 <Control
@@ -191,6 +218,8 @@ Unified time, zoom, and pan controls with keyboard shortcuts:
   v-model:zoom="zoomLevel"
   v-model:offsetX="offsetX"
   v-model:offsetY="offsetY"
+  v-model:rotation-direction="rotationDirection"
+  v-model:rotation-angle="rotationAngle"
 />
 ```
 
@@ -204,6 +233,11 @@ Unified time, zoom, and pan controls with keyboard shortcuts:
 - `+/-/0`: Zoom controls
 - `Arrow keys`: Pan viewport
 - `Delete`: Reset pan
+
+**New Rotation Controls:**
+- `rotationDirection`: 'clockwise' | 'counterclockwise' - Controls text/label rotation direction
+- `rotationAngle`: Manual rotation angle in degrees
+- All ring components respect the global rotation direction for consistent text orientation
 
 ## Development Patterns
 
@@ -231,6 +265,21 @@ const props = withDefaults(defineProps<Props>(), {
 })
 ```
 
+### Rotation Direction
+
+All traditional ring components should support the `rotationDirection` prop for consistent text orientation:
+
+```typescript
+interface Props {
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+  // ... other props
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  rotationDirection: 'clockwise'
+})
+```
+
 ### Animation System
 
 Use the `useAnimation` composable for consistent animation behavior:
@@ -245,19 +294,28 @@ const { isAnimating, animationSpeed, startAnimation, stopAnimation } = useAnimat
 
 The project is currently in the "重构天文体系" (Refactoring Astronomical System) phase.
 
-**✅ Completed refactoring:**
+**✅ Completed refactoring (actively used):**
 - PolarCanvas - Base polar coordinate system
 - DegreeScale - Flexible degree scale component (replaces CircleScale)
 - SolarEcliptic - Solar position with astronomy-engine integration
-- Control - Unified control panel
+- Control - Unified control panel with rotation controls
+- TwentyFourSolarTerms - 24 solar terms with astronomical precision
+- TwentyEightConstellations - 28 constellations with proper rotation
+- tianggankongwang - Heavenly stems with void positions, customizable props
 
-**🔄 Pending refactoring (temporarily commented out):**
-- SixtyJiazi - 60 Jiazi system
-- HeavenlyStems - 10 heavenly stems
-- EightGates - 8 gates system
-- TwelveLongevity - 12 longevity stages
+**⏸️ Legacy components (available but not in current App.vue):**
+- SixtyJiazi - 60 Jiazi system (functional, ready to enable)
+- HeavenlyStems - 10 heavenly stems (functional, ready to enable)
+- EightGates - 8 gates system (functional, ready to enable)
+- TwelveLongevity - 12 longevity stages (functional, ready to enable)
+- SiXiang - Four celestial symbols (functional, ready to enable)
 
-When working on commented-out components, check their current implementation and refactor them to use the new PolarCanvas architecture.
+**🆕 Recent additions:**
+- Lunar orbit/white path (白道) system with OrbitSystem component
+- Rotation direction and angle controls (commit 7bd9fb8, 8cb2230)
+- GitHub Pages deployment workflow (commit d1bffce, c835a8a)
+
+When working with legacy components, they can be enabled by uncommenting in [App.vue](src/App.vue) and do not necessarily require refactoring unless adding new features.
 
 ## Key Files for Understanding
 
@@ -266,6 +324,8 @@ When working on commented-out components, check their current implementation and
 - `astronomy-engine-usage.md` - Specific guide for astronomy-engine integration
 - `src/components/base/PolarCanvas.vue` - Base coordinate system
 - `src/components/SolarEcliptic.vue` - Example of astronomy-engine integration
+- `src/components/base/OrbitSystem.vue` - Orbital visualization (lunar system)
+- `src/App.vue` - Main application showing current component configuration
 
 ## Testing Strategy
 
@@ -280,3 +340,19 @@ When working on commented-out components, check their current implementation and
 - **Debounce** frequent updates (especially time-based animations)
 - Optimize **SVG rendering** by minimizing DOM nodes
 - Use **v-show** vs **v-if** appropriately for conditional rendering
+
+## Deployment
+
+The project is configured for GitHub Pages deployment:
+
+```bash
+# Build and deploy to GitHub Pages
+npm run deploy
+```
+
+This command:
+1. Runs the production build (`npm run build`)
+2. Publishes the `dist/` directory to the `gh-pages` branch
+3. GitHub Actions automatically deploy from gh-pages to GitHub Pages
+
+The deployment workflow is configured in `.github/workflows/`.
