@@ -23,6 +23,9 @@ import CircleRing from './base/CircleRing.vue'
  * - 南方朱雀七宿（夏季星空）
  */
 
+// 28星宿组件整体旋转偏移（可选）
+const startDegree = 210  // 修改此值可整体旋转圆环，如设为 90 则从正上方开始
+
 const twentyEightConstellations = [
   // 东方青龙七宿 (0° → 73.922°)
   { label: '角', color: '#2ECC71', startAngle: 0, endAngle: 11.828 },      // 12古度
@@ -76,6 +79,7 @@ const twentyEightConstellations = [
     :label-position="0.5"
     :enable-animation="false"
     :animation-speed="0.2"
+    :start-degree="startDegree"
     :font-size="12"
   />
 </template>
