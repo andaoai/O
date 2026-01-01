@@ -46,6 +46,8 @@
   },
   "enableAllProjectMcpServers": true,
   "enabledMcpjsonServers": [
-    "github"
+    "context7",
+    "playwright",
+    "sequential-thinking"
   ]
 }
