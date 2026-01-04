@@ -362,7 +362,7 @@ const emit = defineEmits<{
 // 响应式数据
 const currentTime = ref(new Date())
 const isPlaying = ref(false)
-const playSpeed = ref(60)
+const playSpeed = ref(1)
 const internalZoom = ref(1)
 const internalOffsetX = ref(0)
 const internalOffsetY = ref(0)

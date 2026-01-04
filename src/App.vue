@@ -11,6 +11,7 @@ import SiXiang from './components/SiXiang.vue'
 import DegreeScale from './components/DegreeScale.vue'
 import SolarEcliptic from './components/SolarEcliptic.vue'
 import TwentyFourSolarTerms from './components/TwentyFourSolarTerms.vue'
+import TaiChi from './components/TaiChi.vue'
 import Control from './components/Control.vue'
 import CustomRing from './components/CustomRing.vue'
 
@@ -85,6 +86,13 @@ const handleRotationAngleChange = (newAngle: number) => {
         :rotation-direction="rotationDirection"
       />
 
+      <!-- 太极图（中心） -->
+      <TaiChi
+        :radius="80"
+        :time="controlledTime"
+        :rotation-direction="rotationDirection"
+      />
+
       <!-- 二十四节气圆环（第二层） -->
       <TwentyFourSolarTerms
         :radius="460"
@@ -103,7 +111,7 @@ const handleRotationAngleChange = (newAngle: number) => {
         :rotation-direction="rotationDirection"
       />
 
-      <!-- 二十八星宿圆环（第三层） -->
+      <!-- 二十八星宿圆环（第四层） -->
       <TwentyEightConstellations :rotation-direction="rotationDirection" />
 
       <!-- 六十甲子圆环（第四层） -->
