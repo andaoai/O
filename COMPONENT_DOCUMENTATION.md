@@ -8,6 +8,7 @@
   - [PolarCanvas](#polarcanvas-极坐标画布组件)
   - [DegreeScale](#degreescale-通用度数刻度组件)
   - [SolarEcliptic](#solarecliptic-太阳黄道组件)
+  - [TaiChi](#taichi-太极图组件)
   - [Control](#control-统一控制面板)
 - [传统组件](#传统组件)
 - [架构设计](#架构设计)
@@ -426,6 +427,120 @@ const handleOffsetChange = (newOffset: {x: number, y: number}) => {
 }
 </style>
 ```
+
+### TaiChi 太极图组件
+
+显示传统的太极图（阴阳鱼），根据时间动态旋转，反映天地阴阳消长。
+
+#### 特性
+- **时间驱动旋转** - 24小时旋转360度（一天一圈）
+- **历史日期支持** - 支持从公元1年开始的任意历史日期
+- **连续旋转** - 角度连续累加，永不重置，避免旋转反转问题
+- **毫秒级精度** - 精确到毫秒的时间响应
+- **完全可配置** - 支持自定义颜色、大小、边框等
+- **天文同步** - 与控制面板时间完全同步
+
+#### Props
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `radius` | number | 80 | 太极图半径（像素） |
+| `yinColor` | string | '#000000' | 阴色（黑色） |
+| `yangColor` | string | '#FFFFFF' | 阳色（白色） |
+| `yinEyeColor` | string | '#FFFFFF' | 阴眼颜色（白色） |
+| `yangEyeColor` | string | '#000000' | 阳眼颜色（黑色） |
+| `strokeColor` | string | '#666666' | 边框颜色 |
+| `strokeWidth` | number | 2 | 边框宽度（像素） |
+| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向 |
+| `time` | Date | new Date() | 观测时间（用于计算旋转角度） |
+
+#### 旋转原理
+
+太极图根据时间计算旋转角度，算法如下：
+
+```typescript
+// 1. 计算从公元1年1月1日到指定日期的总天数
+// 2. 考虑闰年规则（4年一闰、100年不闰、400年又闰）
+// 3. 加上当天的时间部分（小时、分钟、秒、毫秒）
+// 4. 总天数 × 360度 = 旋转角度
+// 5. 加上90度调整白色部分位置
+```
+
+**关键特性**：
+- 使用公元1年为基准，支持两千年前历史日期
+- 角度连续累加，不会每日重置，确保平滑旋转
+- 毫秒级时间精度，实时反映时间变化
+
+#### 使用示例
+
+**基础用法**
+```vue
+<template>
+  <svg>
+    <!-- 太极图会根据 controlledTime 自动旋转 -->
+    <TaiChi
+      :radius="80"
+      :time="controlledTime"
+      :rotation-direction="'clockwise'"
+    />
+  </svg>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import TaiChi from './components/TaiChi.vue'
+
+const controlledTime = ref(new Date())
+</script>
+```
+
+**自定义样式**
+```vue
+<template>
+  <TaiChi
+    :radius="100"
+    :yin-color="#1a1a1a"
+    :yang-color="#f0f0f0"
+    :stroke-color="#d4af37"
+    :stroke-width="3"
+    :time="controlledTime"
+  />
+</template>
+```
+
+**历史日期**
+```vue
+<script setup>
+import { ref } from 'vue'
+
+// 太极图支持任意历史日期
+const historicalDate = ref(new Date('2000-01-01T12:00:00'))
+// 甚至可以追溯到公元1年
+const ancientDate = ref(new Date('0001-01-01T00:00:00'))
+</script>
+```
+
+#### 技术细节
+
+**绘制方法**：
+1. 黑色整圆背景
+2. 右半边白色矩形（应用圆形裁剪）
+3. 外圆边框
+4. 上部白色小圆（阳）
+5. 下部黑色小圆（阴）
+6. 阳眼（黑色小圆点）
+7. 阴眼（白色小圆点）
+
+**性能优化**：
+- 使用 `computed` 属性缓存计算结果
+- 移除 CSS `transition` 以确保实时响应
+- 直接 SVG `transform` 旋转，性能最优
+
+**天文意义**：
+太极图反映阴阳消长，与时间直接对应：
+- 白色部分（阳）：随时间推移连续旋转
+- 黑色部分（阴）：与白色部分互补
+- 24小时完成360度旋转，象征一天的阴阳循环
 
 ## 传统组件
 
