@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import HeavenlyStems from './components/HeavenlyStems.vue'
-import EarthlyBranches from './components/EarthlyBranches.vue'
-import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
-import SixtyJiazi from './components/SixtyJiazi.vue'
-import SixtyJiaziNayin from './components/SixtyJiaziNayin.vue'
-import EightGates from './components/EightGates.vue'
-import TwelveLongevity from './components/TwelveLongevity.vue'
-import tiangankongwang from './components/tianggankongwang.vue'
-import SiXiang from './components/SiXiang.vue'
+import DataRing from './components/DataRing.vue'
 import DegreeScale from './components/DegreeScale.vue'
 import SolarEcliptic from './components/SolarEcliptic.vue'
-import TwentyFourSolarTerms from './components/TwentyFourSolarTerms.vue'
 import TaiChi from './components/TaiChi.vue'
 import Control from './components/Control.vue'
 import RingStack from './components/base/RingStack.vue'
+import {
+  twentyFourSolarTerms,
+  twentyEightConstellations,
+  sixtyJiazi,
+  sixtyJiaziNayin,
+  heavenlyStems,
+  tianganKongwang,
+  twelveLongevity,
+  earthlyBranches,
+  eightGates,
+  siXiang
+} from './data/rings'
 
 
 // 时间控制
@@ -34,8 +37,10 @@ const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
 // 同心圆环自动布局配置（由外到内）。
-// 只声明每个环的径向厚度，RingStack 会从 outerRadius 起自动分配 radius/innerRadius，
-// 叠加时永不重叠。额外的组件专属 props 通过 props 字段透传。
+// 只声明每个环的径向厚度，RingStack 会从 outerRadius 起自动分配 radius/innerRadius。
+// 数据驱动的环统一用 DataRing 渲染，data 字段经 props 透传；
+// DegreeScale 按角度间隔生成（非数据驱动），保留独立组件。
+const DataRingComp = markRaw(DataRing)
 const rings = [
   {
     component: markRaw(DegreeScale),
@@ -52,21 +57,17 @@ const rings = [
       circleWidth: 1
     }
   },
-  {
-    component: markRaw(TwentyFourSolarTerms),
-    thickness: 24,
-    props: { showSectors: false }
-  },
-  { component: markRaw(TwentyEightConstellations), thickness: 30 },
-  { component: markRaw(SixtyJiazi), thickness: 30 },
+  { component: DataRingComp, thickness: 24, props: { data: twentyFourSolarTerms } },
+  { component: DataRingComp, thickness: 30, props: { data: twentyEightConstellations } },
+  { component: DataRingComp, thickness: 30, props: { data: sixtyJiazi } },
   // 五行纳音：与六十甲子同源同转，紧贴其内侧
-  { component: markRaw(SixtyJiaziNayin), thickness: 26, gapBefore: 0 },
-  { component: markRaw(HeavenlyStems), thickness: 28 },
-  { component: markRaw(tiangankongwang), thickness: 30 },
-  { component: markRaw(TwelveLongevity), thickness: 38 },
-  { component: markRaw(EarthlyBranches), thickness: 28 },
-  { component: markRaw(EightGates), thickness: 28 },
-  { component: markRaw(SiXiang), thickness: 34 }
+  { component: DataRingComp, thickness: 26, gapBefore: 0, props: { data: sixtyJiaziNayin } },
+  { component: DataRingComp, thickness: 28, props: { data: heavenlyStems } },
+  { component: DataRingComp, thickness: 30, props: { data: tianganKongwang } },
+  { component: DataRingComp, thickness: 38, props: { data: twelveLongevity } },
+  { component: DataRingComp, thickness: 28, props: { data: earthlyBranches } },
+  { component: DataRingComp, thickness: 28, props: { data: eightGates } },
+  { component: DataRingComp, thickness: 34, props: { data: siXiang } }
 ]
 
 // 时间变化处理器
