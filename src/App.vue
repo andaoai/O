@@ -4,6 +4,7 @@ import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
 import SixtyJiazi from './components/SixtyJiazi.vue'
+import SixtyJiaziNayin from './components/SixtyJiaziNayin.vue'
 import EightGates from './components/EightGates.vue'
 import TwelveLongevity from './components/TwelveLongevity.vue'
 import tiangankongwang from './components/tianggankongwang.vue'
@@ -57,7 +58,9 @@ const rings = [
     props: { showSectors: false }
   },
   { component: markRaw(TwentyEightConstellations), thickness: 30 },
-  { component: markRaw(SixtyJiazi), thickness: 36 },
+  { component: markRaw(SixtyJiazi), thickness: 30 },
+  // 五行纳音：与六十甲子同源同转，紧贴其内侧
+  { component: markRaw(SixtyJiaziNayin), thickness: 26, gapBefore: 0 },
   { component: markRaw(HeavenlyStems), thickness: 28 },
   { component: markRaw(tiangankongwang), thickness: 30 },
   { component: markRaw(TwelveLongevity), thickness: 38 },
