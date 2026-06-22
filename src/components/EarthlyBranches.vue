@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 地支组件内部起始度数设置
-const startDegree = -90  // 地支起始度数
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 280,
+  innerRadius: 250,
+  startDegree: -90,
+  rotationDirection: 'clockwise'
+})
 
 // 十二地支，每个30度，子从345度开始
 const earthlyBranches = [
@@ -23,8 +35,8 @@ const earthlyBranches = [
 
 <template>
   <CircleRing
-    :radius="280"
-    :inner-radius="250"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="earthlyBranches"
     :show-ticks="true"
     :tick-width="0.8"
@@ -36,5 +48,6 @@ const earthlyBranches = [
     :enable-animation="false"
     :animation-speed="-0.3"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
   />
 </template>

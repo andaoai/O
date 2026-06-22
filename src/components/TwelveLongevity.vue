@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 十二长生组件内部起始度数设置
-const startDegree = 0  // 十二长生起始度数
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 310,
+  innerRadius: 280,
+  startDegree: 0,
+  rotationDirection: 'clockwise'
+})
 
 // 五组十二长生，每组60个格子（12个长生×5个组），每个格子6度
 const longevityStates = []
@@ -34,8 +46,8 @@ for (let group = 0; group < 5; group++) {
 
 <template>
   <CircleRing
-    :radius="310"
-    :inner-radius="280"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="longevityStates"
     :show-ticks="true"
     :tick-width="0.6"
@@ -47,6 +59,7 @@ for (let group = 0; group < 5; group++) {
     :enable-animation="false"
     :animation-speed="0.1"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
     :vertical-two-char="true"
     font-size="13"
   />

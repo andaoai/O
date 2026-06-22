@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, markRaw } from 'vue'
 import HeavenlyStems from './components/HeavenlyStems.vue'
 import EarthlyBranches from './components/EarthlyBranches.vue'
 import TwentyEightConstellations from './components/TwentyEightConstellations.vue'
@@ -13,7 +13,7 @@ import SolarEcliptic from './components/SolarEcliptic.vue'
 import TwentyFourSolarTerms from './components/TwentyFourSolarTerms.vue'
 import TaiChi from './components/TaiChi.vue'
 import Control from './components/Control.vue'
-import CustomRing from './components/CustomRing.vue'
+import RingStack from './components/base/RingStack.vue'
 
 
 // 时间控制
@@ -31,6 +31,40 @@ const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 
 // 旋转角度控制
 const rotationAngle = ref(0)
+
+// 同心圆环自动布局配置（由外到内）。
+// 只声明每个环的径向厚度，RingStack 会从 outerRadius 起自动分配 radius/innerRadius，
+// 叠加时永不重叠。额外的组件专属 props 通过 props 字段透传。
+const rings = [
+  {
+    component: markRaw(DegreeScale),
+    thickness: 20,
+    props: {
+      showSectors: true,
+      sectorColor: '#666666',
+      sectorOpacity: 0.1,
+      showLabels: true,
+      labelColor: '#888888',
+      scaleInterval: 6,
+      showCircle: true,
+      circleColor: '#666666',
+      circleWidth: 1
+    }
+  },
+  {
+    component: markRaw(TwentyFourSolarTerms),
+    thickness: 24,
+    props: { showSectors: false }
+  },
+  { component: markRaw(TwentyEightConstellations), thickness: 30 },
+  { component: markRaw(SixtyJiazi), thickness: 36 },
+  { component: markRaw(HeavenlyStems), thickness: 28 },
+  { component: markRaw(tiangankongwang), thickness: 30 },
+  { component: markRaw(TwelveLongevity), thickness: 38 },
+  { component: markRaw(EarthlyBranches), thickness: 28 },
+  { component: markRaw(EightGates), thickness: 28 },
+  { component: markRaw(SiXiang), thickness: 34 }
+]
 
 // 时间变化处理器
 const handleTimeChange = (newTime: Date) => {
@@ -69,20 +103,21 @@ const handleRotationAngleChange = (newAngle: number) => {
     >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
 
-      <!-- 360度刻度尺（最外层） -->
-      <!-- scale-interval使用6度间隔，共60个刻度，对应六十甲子 -->
-      <DegreeScale
-        :radius="480"
-        :inner-radius="460"
-        :show-sectors="true"
-        sector-color="#666666"
-        :sector-opacity="0.1"
-        :show-labels="true"
-        label-color="#888888"
-        :scale-interval="6"
-        :show-circle="true"
-        circle-color="#666666"
-        :circle-width="1"
+      <!-- 同心圆环带：由外到内自动布局，不重叠 -->
+      <RingStack
+        :outer-radius="480"
+        :gap="2"
+        :rings="rings"
+        :rotation-direction="rotationDirection"
+      />
+
+      <!-- 太阳黄道圆环（中心区） -->
+      <SolarEcliptic
+        :radius="150"
+        :time="controlledTime"
+        :enable-animation="true"
+        :animation-speed="0.1"
+        :show-sun-label="true"
         :rotation-direction="rotationDirection"
       />
 
@@ -92,83 +127,6 @@ const handleRotationAngleChange = (newAngle: number) => {
         :time="controlledTime"
         :rotation-direction="rotationDirection"
       />
-
-      <!-- 二十四节气圆环（第二层） -->
-      <TwentyFourSolarTerms
-        :radius="460"
-        :inner-radius="440"
-        :show-sectors="false"
-        :rotation-direction="rotationDirection"
-      />
-
-      <!-- 太阳黄道圆环（第三层） -->
-      <SolarEcliptic
-        :radius="160"
-        :time="controlledTime"
-        :enable-animation="true"
-        :animation-speed="0.1"
-        :show-sun-label="true"
-        :rotation-direction="rotationDirection"
-      />
-
-      <!-- 二十八星宿圆环（第四层） -->
-      <TwentyEightConstellations :rotation-direction="rotationDirection" />
-
-      <!-- 六十甲子圆环（第四层） -->
-      <!-- <SixtyJiazi /> -->
-
-      <!-- 十天干圆环（第五层） -->
-      <!-- <HeavenlyStems /> -->
-
-      <!-- 多个天干空亡圆环，不同半径和起始度数 -->
-      <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="310"
-        :inner-radius="280"
-        :start-degree="-90"
-      />
-      <!-- <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="340"
-        :inner-radius="310"
-        :start-degree="-30"
-      />
-      
-      <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="370"
-        :inner-radius="340"
-        :start-degree="30"
-      />
-      <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="400"
-        :inner-radius="370"
-        :start-degree="90"
-      />
-      <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="430"
-        :inner-radius="400"
-        :start-degree="150"
-      />
-      <tiangankongwang
-        :rotation-direction="rotationDirection"
-        :radius="460"
-        :inner-radius="430"
-        :start-degree="210"
-      /> -->
-      <!-- 十二地支圆环（第六层） -->
-      <EarthlyBranches :rotation-direction="rotationDirection" />
-
-      <!-- 八门圆环（第七层） -->
-      <!-- <EightGates /> -->
-
-      <!-- 十二长生圆环（第八层） -->
-      <!-- <TwelveLongevity /> -->
-
-      <!-- 四象圆环（第九层） -->
-      <!-- <SiXiang :rotation-direction="rotationDirection" /> -->
       </g>
 
     </svg>

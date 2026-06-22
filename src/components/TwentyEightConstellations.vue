@@ -23,8 +23,20 @@ import CircleRing from './base/CircleRing.vue'
  * - 南方朱雀七宿（夏季星空）
  */
 
-// 28星宿组件整体旋转偏移（可选）
-const startDegree = 210  // 修改此值可整体旋转圆环，如设为 90 则从正上方开始
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number  // 整体旋转偏移，如设为 90 则从正上方开始
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 420,
+  innerRadius: 390,
+  startDegree: 210,
+  rotationDirection: 'clockwise'
+})
 
 const twentyEightConstellations = [
   // 东方青龙七宿 (0° → 73.922°)
@@ -67,8 +79,8 @@ const twentyEightConstellations = [
 
 <template>
   <CircleRing
-    :radius="420"
-    :inner-radius="390"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="twentyEightConstellations"
     :show-ticks="true"
     :tick-width="1"
@@ -80,6 +92,7 @@ const twentyEightConstellations = [
     :enable-animation="false"
     :animation-speed="0.2"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
     :font-size="12"
   />
 </template>

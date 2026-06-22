@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 天干组件内部起始度数设置
-const startDegree = 0  // 天干起始度数
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 340,
+  innerRadius: 310,
+  startDegree: 0,
+  rotationDirection: 'clockwise'
+})
 
 // 十天干，每个36度，甲从0度开始
 const heavenlyStems = [
@@ -21,8 +33,8 @@ const heavenlyStems = [
 
 <template>
   <CircleRing
-    :radius="340"
-    :inner-radius="310"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="heavenlyStems"
     :show-ticks="true"
     :tick-width="0.6"
@@ -34,5 +46,6 @@ const heavenlyStems = [
     :enable-animation="false"
     :animation-speed="0.5"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
   />
 </template>

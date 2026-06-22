@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 八门组件内部起始度数设置
-const startDegree = 0  // 八门起始度数
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 220,
+  innerRadius: 190,
+  startDegree: 0,
+  rotationDirection: 'clockwise'
+})
 
 // 八门，每个45度，从0度开始按顺时针排列
 const eightGates = [
@@ -19,8 +31,8 @@ const eightGates = [
 
 <template>
   <CircleRing
-    :radius="220"
-    :inner-radius="190"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="eightGates"
     :show-ticks="true"
     :tick-width="0.8"
@@ -32,6 +44,7 @@ const eightGates = [
     :enable-animation="false"
     :animation-speed="0.1"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
     font-size="14"
   />
 </template>

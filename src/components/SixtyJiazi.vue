@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 六十甲子组件内部起始度数设置
-const startDegree = 0  // 六十甲子起始度数
+// 布局相关 props（默认值 = 原硬编码值，向后兼容）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 380,
+  innerRadius: 350,
+  startDegree: 0,
+  rotationDirection: 'clockwise'
+})
 
 // 六十甲子：由十天干和十二地支组合而成，共60个
 const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
@@ -81,8 +93,8 @@ for (let i = 0; i < 60; i++) {
 
 <template>
   <CircleRing
-    :radius="380"
-    :inner-radius="350"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="sixtyJiazi"
     :show-ticks="true"
     :tick-width="0.5"
@@ -94,6 +106,7 @@ for (let i = 0; i < 60; i++) {
     :enable-animation="false"
     :animation-speed="0"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
     font-size="11"
   />
 </template>

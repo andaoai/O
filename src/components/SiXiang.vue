@@ -1,8 +1,20 @@
 <script setup lang="ts">
 import CircleRing from './base/CircleRing.vue'
 
-// 四象组件内部起始度数设置
-const startDegree = 0  // 四象起始度数
+// 布局相关 props（默认值 = 原硬编码值，已修复内外半径反置：外 230 / 内 200）
+interface Props {
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+withDefaults(defineProps<Props>(), {
+  radius: 230,
+  innerRadius: 200,
+  startDegree: 0,
+  rotationDirection: 'clockwise'
+})
 
 // 四象，每个90度，按照传统方位分布
 const fourSymbols = [
@@ -43,8 +55,8 @@ const fourSymbols = [
 
 <template>
   <CircleRing
-    :radius="200"
-    :inner-radius="230"
+    :radius="radius"
+    :inner-radius="innerRadius"
     :items="fourSymbols"
     :show-ticks="true"
     :tick-width="1"
@@ -56,6 +68,7 @@ const fourSymbols = [
     :enable-animation="false"
     :animation-speed="0"
     :start-degree="startDegree"
+    :rotation-direction="rotationDirection"
     font-size="16"
   />
 </template>
