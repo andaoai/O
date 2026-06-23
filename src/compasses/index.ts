@@ -40,5 +40,12 @@ export const compasses: CompassMeta[] = [
     description: '伏羲／邵雍先天圆图，六十四卦按二进制位反转排列，乾南坤北、两仪对称，展示卦符、卦名与六爻爻象',
     category: '易学',
     component: () => import('@/views/SixtyFourGuaView.vue')
+  },
+  {
+    id: 'planet-mansion',
+    name: '五星入宿盘',
+    description: '水金火木土五星与月亮的实时黄道位置，高亮各天体当前所入的二十八星宿，跟随真实时间并可调',
+    category: '天文',
+    component: () => import('@/views/PlanetMansionView.vue')
   }
 ]
