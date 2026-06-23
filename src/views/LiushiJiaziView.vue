@@ -3,7 +3,7 @@ import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import DataRing from '../components/DataRing.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
-import { sixtyJiazi, twelveShichen, twentyFourSolarTerms, seventyTwoHou } from '../data/rings'
+import { sixtyJiazi, twelveShichen, twentyFourSolarTerms, seventyTwoHou, sixtyJiaziNayin } from '../data/rings'
 import {
   getJiaziIndices,
   branchOf,
@@ -171,6 +171,22 @@ function buildTermRing(source: typeof twentyFourSolarTerms, activeIndex: number,
   }
 }
 
+// 五行纳音环：30 格，每格 12°，纳音 i 对应六十甲子 [2i, 2i+1]。
+// 与六十甲子同源同转（startDegree 共用 JIAZI_START_DEGREE），故紧贴年柱内侧成对呈现。
+// 高亮格 = floor(年柱甲子序号 / 2)；高亮时保留原五行色，其余压灰。
+const NAYIN_GREY = '#555'
+function buildNayinRing(jiaziIndex: number) {
+  const activeNayin = Math.floor(jiaziIndex / 2)
+  return {
+    ...sixtyJiaziNayin,
+    items: sixtyJiaziNayin.items.map((it, i) => ({
+      ...it,
+      color: i === activeNayin ? it.color : NAYIN_GREY,
+      highlight: i === activeNayin
+    }))
+  }
+}
+
 // 六十甲子环与十二时辰环共享同一参考点（屏幕正上方），但用两种对齐约定：
 //   · 六十甲子 = 边对齐：甲子格 0°~6°，起跑线压在参考点上；
 //   · 十二时辰 = 心对齐：子时格 -15°~15°，格中心压在参考点上（午夜=子时正中）。
@@ -197,8 +213,17 @@ const rings = computed(() => {
         startDegree: JIAZI_START_DEGREE
       }
     })
-    // 年柱之后、月柱之前：插入 24 节气环 + 72 候环（由粗到细，立春起对齐）
+    // 年柱之后：先紧贴五行纳音环（与年柱同源），再插入 24 节气环 + 72 候环（立春起对齐）
     if (p.id === 'year') {
+      out.push({
+        component: DataRingComp,
+        thickness: 22,
+        gapBefore: 0,
+        props: {
+          data: buildNayinRing(currentIndices.value.year),
+          startDegree: JIAZI_START_DEGREE
+        }
+      })
       out.push({
         component: DataRingComp,
         thickness: 22,
