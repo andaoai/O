@@ -33,5 +33,12 @@ export const compasses: CompassMeta[] = [
     description: '年柱、月柱、日柱、时柱、分柱、秒柱六环同步显示，实时跟随时间变化，当前干支高亮指示',
     category: '干支历',
     component: () => import('@/views/LiushiJiaziView.vue')
+  },
+  {
+    id: 'sixty-four-gua',
+    name: '先天六十四卦盘',
+    description: '伏羲／邵雍先天圆图，六十四卦按二进制位反转排列，乾南坤北、两仪对称，展示卦符、卦名与六爻爻象',
+    category: '易学',
+    component: () => import('@/views/SixtyFourGuaView.vue')
   }
 ]
