@@ -64,7 +64,7 @@ const PILLARS: { id: PillarId; name: string; thickness: number; color: string; v
   { id: 'second', name: '秒柱', thickness: 28, color: '#9370DB', vertical: true }
 ]
 
-const OUTER_RADIUS = 460
+const OUTER_RADIUS = 560
 const DataRingComp = markRaw(DataRing)
 
 // 当前各柱的六十甲子序号（0-59）
@@ -72,6 +72,33 @@ const currentIndices = computed(() => getJiaziIndices(controlledTime.value))
 
 // 非当前格统一灰色，仅当前时间点所在格高亮放大
 const GREY = '#555'
+
+// 五行配色（与纳音环 sixtyJiaziNayin 同款色值，保证全盘一致）：
+// 高亮时不再用单一色，而是让发光的那一格携带其五行属性——灰=背景，亮=此刻+五行。
+const WUXING_COLOR: Record<string, string> = {
+  木: '#2ECC71',
+  火: '#E74C3C',
+  土: '#D35400',
+  金: '#F1C40F',
+  水: '#3498DB'
+}
+// 十天干五行：甲乙木、丙丁火、戊己土、庚辛金、壬癸水
+const STEM_ELEMENTS = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水']
+// 十二地支五行：子水丑土寅木卯木辰土巳火午火未土申金酉金戌土亥水
+const BRANCH_ELEMENTS = ['水', '土', '木', '木', '土', '火', '火', '土', '金', '金', '土', '水']
+
+/** 某天干(0-9)的五行高亮色 */
+function stemColorOf(stemIndex: number): string {
+  return WUXING_COLOR[STEM_ELEMENTS[stemIndex]!]!
+}
+/** 某地支(0-11)的五行高亮色 */
+function branchColorOf(branchIndex: number): string {
+  return WUXING_COLOR[BRANCH_ELEMENTS[branchIndex]!]!
+}
+/** 某六十甲子格(0-59)对应纳音的五行高亮色（纳音环 item 颜色已是五行色，直接取） */
+function nayinColorOf(jiaziIndex: number): string {
+  return sixtyJiaziNayin.items[Math.floor(jiaziIndex / 2)]!.color!
+}
 
 // 为某一环构造带高亮的数据：当前所在格高亮放大，其余灰色。
 // source 默认六十甲子（六柱用），时辰环传入 twelveShichen。
@@ -91,19 +118,12 @@ function buildRingData(activeIndex: number, highlightColor: string, source = six
 
 // RingStack 的环配置：六柱甲子环 + 日柱/时柱内侧各插入「天干空亡 + 十二地支」两环。
 // 整体随 currentIndices 重算，避免在模板里逐帧重建。
-const SHICHEN_COLOR = '#7FFFD4'  // 时辰/日支高亮色
-const KONGWANG_COLOR = '#888'    // 空亡格底色
-const TIANGAN_HL = '#FFE066'     // 当前柱天干高亮色
-
-// 天干五行配色（与天文盘天干环一致）
-const STEM_COLORS = [
-  '#2ECC71', '#28B463', '#E74C3C', '#C0392B', '#D35400',
-  '#F39C12', '#F1C40F', '#BDC3C7', '#3498DB', '#2980B9'
-]
+const KONGWANG_COLOR = '#777'    // 空亡格底色（略亮灰，使「空/亡」二字可辨）
 
 // 天干空亡环：12 个地支位，随旬把十天干贴到 10 位、余 2 位空亡。
 // 与地支环同骨架（子位心对齐正上方），当前柱所在地支那格天干高亮。
 // 日柱、时柱通用——传入对应柱的六十甲子序号即可。
+// 配色遵循全盘统一语言：灰=背景，亮=此刻——非当前格一律压灰，只当前格发亮。
 function buildTianganRing(jiaziIndex: number) {
   const { stems, kongwang } = xunInfo(jiaziIndex)
   const activeBranch = branchOf(jiaziIndex)
@@ -116,7 +136,8 @@ function buildTianganRing(jiaziIndex: number) {
       return {
         ...it,
         label: isKong ? (kongwang[0] === branch ? '空' : '亡') : STEMS[stem!]!,
-        color: isActive ? TIANGAN_HL : isKong ? KONGWANG_COLOR : STEM_COLORS[stem!]!,
+        // 天干高亮 → 取该天干的五行色
+        color: isActive ? stemColorOf(stem!) : isKong ? KONGWANG_COLOR : GREY,
         fontSize: isActive ? 14 : 11,
         highlight: isActive
       }
@@ -124,13 +145,14 @@ function buildTianganRing(jiaziIndex: number) {
   }
 }
 
-// 十二地支环：高亮当前柱所在地支。日柱、时柱通用。
-function buildBranchRing(jiaziIndex: number, highlightColor: string) {
-  return buildRingData(branchOf(jiaziIndex), highlightColor, twelveShichen)
+// 十二地支环：高亮当前柱所在地支，高亮色取该地支五行色。日柱、时柱通用。
+function buildBranchRing(jiaziIndex: number) {
+  const activeBranch = branchOf(jiaziIndex)
+  return buildRingData(activeBranch, branchColorOf(activeBranch), twelveShichen)
 }
 
 // 一柱拆「天干空亡环 + 十二地支环」两环（外干内支），日柱/时柱共用此模板。
-function pillarSubRings(jiaziIndex: number, branchHL: string) {
+function pillarSubRings(jiaziIndex: number) {
   return [
     {
       component: DataRingComp,
@@ -142,7 +164,7 @@ function pillarSubRings(jiaziIndex: number, branchHL: string) {
       component: DataRingComp,
       thickness: 28,
       gapBefore: 0,
-      props: { data: buildBranchRing(jiaziIndex, branchHL) }
+      props: { data: buildBranchRing(jiaziIndex) }
     }
   ]
 }
@@ -209,7 +231,13 @@ const rings = computed(() => {
       component: DataRingComp,
       thickness: p.thickness,
       props: {
-        data: buildRingData(currentIndices.value[p.id], p.color, sixtyJiazi, p.vertical),
+        // 六十甲子高亮 → 取该格纳音的五行色（与纳音环呼应）
+        data: buildRingData(
+          currentIndices.value[p.id],
+          nayinColorOf(currentIndices.value[p.id]),
+          sixtyJiazi,
+          p.vertical
+        ),
         startDegree: JIAZI_START_DEGREE
       }
     })
@@ -245,7 +273,7 @@ const rings = computed(() => {
     }
     // 月/日/时柱后各紧贴「天干空亡 + 十二地支」两环（外干内支），同一模板复用
     if (p.id === 'month' || p.id === 'day' || p.id === 'hour') {
-      out.push(...pillarSubRings(currentIndices.value[p.id], SHICHEN_COLOR))
+      out.push(...pillarSubRings(currentIndices.value[p.id]))
     }
   }
   return out
@@ -257,9 +285,9 @@ const rings = computed(() => {
     <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
 
     <svg
-      :width="1200"
-      :height="1200"
+      class="compass-svg"
       viewBox="0 0 1200 1200"
+      preserveAspectRatio="xMidYMid meet"
     >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
 
@@ -299,6 +327,12 @@ const rings = computed(() => {
 
 svg {
   display: block;
+}
+
+/* 罗盘填满视口较短边，保持正方形等比 */
+.compass-svg {
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
 }
 
 .back-link {
