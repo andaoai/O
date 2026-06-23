@@ -60,6 +60,8 @@ interface RingItem {
   startAngle?: number
   /** 自定义结束角度（0-360度，可选） */
   endAngle?: number
+  /** 高亮当前格：渲染呼吸扇形背景 + 文字脉动（可选，默认 false） */
+  highlight?: boolean
 }
 
 /**
@@ -190,6 +192,14 @@ const sectors = computed(() =>
 )
 
 /**
+ * 高亮扇形：仅 highlight 标记的 item，渲染呼吸背景。
+ * 复用 sectors 的路径，不论 showSectors 是否开启都会出现。
+ */
+const highlightSectors = computed(() =>
+  sectors.value.filter(s => s.item.highlight)
+)
+
+/**
  * 刻度线（每个 item 起始位置一条，从内圆到外圆）
  */
 const ticks = computed(() =>
@@ -301,6 +311,19 @@ const labels = computed(() =>
         </g>
 
         <!--
+          高亮扇形（呼吸背景）
+          仅 highlight 标记的格，独立于 showSectors，做缓慢明暗脉动
+          以可视化「当前时间点正落在此格」
+        -->
+        <path
+          v-for="hs in highlightSectors"
+          :key="`hl-${hs.startAngle}`"
+          class="highlight-sector"
+          :d="hs.path"
+          :fill="hs.item.color || '#ffffff'"
+        />
+
+        <!--
           分隔线（刻度线）
           从内圆到外圆的分隔线
           标记每个项目的边界
@@ -330,6 +353,7 @@ const labels = computed(() =>
             v-if="!label.isTwoCharacter"
             :x="label.x"
             :y="label.y"
+            :class="{ 'highlight-label': label.item.highlight }"
             :fill="label.item.color || labelColor"
             :font-size="label.item.fontSize || 14"
             text-anchor="middle"
@@ -396,5 +420,32 @@ const labels = computed(() =>
 
   /* 移除 transition 避免与 JavaScript 动画冲突 */
   /* 动画完全由 useAnimation composable 控制 */
+}
+
+/* 高亮扇形：缓慢明暗呼吸，标识当前时间点所在格 */
+.highlight-sector {
+  animation: highlight-breathe 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes highlight-breathe {
+  0%, 100% { opacity: 0.15; }
+  50% { opacity: 0.55; }
+}
+
+/* 高亮文字：同步脉动 + 轻微发光 */
+.highlight-label {
+  animation: highlight-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    opacity: 0.75;
+    filter: drop-shadow(0 0 1px currentColor);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 4px currentColor);
+  }
 }
 </style>

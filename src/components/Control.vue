@@ -121,6 +121,22 @@
             -1小时
             <span class="key-hint">⇧H</span>
           </button>
+          <button class="step-btn negative" @click="stepTime(-60)" title="Shift+N">
+            -1分
+            <span class="key-hint">⇧N</span>
+          </button>
+          <button class="step-btn negative" @click="stepTime(-1)" title="Shift+S">
+            -1秒
+            <span class="key-hint">⇧S</span>
+          </button>
+          <button class="step-btn" @click="stepTime(1)" title="S">
+            +1秒
+            <span class="key-hint">S</span>
+          </button>
+          <button class="step-btn" @click="stepTime(60)" title="N">
+            +1分
+            <span class="key-hint">N</span>
+          </button>
           <button class="step-btn" @click="stepTime(3600)" title="H">
             +1小时
             <span class="key-hint">H</span>
@@ -886,6 +902,28 @@ const handleKeyDown = (event: KeyboardEvent) => {
       } else {
         event.preventDefault()
         stepTime(3600)
+      }
+      break
+
+    case 'N':
+    case 'n':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepTime(-60)
+      } else {
+        event.preventDefault()
+        stepTime(60)
+      }
+      break
+
+    case 'S':
+    case 's':
+      if (event.shiftKey) {
+        event.preventDefault()
+        stepTime(-1)
+      } else {
+        event.preventDefault()
+        stepTime(1)
       }
       break
 

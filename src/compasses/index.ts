@@ -26,5 +26,12 @@ export const compasses: CompassMeta[] = [
     description: '360度刻度、二十四节气、二十八星宿、六十甲子、五行纳音、十天干、天干空亡、十二长生、十二地支、八门、四象、日月五星黄道与太极',
     category: '天文',
     component: () => import('@/views/AstronomyView.vue')
+  },
+  {
+    id: 'liushi-jiazi',
+    name: '六十甲子六环',
+    description: '年柱、月柱、日柱、时柱、分柱、秒柱六环同步显示，实时跟随时间变化，当前干支高亮指示',
+    category: '干支历',
+    component: () => import('@/views/LiushiJiaziView.vue')
   }
 ]

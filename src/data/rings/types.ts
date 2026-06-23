@@ -18,6 +18,8 @@ export interface RingItem {
   startAngle?: number
   /** 自定义结束角度（可选） */
   endAngle?: number
+  /** 高亮当前格：呼吸扇形背景 + 文字脉动（可选，默认 false） */
+  highlight?: boolean
 }
 
 /** 圆环的样式与默认布局，描述这个环"长什么样" */
