@@ -80,8 +80,6 @@ interface Props {
   labelPosition?: number
   /** 是否显示刻度线 */
   showTicks?: boolean
-  /** 刻度线长度（像素） */
-  tickLength?: number
   /** 刻度线宽度（像素） */
   tickWidth?: number
   /** 刻度线颜色 */
@@ -117,7 +115,6 @@ const props = withDefaults(defineProps<Props>(), {
   labelColor: 'white',     // 白色文字
   labelPosition: 0.7,      // 文字偏向外圆
   showTicks: true,         // 显示刻度线
-  tickLength: 10,          // 刻度线长度
   tickWidth: 0.5,          // 细刻度线
   tickColor: 'white',      // 白色刻度线
   showCircle: true,        // 显示圆环边线
@@ -139,112 +136,96 @@ const props = withDefaults(defineProps<Props>(), {
 const angleStep = computed(() => 360 / props.items.length)
 
 /**
- * 生成扇形区域数据
- * 为每个项目生成对应的扇形区域（如果启用）
- *
- * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
- * @param generateArcPath - 从 PolarCanvas 传入的弧形路径生成函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
- * @returns 扇形区域数组
+ * 极坐标转笛卡尔坐标（纯函数，相对中心 0,0）
+ * 与 PolarCanvas 的坐标系一致：counterclockwise 模式下角度取反
  */
-const generateSectors = (getMidAngle: Function, generateArcPath: Function, totalRotation: number) => {
-  return props.items.map((item, index) => {
-    // 使用自定义角度或平均分配的角度
-    const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
-    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
-
-    // 应用起始度数偏移
-    // 注意：PolarCanvas 已经处理了 rotation，这里只需要处理 startDegree
-    const startAngle = (baseStartAngle + props.startDegree) % 360
-    const endAngle = (baseEndAngle + props.startDegree) % 360
-
-    return {
-      startAngle,  // 扇形起始角度
-      endAngle,    // 扇形结束角度
-      item,        // 关联的项目数据
-      path: generateArcPath(0, 0, props.radius, startAngle, endAngle, props.innerRadius)
-    }
-  })
+const polarToCartesian = (angle: number, radius: number) => {
+  const adjustedAngle = props.rotationDirection === 'counterclockwise' ? -angle : angle
+  const rad = (adjustedAngle * Math.PI) / 180
+  return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius }
 }
 
 /**
- * 生成刻度线数据
- * 为每个项目生成起始位置的刻度线
- * 注意：只生成起始线，不生成结束线，这是与 DegreeScale 的区别
- *
- * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
- * @returns 刻度线数组
+ * 计算角度区间中点（处理跨 0 度）
  */
-const generateTicks = (polarToCartesian: Function, totalRotation: number) => {
-  const allTicks: Array<{
-    x1: number
-    y1: number
-    x2: number
-    y2: number
-    angle: number
-    item: RingItem
-  }> = []
+const getMidAngle = (startAngle: number, endAngle: number): number => {
+  if (startAngle > endAngle) {
+    const span = 360 - startAngle + endAngle
+    return (startAngle + span / 2 + 360) % 360
+  }
+  return (startAngle + endAngle) / 2
+}
 
-  props.items.forEach((item, index) => {
-    // 计算起始角度
+/**
+ * 生成环弧形 path（环形：内外两条弧）
+ */
+const generateArcPath = (radius: number, startAngle: number, endAngle: number, innerRadius: number): string => {
+  const start = polarToCartesian(startAngle, radius)
+  const end = polarToCartesian(endAngle, radius)
+  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
+  if (innerRadius === 0) {
+    return `M 0,0 L ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} Z`
+  }
+  const startInner = polarToCartesian(startAngle, innerRadius)
+  const endInner = polarToCartesian(endAngle, innerRadius)
+  return `M ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} L ${endInner.x},${endInner.y} A ${innerRadius},${innerRadius} 0 ${largeArcFlag},0 ${startInner.x},${startInner.y} Z`
+}
+
+/**
+ * 扇形区域（仅依赖 items/radius/innerRadius/startDegree，与动画帧无关）
+ */
+const sectors = computed(() =>
+  props.items.map((item, index) => {
+    const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
+    const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
+    const startAngle = (baseStartAngle + props.startDegree) % 360
+    const endAngle = (baseEndAngle + props.startDegree) % 360
+    return {
+      startAngle,
+      endAngle,
+      item,
+      path: generateArcPath(props.radius, startAngle, endAngle, props.innerRadius)
+    }
+  })
+)
+
+/**
+ * 刻度线（每个 item 起始位置一条，从内圆到外圆）
+ */
+const ticks = computed(() =>
+  props.items.map((item, index) => {
     const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
     const startAngle = (baseStartAngle + props.startDegree) % 360
-
-    // 生成从内圆到外圆的刻度线
     const startInner = polarToCartesian(startAngle, props.innerRadius)
     const startOuter = polarToCartesian(startAngle, props.radius)
-
-    allTicks.push({
+    return {
       x1: startInner.x,
       y1: startInner.y,
       x2: startOuter.x,
       y2: startOuter.y,
       angle: startAngle,
       item
-    })
+    }
   })
-
-  return allTicks
-}
+)
 
 /**
- * 生成标签位置数据
- * 计算每个项目标签的显示位置和旋转角度
- *
- * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
- * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
- * @returns 标签数组
+ * 标签位置与旋转（文字顶部指向圆心）
  */
-const generateLabels = (getMidAngle: Function, polarToCartesian: Function, totalRotation: number) => {
-  return props.items.map((item, index) => {
-    // 计算角度范围
+const labels = computed(() =>
+  props.items.map((item, index) => {
     const baseStartAngle = item.startAngle !== undefined ? item.startAngle : index * angleStep.value
     const baseEndAngle = item.endAngle !== undefined ? item.endAngle : (index + 1) * angleStep.value
-
-    // 应用起始度数偏移
     const startAngle = (baseStartAngle + props.startDegree) % 360
     const endAngle = (baseEndAngle + props.startDegree) % 360
-
-    // 计算中点角度（标签显示位置）
     const midAngle = getMidAngle(startAngle, endAngle)
-
-    // 计算文字的径向位置
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
     const position = polarToCartesian(midAngle, textRadius)
-
-    // 计算文字旋转角度（文字顶部指向圆心）
-    // 注意：PolarCanvas 在 counterclockwise 模式下会将角度取反进行坐标转换
-    // 但 getMidAngle 返回的仍是原始角度值，所以需要相应调整
+    // counterclockwise 模式下坐标转换会取反角度，文字旋转需相应调整
     const textRotation = props.rotationDirection === 'counterclockwise'
-      ? -midAngle + 90  // 逆时针体系：角度取反后再加90度
-      : midAngle + 90   // 顺时针体系：直接加90度
-
-    // 检查是否为双字符标签且启用垂直排列
-    // 主要用于十二长生（长生、沐浴、冠带、临官等）
+      ? -midAngle + 90
+      : midAngle + 90
     const isTwoCharacter = item.label.length === 2 && props.verticalTwoChar
-
     return {
       x: position.x,
       y: position.y,
@@ -254,7 +235,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
       isTwoCharacter
     }
   })
-}
+)
 </script>
 
 <template>
@@ -270,7 +251,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
     :center-x="0"
     :center-y="0"
   >
-    <template #default="slotProps">
+    <template #default>
       <!--
         根容器组
         所有圆环元素都在这个组内
@@ -283,8 +264,8 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
         -->
         <circle
           v-if="showCircle"
-          :cx="slotProps.centerX"
-          :cy="slotProps.centerY"
+          :cx="0"
+          :cy="0"
           :r="radius"
           fill="none"
           :stroke="circleColor"
@@ -298,8 +279,8 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
         -->
         <circle
           v-if="innerRadius > 0"
-          :cx="slotProps.centerX"
-          :cy="slotProps.centerY"
+          :cx="0"
+          :cy="0"
           :r="innerRadius"
           fill="none"
           :stroke="circleColor"
@@ -311,7 +292,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           每个项目对应一个扇形
           用于提供视觉上的分区效果
         -->
-        <g v-if="showSectors" v-for="sector in generateSectors(slotProps.getMidAngle, slotProps.generateArcPath, slotProps.totalRotation)" :key="sector.startAngle">
+        <g v-if="showSectors" v-for="sector in sectors" :key="sector.startAngle">
           <path
             :d="sector.path"
             :fill="sector.item.color || '#ffffff'"
@@ -324,7 +305,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           从内圆到外圆的分隔线
           标记每个项目的边界
         -->
-        <g v-if="showTicks" v-for="tick in generateTicks(slotProps.polarToCartesian, slotProps.totalRotation)" :key="tick.angle">
+        <g v-if="showTicks" v-for="tick in ticks" :key="tick.angle">
           <line
             :x1="tick.x1"
             :y1="tick.y1"
@@ -340,7 +321,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           显示在环的内部，每个扇形的中央位置
           支持单字符和双字符两种显示方式
         -->
-        <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian, slotProps.totalRotation)" :key="label.angle">
+        <g v-if="showLabels" v-for="label in labels" :key="label.angle">
           <!--
             单字符或四象标签（水平显示）
             适用于天干、地支、四象等单字标签

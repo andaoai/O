@@ -116,11 +116,11 @@ const handleRotationAngleChange = (newAngle: number) => {
       />
 
       <!-- 太阳黄道圆环（中心区） -->
+      <!-- 不开整体旋转：日月五星位置由 time 驱动天文计算，整盘旋转会导致天体绕中心乱转 -->
       <SolarEcliptic
         :radius="150"
         :time="controlledTime"
-        :enable-animation="true"
-        :animation-speed="0.1"
+        :enable-animation="false"
         :show-sun-label="true"
         :rotation-direction="rotationDirection"
       />

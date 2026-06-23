@@ -124,7 +124,9 @@ const timeRotation = computed(() => {
   const exactDays = totalDays + dayFraction
 
   // 计算旋转角度：每天360度
-  const angle = exactDays * 360
+  // counterclockwise 模式取反，使方向控制对太极图生效
+  const direction = props.rotationDirection === 'counterclockwise' ? -1 : 1
+  const angle = exactDays * 360 * direction
 
   // 加上90度让白色部分在正确位置
   return angle + 90

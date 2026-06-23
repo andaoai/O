@@ -73,13 +73,9 @@ interface AngleRange {
  * 组件属性接口定义
  */
 interface Props {
-  /** 画布宽度（像素） */
-  width?: number
-  /** 画布高度（像素） */
-  height?: number
-  /** 圆心X坐标（像素） */
+  /** 圆心X坐标（像素），作为旋转中心 */
   centerX?: number
-  /** 圆心Y坐标（像素） */
+  /** 圆心Y坐标（像素），作为旋转中心 */
   centerY?: number
   /** 手动旋转角度（度数） */
   rotation?: number
@@ -87,10 +83,6 @@ interface Props {
   enableAnimation?: boolean
   /** 动画旋转速度（度/帧），正数为顺时针，负数为逆时针 */
   animationSpeed?: number
-  /** 最大半径（像素），用于限制绘制范围 */
-  maxRadius?: number
-  /** 最小半径（像素），用于限制绘制范围 */
-  minRadius?: number
   /** 旋转方向 */
   rotationDirection?: 'clockwise' | 'counterclockwise'
 }
@@ -99,15 +91,11 @@ interface Props {
  * 组件默认属性值
  */
 const props = withDefaults(defineProps<Props>(), {
-  width: 800,            // 默认画布宽度
-  height: 600,           // 默认画布高度
-  centerX: 400,          // 默认圆心X（画布中心）
-  centerY: 300,          // 默认圆心Y（画布中心）
+  centerX: 0,             // 默认圆心X（环组件均以 0,0 为中心）
+  centerY: 0,             // 默认圆心Y
   rotation: 0,            // 无手动旋转
   enableAnimation: false, // 默认不启用动画
   animationSpeed: 0.5,    // 缓慢旋转速度
-  maxRadius: 280,        // 默认最大半径
-  minRadius: 0,           // 默认最小半径
   rotationDirection: 'clockwise'  // 默认顺时针
 })
 
@@ -165,12 +153,15 @@ watch(() => props.rotationDirection, () => {
 /**
  * 计算总的旋转角度
  * 包含动画值和手动旋转值
- * 依赖 globalTime.value 使其在每个动画帧响应式重算（动画值本身非响应式）
+ * 仅在 enableAnimation 为 true 时依赖 globalTime，使其随动画帧响应式重算；
+ * 静态环（不开动画）不订阅 globalTime，避免被其他组件的动画帧带着每帧失效重算。
  * 使用模运算确保角度在0-360度范围内
  */
 const totalRotation = computed(() => {
-  // 读取 globalTime 建立响应式依赖：动画每帧推进 globalTime 时触发重算
-  void globalTime.value
+  // 仅动画态建立对 globalTime 的响应式依赖
+  if (props.enableAnimation) {
+    void globalTime.value
+  }
   return (getValue() + props.rotation) % 360
 })
 
