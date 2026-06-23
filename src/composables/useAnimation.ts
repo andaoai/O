@@ -86,6 +86,19 @@ class AnimationManager {
   }
 
   /**
+   * 注销动画
+   * 从管理器中彻底移除该动画。组件卸载时调用，避免 animations Map 无限累积。
+   * 每个动画 id 唯一，移除自己不会影响其他组件。
+   */
+  unregister(id: string): void {
+    this.animations.delete(id)
+    // 若已无活动动画，停止全局循环
+    if (!this.hasActiveAnimations()) {
+      this.stopGlobalAnimation()
+    }
+  }
+
+  /**
    * 设置动画速度
    */
   setSpeed(id: string, speed: number): void {
@@ -147,7 +160,7 @@ class AnimationManager {
       const deltaTime = (currentTime - this.lastTime) / 1000 // 转换为秒
       this.lastTime = currentTime
 
-      // 更新全局时间
+      // 更新全局时间（响应式，驱动依赖 globalTime 的 computed 重新计算）
       this.globalTime.value = currentTime
 
       // 更新所有启用的动画
@@ -156,6 +169,12 @@ class AnimationManager {
           this.updateAnimation(animation, deltaTime)
         }
       })
+
+      // 没有活动动画时停止全局循环，避免 requestAnimationFrame 空转
+      if (!this.hasActiveAnimations()) {
+        this.stopGlobalAnimation()
+        return
+      }
 
       this.animationId = requestAnimationFrame(animate)
     }
@@ -270,11 +289,10 @@ export function useAnimation(id: string, type: AnimationType, options: {
   // 重置
   const reset = () => globalAnimationManager.reset(id)
 
-  // 组件卸载时清理
+  // 组件卸载时彻底注销动画，避免内存泄漏
+  // 每个 id 唯一，移除自己不影响其他组件
   onUnmounted(() => {
-    // 注意：不要在这里直接dispose，因为可能有其他组件在使用
-    // 只停止当前动画
-    stop()
+    globalAnimationManager.unregister(id)
   })
 
   return {

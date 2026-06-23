@@ -122,7 +122,7 @@ const adjustedAnimationSpeed = computed(() => {
     : props.animationSpeed
 })
 
-const { start, stop, setSpeed, getValue, setValue } = useAnimation(
+const { start, stop, setSpeed, getValue, setValue, globalTime } = useAnimation(
   animationId,
   AnimationType.ROTATION,
   {
@@ -165,9 +165,12 @@ watch(() => props.rotationDirection, () => {
 /**
  * 计算总的旋转角度
  * 包含动画值和手动旋转值
+ * 依赖 globalTime.value 使其在每个动画帧响应式重算（动画值本身非响应式）
  * 使用模运算确保角度在0-360度范围内
  */
 const totalRotation = computed(() => {
+  // 读取 globalTime 建立响应式依赖：动画每帧推进 globalTime 时触发重算
+  void globalTime.value
   return (getValue() + props.rotation) % 360
 })
 
