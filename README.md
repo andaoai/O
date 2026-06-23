@@ -1,383 +1,211 @@
-# 🌟 中华天文圆环 - Chinese Astronomical Rings
+# 🧭 中华传统罗盘可视化平台 - Chinese Traditional Compass Platform
 
-一个基于 Vue 3 和 TypeScript 的交互式中华传统文化天文圆环可视化系统，展示完整的中华传统文化宇宙观体系。
+一个基于 Vue 3 + TypeScript 的多页面交互式中华传统文化罗盘可视化平台。首页列出所有「罗盘」，每个罗盘是一张全屏的极坐标 SVG 可视化盘面，由可叠加的同心圆环组成。
 
-## ✨ 特性
+## ✨ 现有罗盘
 
-- **☯️ 太极图组件** - 传统阴阳鱼太极图，根据时间动态旋转，反映天地阴阳消长
-- **📏 360度刻度尺** - 精确的角度刻度标记和度数显示，支持自定义间隔
-- **☀️ 太阳黄道系统** - 基于astronomy-engine的精确太阳位置计算和实时显示
-- **⭐ 二十八星宿圆环** - 四象七宿，东方青龙、北方玄武、西方白虎、南方朱雀
-- **🐲 十二地支圆环** - 子丑寅卯辰巳午未申酉戌亥
-- **🐉 四象圆环** - 青龙、朱雀、白虎、玄武，五行四方位
-- **⏰ 智能时间控制系统** - 支持实时时间控制、动画播放、缩放和平移
-- **🎨 智能文字定向** - 文字始终指向圆心，支持双字符垂直排列
-- **📱 响应式设计** - 支持不同屏幕尺寸
-- **🎯 精确角度控制** - 支持自定义起始和结束角度
-- **🎮 键盘快捷键** - 完整的键盘控制支持
-- **🌍 农历显示** - 集成tyme4ts库，显示农历、干支、节气信息
+### 🌌 中华天文圆环（astronomy）
 
-## 🎮 组件结构
+一张完整的天文盘面，由外到内叠加多层同心圆环：
+
+- **📏 360 度刻度尺** — 可配置间隔的角度刻度（DegreeScale）
+- **🌱 二十四节气** — 二十四节气分布
+- **⭐ 二十八星宿** — 四象七宿：东方青龙、北方玄武、西方白虎、南方朱雀
+- **🀄 六十甲子** — 干支纪元
+- **🌊 五行纳音** — 与六十甲子同源同转，紧贴其内侧
+- **🌿 十天干** — 甲乙丙丁戊己庚辛壬癸
+- **🕳️ 天干空亡** — 旬空标记
+- **♻️ 十二长生** — 长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养
+- **🐲 十二地支** — 子丑寅卯辰巳午未申酉戌亥
+- **🚪 八门** — 奇门八门
+- **🐉 四象** — 青龙、朱雀、白虎、玄武
+- **☀️ 太阳黄道** — 基于 astronomy-engine 的精确太阳位置（中心区）
+- **☯️ 太极图** — 随时间动态旋转的阴阳鱼（盘心）
+
+### 🀄 六十甲子六环（liushi-jiazi）
+
+年柱、月柱、日柱、时柱、分柱、秒柱六环同心同步显示，实时跟随真实时间，当前干支所在格高亮放大。年月日时四柱由 tyme4ts 严格按节气历法推算，分柱 / 秒柱直接以分钟数 / 秒数（0-59）映射六十甲子。
+
+## 🏗️ 架构
+
+本项目从早期「每个圆环一个 .vue 组件」的写法，重构为 **数据驱动 + 多页面路由** 架构。三个关键支点：
+
+### 1. 罗盘注册表 → 路由（多页面）
+
+`src/compasses/index.ts` 是唯一的注册表。首页网格和路由都从这个数组读取：
+
+- `src/views/HomeView.vue` 为每个注册项渲染一张卡片。
+- `src/router/index.ts` 据此生成 `/compass/:id` 路由，`/` 为首页，并有兜底重定向。
+
+> **新增一个罗盘 = 新建 `src/views/XxxView.vue` + 在 `compasses` 数组加一项。** 无需改动路由。
+
+### 2. 数据驱动圆环（DataRing + RingData）
+
+传统圆环不再是各自独立的组件：
+
+- `src/data/rings/*.ts` — 每个文件导出一个 `RingData` 对象（`items` + 样式默认值）。
+- `src/components/DataRing.vue` — 通用组件，接收 `RingData` 后通过 `CircleRing` 渲染。
+- `src/components/base/CircleRing.vue` — 真正的 SVG 圆环渲染器（扇形、刻度、标签、高亮呼吸动画）。
+
+这套机制取代了过去的 `EarthlyBranches.vue`、`SiXiang.vue`、`SixtyJiazi.vue` 等组件——这些组件文件已不存在，其内容现在以数据形式存放在 `src/data/rings/`。
+
+### 3. 同心圆环自动布局（RingStack）
+
+`src/components/base/RingStack.vue` 让调用方只声明 `outerRadius` 和每个环的「径向厚度」`thickness`，容器从外向内自动累加分配各环的 `radius` / `innerRadius`，叠加时永不重叠，并统一注入旋转方向。
+
+## 🎮 盘面层次结构
 
 ```
-📐 重构后的中华传统文化宇宙观层次结构：
+📐 中华天文圆环（由外到内）：
 
-┌─────────────────────────────────────────────────┐
-│ 📏 360度刻度尺 (480-460) - DegreeScale组件       │
-│   ✅ 支持自定义刻度间隔 (1-360度)                 │
-│   ✅ 扇形区域可视化                              │
-│   ✅ 智能文字定位和旋转                          │
-├─────────────────────────────────────────────────┤
-│ ☯️ 太极图 (中心 - 半径80) - TaiChi组件           │
-│   ✅ 传统阴阳鱼太极图                            │
-│   ✅ 24小时旋转360度                             │
-│   ✅ 支持从公元1年开始的历史日期                  │
-│   ✅ 毫秒级时间精度                              │
-├─────────────────────────────────────────────────┤
-│ ☀️ 太阳黄道系统 (420-390) - SolarEcliptic组件    │
-│   ✅ 基于astronomy-engine的精确计算              │
-│   ✅ 实时太阳位置显示                            │
-│   ✅ 春分点标记                                  │
-│   ✅ 季节性颜色变化                              │
-├─────────────────────────────────────────────────┤
-│ ⭐ 二十八星宿 (380-350) - TwentyEightConstellations │
-│   ├── 东方青龙: 角、亢、氐、房、心、尾、箕       │
-│   ├── 北方玄武: 斗、牛、女、虚、危、室、壁       │
-│   ├── 西方白虎: 奎、娄、胃、昴、毕、觜、参       │
-│   └── 南方朱雀: 井、鬼、柳、星、张、翼、轸       │
-├─────────────────────────────────────────────────┤
-│ 🐲 十二地支 (280-250) - EarthlyBranches         │
-│   └── 子丑寅卯辰巳午未申酉戌亥                   │
-├─────────────────────────────────────────────────┤
-│ 🐉 四象 (180-150) - SiXiang                     │
-│   ├── 青龙 (东) - 木属性，青绿色               │
-│   ├── 朱雀 (南) - 火属性，朱红色               │
-│   ├── 白虎 (西) - 金属性，白色                 │
-│   └── 玄武 (北) - 水属性，玄蓝色               │
-└─────────────────────────────────────────────────┘
+┌────────────────────────────────────────────┐
+│ 📏 360 度刻度尺           DegreeScale         │
+│ 🌱 二十四节气             DataRing            │
+│ ⭐ 二十八星宿             DataRing            │
+│ 🀄 六十甲子               DataRing            │
+│ 🌊 五行纳音               DataRing（紧贴甲子）│
+│ 🌿 十天干                 DataRing            │
+│ 🕳️ 天干空亡               DataRing            │
+│ ♻️ 十二长生               DataRing            │
+│ 🐲 十二地支               DataRing            │
+│ 🚪 八门                   DataRing            │
+│ 🐉 四象                   DataRing            │
+│ ☀️ 太阳黄道（中心区）     SolarEcliptic       │
+│ ☯️ 太极图（盘心）         TaiChi              │
+└────────────────────────────────────────────┘
 
-⏰ 控制面板 - Control组件 (右侧固定面板)
-├── 🕐 时间控制: 播放/暂停、速度调节、时间选择
-├── 🔍 缩放控制: 放大/缩小/重置、预设缩放
-├── 🎯 平移控制: 方向键移动、重置位置
-├── 📅 农历信息: 农历日期、干支纪年、节气显示
-└── ⌨️ 键盘快捷键: 完整的键盘操作支持
+⏰ 控制面板 - Control 组件（右侧固定面板）
+├── 🕐 时间控制：播放/暂停、速度、时间选择
+├── 🔍 缩放控制：放大/缩小/重置
+├── 🎯 平移控制：方向键移动、重置
+├── 🔄 旋转控制：旋转方向、旋转角度
+└── ⌨️ 键盘快捷键
 ```
 
-### 🚧 重构说明
-
-当前项目处于"重构天文体系"阶段，以下组件已重构完成：
-- ✅ **DegreeScale** - 新的通用度数刻度组件，替代CircleScale
-- ✅ **SolarEcliptic** - 新的太阳黄道组件，使用astronomy-engine
-- ✅ **TaiChi** - 太极图组件，支持历史日期和毫秒级精度
-- ✅ **PolarCanvas** - 新的极坐标画布基础组件
-- ✅ **Control** - 统一的控制面板，集成时间、缩放、平移控制
-
-暂时注释的组件（待重构）：
-- 🔄 **SixtyJiazi** - 六十甲子组件
-- 🔄 **HeavenlyStems** - 十天干组件
-- 🔄 **EightGates** - 八门组件
-- 🔄 **TwelveLongevity** - 十二长生组件
+> 注：`SolarEcliptic` 与 `TaiChi` 的位置由 `time` 驱动（天文/时钟），天文盘面刻意不对它们施加整体旋转动画——否则按时间定位的天体会绕中心乱转。
 
 ## 🛠️ 技术栈
 
-- **Vue 3.5.22** - 渐进式 JavaScript 框架，Composition API
-- **TypeScript** - 类型安全的 JavaScript 超集
-- **Vite 7.1.7** - 现代化前端构建工具
-- **astronomy-engine 2.1.19** - 高精度天文计算库
-- **tyme4ts 1.3.7** - 中华传统历法计算库
-- **Pinia 3.0.3** - Vue 状态管理
-- **SVG** - 可缩放矢量图形
-- **CSS3** - 现代 CSS 特性和动画
+- **Vue 3.5** — Composition API（`<script setup>`）
+- **TypeScript** — 全程类型安全
+- **Vite 7** — 构建工具
+- **Vue Router 4** — 多页面路由
+- **Pinia 3** — 已安装注册（当前暂无 store，状态以视图内 `ref` + `v-model` 管理）
+- **astronomy-engine 2.1** — 高精度天文计算
+- **tyme4ts 1.3** — 中华传统历法 / 干支计算
+- **SVG + CSS3** — 矢量绘制与动画
 
 ## 🚀 快速开始
 
 ### 环境要求
 
-- Node.js >= 20.19.0 || >= 22.12.0
-- npm >= 8.0.0
+- Node.js `^20.19.0 || >=22.12.0`
 
-### 安装依赖
-
-```sh
-npm install
-```
-
-### 开发运行
+### 安装与运行
 
 ```sh
-npm run dev
-```
-
-### 生产构建
-
-```sh
-npm run build
+npm install      # 安装依赖
+npm run dev      # 开发服务器
+npm run build    # 生产构建（含类型检查）
+npm run preview  # 预览构建产物
 ```
 
 ## 📦 项目结构
 
 ```
 src/
+├── compasses/index.ts             # 罗盘注册表（驱动首页 + 路由）
+├── views/
+│   ├── HomeView.vue               # 首页：罗盘卡片网格
+│   ├── AstronomyView.vue          # 中华天文圆环
+│   └── LiushiJiaziView.vue        # 六十甲子六环
 ├── components/
-│   ├── base/                       # 基础组件目录
-│   │   ├── PolarCanvas.vue         # 🆕 极坐标画布组件
-│   │   ├── OrbitSystem.vue         # 🆕 轨道系统组件
-│   │   └── CircleRing.vue          # 通用圆环组件 (遗留)
-│   ├── DegreeScale.vue             # 🆕 通用度数刻度组件
-│   ├── SolarEcliptic.vue           # 🆕 太阳黄道组件
-│   ├── TwentyEightConstellations.vue # 二十八星宿组件
-│   ├── EarthlyBranches.vue         # 十二地支组件
-│   ├── SiXiang.vue                 # 四象组件
-│   ├── SixtyJiazi.vue             # 六十甲子组件 (🔄注释中)
-│   ├── HeavenlyStems.vue           # 十天干组件 (🔄注释中)
-│   ├── EightGates.vue             # 八门组件 (🔄注释中)
-│   ├── TwelveLongevity.vue        # 十二长生组件 (🔄注释中)
-│   └── Control.vue                # 🆕 统一控制面板
-├── composables/
-│   └── useAnimation.ts            # 🆕 动画控制composable
+│   ├── base/
+│   │   ├── PolarCanvas.vue         # 极坐标画布基础组件
+│   │   ├── CircleRing.vue          # 通用 SVG 圆环渲染器
+│   │   └── RingStack.vue           # 同心圆环自动布局容器
+│   ├── DataRing.vue               # 数据驱动圆环（RingData → CircleRing）
+│   ├── DegreeScale.vue            # 度数刻度环（按间隔生成）
+│   ├── SolarEcliptic.vue          # 太阳黄道（astronomy-engine）
+│   ├── TaiChi.vue                 # 时间驱动的太极图
+│   └── Control.vue                # 统一控制面板
+├── data/rings/                    # 圆环数据（每个 RingData 一个文件）
+│   ├── types.ts                   # RingData / RingItem 接口
+│   ├── index.ts                   # 统一导出
+│   └── *.ts                       # 节气/星宿/甲子/纳音/天干/空亡/长生/地支/八门/四象
+├── composables/useAnimation.ts    # 动画控制 composable
 ├── utils/
-│   └── chineseCalendar.ts         # 🆕 中国历法工具
-├── types/                         # TypeScript类型定义
-├── stores/                        # Pinia状态管理
-├── router/                        # Vue Router路由
-├── views/                         # 页面视图组件
-├── App.vue                        # 主应用组件
-└── main.ts                        # 应用入口
+│   ├── chineseCalendar.ts         # 农历工具（tyme4ts）
+│   └── liushiJiazi.ts             # 六柱六十甲子序号计算（tyme4ts）
+├── router/index.ts                # 由注册表生成的路由
+├── App.vue                        # 外壳：仅 <RouterView />
+└── main.ts                        # 入口（Vue + Pinia + Router）
 ```
 
-## 🎯 核心组件功能
+## 🧩 如何扩展
 
-### 🆕 PolarCanvas 极坐标画布组件
+### 新增一个罗盘
 
-作为所有极坐标组件的基础画布，提供统一的坐标系统和动画支持：
+1. 新建 `src/views/XxxView.vue`，参考 `AstronomyView.vue` / `LiushiJiaziView.vue`：`.container` 包一个 `<svg>`，其中 `<g transform>` 应用平移/缩放/旋转，附带返回首页链接和 `Control` 面板。
+2. 在 `src/compasses/index.ts` 的 `compasses` 数组追加一项（唯一 `id`、`name`、`description`、`category`、懒加载 `component`）。
+3. 首页卡片与 `/compass/:id` 路由自动出现。
 
-- **标准极坐标系统** - 0度在正右方，顺时针增加
-- **统一动画管理** - 通过useAnimation composable
-- **坐标转换工具** - 极坐标与笛卡尔坐标转换
-- **角度计算函数** - 中点角度、角度跨度等
-- **SVG路径生成** - 圆弧和扇形路径生成
+### 新增一个数据驱动圆环
 
-### 🆕 DegreeScale 通用度数刻度组件
+1. 新建 `src/data/rings/myRing.ts` 导出 `RingData`（必填 `items`，样式字段可选），并在 `src/data/rings/index.ts` 中重新导出。
+2. 在视图的 `RingStack` 配置里加一项：`{ component: markRaw(DataRing), thickness: N, props: { data: myRing } }`。
 
-高度灵活的极坐标刻度环组件：
+详细组件 API 见 [COMPONENT_DOCUMENTATION.md](COMPONENT_DOCUMENTATION.md)。
 
-- **自定义刻度间隔** - 支持1-360度任意间隔
-- **智能刻度生成** - 自动生成完整的刻度线网格
-- **扇形区域可视化** - 每个刻度间隔的扇形背景
-- **文字智能定位** - 文字始终指向圆心
-- **动画支持** - 集成PolarCanvas的动画系统
+## 🧪 测试与质量
 
-**常用配置示例：**
-```vue
-<!-- 六十甲子体系：6度间隔 -->
-<DegreeScale :radius="200" :scale-interval="6" />
-
-<!-- 十二地支体系：12度间隔 -->
-<DegreeScale :radius="200" :scale-interval="12" />
-
-<!-- 二十四节气体系：15度间隔 -->
-<DegreeScale :radius="200" :scale-interval="15" />
+```sh
+npm run type-check   # vue-tsc 类型检查
+npm run lint         # ESLint 自动修复
+npm run format       # Prettier 格式化
+npm run test:unit    # Vitest 单元测试
+npm run test:e2e     # Playwright 端到端测试
 ```
 
-### 🆕 SolarEcliptic 太阳黄道组件
+E2E 相关：
 
-基于astronomy-engine的精确太阳位置计算：
-
-- **精确太阳位置** - 使用astronomy-engine计算黄经
-- **实时更新** - 支持时间控制和动画
-- **春分点标记** - 显示0度参考点
-- **季节性颜色** - 根据黄经变化太阳颜色
-- **春分夏至秋分冬至** - 重要节气点的视觉标识
-
-```vue
-<SolarEcliptic
-  :radius="160"
-  :time="controlledTime"
-  :enable-animation="true"
-  :show-sun-label="true"
-/>
+```sh
+npx playwright install                       # 首次安装浏览器
+npm run test:e2e -- --project=chromium       # 指定浏览器
+npm run test:e2e -- tests/example.spec.ts    # 指定文件
+npm run test:e2e -- --debug                  # 调试模式
 ```
 
-### 🆕 Control 统一控制面板
+## 🚢 部署
 
-集成时间、缩放、平移的完整控制系统：
+GitHub Pages：
 
-- **时间控制** - 播放/暂停、速度调节、时间选择
-- **缩放控制** - 放大/缩小、重置、预设缩放(50%-150%)
-- **平移控制** - 方向键移动、重置位置
-- **农历显示** - 显示农历日期、干支纪年、节气信息
-- **键盘快捷键** - 完整的键盘操作支持
-
-**键盘快捷键：**
-- `空格` - 播放/暂停
-- `R` - 重置到当前时间
-- `H/⇧H` - +1小时/-1小时
-- `D/⇧D` - +1天/-1天
-- `M/⇧M` - +1月/-1月
-- `Y/⇧Y` - +1年/-1年
-- `+/-/0` - 缩放控制
-- `方向键` - 平移控制
-- `Delete` - 重置平移
-
-## 🎨 架构设计
-
-### 基础组件架构
-
-```
-PolarCanvas (基础画布)
-├── 提供极坐标系统
-├── 统一动画管理
-├── 坐标转换工具
-└── 通过slot传递工具函数
-
-DegreeScale (刻度组件)
-├── 继承PolarCanvas
-├── 生成刻度线和扇形
-└── 智能文字定位
-
-SolarEcliptic (太阳组件)
-├── 继承PolarCanvas
-├── 集成astronomy-engine
-└── 实时位置计算
-
-其他传统组件
-├── 可选择性继承PolarCanvas
-├── 保持原有功能
-└── 逐步迁移到新架构
+```sh
+npm run deploy   # 构建并发布 dist/ 到 gh-pages 分支
 ```
 
-### 状态管理
-
-使用Pinia进行状态管理，支持：
-- 时间状态同步
-- 缩放和偏移状态
-- 动画状态管理
-- 组件间通信
-
-### 工具库集成
-
-- **astronomy-engine** - 高精度天文计算
-- **tyme4ts** - 中华传统历法
-- **自定义工具函数** - 坐标转换、角度计算等
-
-## 📚 API 参考
-
-### PolarCanvas Props
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `width` | number | 800 | 画布宽度 |
-| `height` | number | 600 | 画布高度 |
-| `centerX` | number | 400 | 圆心X坐标 |
-| `centerY` | number | 300 | 圆心Y坐标 |
-| `rotation` | number | 0 | 手动旋转角度 |
-| `enableAnimation` | boolean | false | 启用动画 |
-| `animationSpeed` | number | 0.5 | 动画速度 |
-
-### DegreeScale Props
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `radius` | number | - | 外半径 (必填) |
-| `innerRadius` | number | 0 | 内半径 |
-| `scaleInterval` | number | 5 | 刻度间隔 (度数) |
-| `startDegree` | number | 0 | 起始度数偏移 |
-| `showLabels` | boolean | true | 显示度数标签 |
-| `showSectors` | boolean | true | 显示扇形区域 |
-| `sectorColor` | string | '#ffffff' | 扇形颜色 |
-| `sectorOpacity` | number | 0.1 | 扇形透明度 |
-
-### SolarEcliptic Props
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `radius` | number | 200 | 黄道半径 |
-| `time` | Date | new Date() | 观测时间 |
-| `sunPosition` | SunPosition | - | 自定义太阳位置 |
-| `enableAnimation` | boolean | true | 启用动画 |
-| `showSunLabel` | boolean | true | 显示太阳标签 |
+该命令执行生产构建，再将 `dist/` 推送到 `gh-pages` 分支，由 GitHub Actions（`.github/workflows/`）自动部署。
 
 ## 🌍 浏览器支持
 
-- Chrome/Edge >= 88
-- Firefox >= 85
-- Safari >= 14
+- Chrome / Edge ≥ 88
+- Firefox ≥ 85
+- Safari ≥ 14
 
 ## 🤝 贡献
 
-欢迎提交 Issue 和 Pull Request！
+欢迎提交 Issue 和 Pull Request。
 
 ## 📄 许可证
 
 MIT License
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 推荐开发环境
 
-## Recommended Browser Setup
+[VS Code](https://code.visualstudio.com/) + [Vue (Official) / Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)（请禁用 Vetur）。
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+> TypeScript 默认无法处理 `.vue` 导入的类型，本项目用 `vue-tsc` 替代 `tsc` 做类型检查，编辑器中需 Volar 提供 `.vue` 类型支持。
 
-## Type Support for `.vue` Imports in TS
-
-TypeScript cannot handle type information for `.vue` imports by default, so we replace the `tsc` CLI with `vue-tsc` for type checking. In editors, we need [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) to make the TypeScript language service aware of `.vue` types.
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Type-Check, Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Run Unit Tests with [Vitest](https://vitest.dev/)
-
-```sh
-npm run test:unit
-```
-
-### Run End-to-End Tests with [Playwright](https://playwright.dev)
-
-```sh
-# Install browsers for the first run
-npx playwright install
-
-# When testing on CI, must build the project first
-npm run build
-
-# Runs the end-to-end tests
-npm run test:e2e
-# Runs the tests only on Chromium
-npm run test:e2e -- --project=chromium
-# Runs the tests of a specific file
-npm run test:e2e -- tests/example.spec.ts
-# Runs the tests in debug mode
-npm run test:e2e -- --debug
-```
-
-### Lint with [ESLint](https://eslint.org/)
-
-```sh
-npm run lint
-```
+构建配置参考 [Vite 配置文档](https://vite.dev/config/)。
