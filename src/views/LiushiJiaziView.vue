@@ -6,9 +6,6 @@ import RingStack from '../components/base/RingStack.vue'
 import { sixtyJiazi, twelveShichen, twentyFourSolarTerms, seventyTwoHou } from '../data/rings'
 import {
   getJiaziIndices,
-  ganzhiName,
-  shichenIndex,
-  shichenName,
   branchOf,
   xunInfo,
   STEMS,
@@ -57,13 +54,14 @@ const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
 // 六柱元信息：由外到内，每环径向厚度交给 RingStack 自动分配半径
-const PILLARS: { id: PillarId; name: string; thickness: number; color: string }[] = [
+const PILLARS: { id: PillarId; name: string; thickness: number; color: string; vertical?: boolean }[] = [
   { id: 'year', name: '年柱', thickness: 24, color: '#FFD700' },
   { id: 'month', name: '月柱', thickness: 24, color: '#FFA500' },
   { id: 'day', name: '日柱', thickness: 24, color: '#FF6B6B' },
   { id: 'hour', name: '时柱', thickness: 24, color: '#4ECDC4' },
-  { id: 'minute', name: '分柱', thickness: 24, color: '#45B7D1' },
-  { id: 'second', name: '秒柱', thickness: 24, color: '#9370DB' }
+  // 分、秒柱在最内圈，半径小、60格每格仅6°，双字横排必重叠 → 竖排省切向空间
+  { id: 'minute', name: '分柱', thickness: 28, color: '#45B7D1', vertical: true },
+  { id: 'second', name: '秒柱', thickness: 28, color: '#9370DB', vertical: true }
 ]
 
 const OUTER_RADIUS = 460
@@ -77,9 +75,11 @@ const GREY = '#555'
 
 // 为某一环构造带高亮的数据：当前所在格高亮放大，其余灰色。
 // source 默认六十甲子（六柱用），时辰环传入 twelveShichen。
-function buildRingData(activeIndex: number, highlightColor: string, source = sixtyJiazi) {
+// vertical=true 时双字标签竖排（内圈窄环防重叠）。
+function buildRingData(activeIndex: number, highlightColor: string, source = sixtyJiazi, vertical = false) {
   return {
     ...source,
+    verticalTwoChar: vertical,
     items: source.items.map((it, i) => ({
       ...it,
       color: i === activeIndex ? highlightColor : GREY,
@@ -178,6 +178,14 @@ function buildTermRing(source: typeof twentyFourSolarTerms, activeIndex: number,
 // 它把 base 0° 旋到屏幕正上方(270°)——甲子起跑线与子时中心都落在那里。
 const JIAZI_START_DEGREE = -90
 
+// 节气 / 候环要与「十二月建（月支环）」对齐，而非与正上方对齐：
+// 月支环心对齐——子月格心在正上方(270°)，故月建格边界落在 255°/285°/315°…(每 30° 一界)。
+// 「节」是月建起始边：立春=寅月首、大雪=子月首…。立春格(base 0°)的起跑线须压在
+// 寅月起始边 315° 上 → startDegree = -45。于是：
+//   立春+雨水 = 315°~345° = 寅月格；大雪+冬至 = 255°~285° = 子月格(正上方)；
+//   候环每 5° 三等分，正好嵌进对应节气格。
+const TERM_START_DEGREE = -45
+
 const rings = computed(() => {
   const out = []
   for (const p of PILLARS) {
@@ -185,7 +193,7 @@ const rings = computed(() => {
       component: DataRingComp,
       thickness: p.thickness,
       props: {
-        data: buildRingData(currentIndices.value[p.id], p.color),
+        data: buildRingData(currentIndices.value[p.id], p.color, sixtyJiazi, p.vertical),
         startDegree: JIAZI_START_DEGREE
       }
     })
@@ -197,7 +205,7 @@ const rings = computed(() => {
         gapBefore: 2,
         props: {
           data: buildTermRing(twentyFourSolarTerms, termHou.value.termIndex, TERM_HL),
-          startDegree: JIAZI_START_DEGREE
+          startDegree: TERM_START_DEGREE
         }
       })
       out.push({
@@ -206,7 +214,7 @@ const rings = computed(() => {
         gapBefore: 1,
         props: {
           data: buildTermRing(seventyTwoHou, termHou.value.houIndex, HOU_HL),
-          startDegree: JIAZI_START_DEGREE
+          startDegree: TERM_START_DEGREE
         }
       })
     }
@@ -217,37 +225,11 @@ const rings = computed(() => {
   }
   return out
 })
-
-// 当前六柱干支名（用于右上角面板显示）
-const pillarNames = computed(
-  () =>
-    Object.fromEntries(
-      PILLARS.map(p => [p.id, ganzhiName(currentIndices.value[p.id])])
-    ) as Record<PillarId, string>
-)
-
-// 当前时辰名（十二时辰，由时柱地支推得）
-const currentShichen = computed(() => shichenName(shichenIndex(currentIndices.value.hour)))
 </script>
 
 <template>
   <div class="container">
     <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
-
-    <!-- 六柱当前值显示 -->
-    <div class="pillars-panel">
-      <div class="pillar-title">六柱</div>
-      <div class="pillar-items">
-        <div class="pillar-item" v-for="p in PILLARS" :key="p.id">
-          <span class="pillar-name" :style="{ color: p.color }">{{ p.name }}</span>
-          <span class="pillar-value" :style="{ color: p.color }">{{ pillarNames[p.id] }}</span>
-        </div>
-        <div class="pillar-item">
-          <span class="pillar-name" :style="{ color: '#7FFFD4' }">时辰</span>
-          <span class="pillar-value" :style="{ color: '#7FFFD4' }">{{ currentShichen }}</span>
-        </div>
-      </div>
-    </div>
 
     <svg
       :width="1200"
@@ -311,47 +293,5 @@ svg {
 .back-link:hover {
   color: #fff;
   border-color: #888;
-}
-
-.pillars-panel {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  background-color: rgba(0, 0, 0, 0.6);
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 12px 16px;
-}
-
-.pillar-title {
-  color: #888;
-  font-size: 12px;
-  text-align: center;
-  margin-bottom: 8px;
-  letter-spacing: 0.1em;
-}
-
-.pillar-items {
-  display: grid;
-  grid-template-columns: repeat(3, auto);
-  gap: 6px 18px;
-}
-
-.pillar-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 50px;
-}
-
-.pillar-name {
-  font-size: 11px;
-  opacity: 0.7;
-}
-
-.pillar-value {
-  font-size: 17px;
-  font-weight: bold;
 }
 </style>
