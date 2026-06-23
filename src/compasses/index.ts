@@ -23,7 +23,7 @@ export const compasses: CompassMeta[] = [
   {
     id: 'astronomy',
     name: '中华天文圆环',
-    description: '二十八宿、二十四节气、六十甲子、五行纳音、天干地支、日月五星黄道与太极',
+    description: '360度刻度、二十四节气、二十八星宿、六十甲子、五行纳音、十天干、天干空亡、十二长生、十二地支、八门、四象、日月五星黄道与太极',
     category: '天文',
     component: () => import('@/views/AstronomyView.vue')
   }
