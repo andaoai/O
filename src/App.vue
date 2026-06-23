@@ -70,32 +70,6 @@ const rings = [
   { component: DataRingComp, thickness: 34, props: { data: siXiang } }
 ]
 
-// 时间变化处理器
-const handleTimeChange = (newTime: Date) => {
-  controlledTime.value = newTime
-}
-
-// 缩放变化处理器
-const handleZoomChange = (newZoom: number) => {
-  zoomLevel.value = newZoom
-}
-
-// 平移变化处理器
-const handleOffsetChange = (newOffset: { x: number, y: number }) => {
-  offsetX.value = newOffset.x
-  offsetY.value = newOffset.y
-}
-
-// 旋转方向变化处理器
-const handleRotationDirectionChange = (newDirection: 'clockwise' | 'counterclockwise') => {
-  rotationDirection.value = newDirection
-}
-
-// 旋转角度变化处理器
-const handleRotationAngleChange = (newAngle: number) => {
-  rotationAngle.value = newAngle
-}
-
 </script>
 
 <template>
@@ -143,11 +117,6 @@ const handleRotationAngleChange = (newAngle: number) => {
       v-model:offsetY="offsetY"
       v-model:rotation-direction="rotationDirection"
       v-model:rotation-angle="rotationAngle"
-      @time-change="handleTimeChange"
-      @zoom-change="handleZoomChange"
-      @offset-change="handleOffsetChange"
-      @rotation-direction-change="handleRotationDirectionChange"
-      @rotation-angle-change="handleRotationAngleChange"
     />
 
   </div>

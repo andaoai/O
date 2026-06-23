@@ -91,10 +91,6 @@ interface Props {
   showPlanets?: boolean
   /** 是否显示行星文字标签 */
   showPlanetLabels?: boolean
-  /** 观测者纬度（度） */
-  observerLatitude?: number
-  /** 观测者经度（度） */
-  observerLongitude?: number
   /** 是否显示月亮 */
   showMoon?: boolean
   /** 是否显示白道 */
@@ -115,8 +111,6 @@ const props = withDefaults(defineProps<Props>(), {
   showSunLabel: true,
   showPlanets: true,
   showPlanetLabels: true,
-  observerLatitude: 39.9042,  // 北京纬度
-  observerLongitude: 116.4074, // 北京经度
   showMoon: true,
   showWhiteWay: true,
   showMoonLabel: true,
@@ -318,14 +312,6 @@ const calculateSunPosition = (time: Date): SunPosition => {
     size: 20
   }
 }
-
-/**
- * 默认太阳位置（使用 astronomy-engine 计算）
- */
-const defaultSunPosition = computed(() => {
-  const time = props.time || new Date()
-  return calculateSunPosition(time)
-})
 
 /**
  * 当前太阳位置

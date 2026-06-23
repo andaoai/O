@@ -257,10 +257,9 @@ const scaleCount = computed(() => Math.floor(360 / props.scaleInterval))
  *
  * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
  * @param generateArcPath - 从 PolarCanvas 传入的弧形路径生成函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
  * @returns 扇形区域数组，每个元素包含起始角度、结束角度和SVG路径
  */
-const generateSectors = (getMidAngle: Function, generateArcPath: Function, totalRotation: number) => {
+const generateSectors = (getMidAngle: Function, generateArcPath: Function) => {
   const sectors = []
 
   // 遍历每个刻度间隔
@@ -291,10 +290,9 @@ const generateSectors = (getMidAngle: Function, generateArcPath: Function, total
  * 这是组件的核心功能之一，保证了刻度的完整性
  *
  * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
  * @returns 刻度线数组，每个元素包含线的起点和终点坐标
  */
-const generateAllTicks = (polarToCartesian: Function, totalRotation: number) => {
+const generateAllTicks = (polarToCartesian: Function) => {
   const ticks = []
 
   // 生成所有刻度线（从0度到360度）
@@ -329,10 +327,9 @@ const generateAllTicks = (polarToCartesian: Function, totalRotation: number) => 
  *
  * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
  * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @param totalRotation - 总旋转角度（已包含在参数中，此处不重复使用）
  * @returns 标签数组，每个元素包含位置坐标、文字内容和旋转角度
  */
-const generateLabels = (getMidAngle: Function, polarToCartesian: Function, totalRotation: number) => {
+const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
   const labels = []
 
   // 遍历每个刻度
@@ -429,7 +426,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           每个刻度间隔显示为一个扇形
           用于提供视觉上的分区效果
         -->
-        <g v-if="showSectors" v-for="sector in generateSectors(slotProps.getMidAngle, slotProps.generateArcPath, slotProps.totalRotation)" :key="sector.startAngle">
+        <g v-if="showSectors" v-for="sector in generateSectors(slotProps.getMidAngle, slotProps.generateArcPath)" :key="sector.startAngle">
           <path
             :d="sector.path"
             :fill="sectorColor"
@@ -443,7 +440,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           包括所有刻度的边界线，形成完整的网格
           确保每个区域都有清晰的边界
         -->
-        <g v-for="tick in generateAllTicks(slotProps.polarToCartesian, slotProps.totalRotation)" :key="tick.angle">
+        <g v-for="tick in generateAllTicks(slotProps.polarToCartesian)" :key="tick.angle">
           <line
             :x1="tick.x1"
             :y1="tick.y1"
@@ -460,7 +457,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function, total
           显示在每个扇形的中央
           文字会自动旋转，始终保持"站立"姿态
         -->
-        <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian, slotProps.totalRotation)" :key="label.text">
+        <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian)" :key="label.text">
           <text
             :x="label.x"
             :y="label.y"
