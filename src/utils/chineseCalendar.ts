@@ -319,3 +319,48 @@ export function getSolarTermDescription(term: SolarTermInfo): string {
     return `距离${term.nextTermName}还有${term.daysToNext}天`
   }
 }
+
+/**
+ * 节气 / 候的「立春起序号」结果
+ */
+export interface TermHouInfo {
+  /** 当前节气：立春起序号(0-23，立春=0) */
+  termIndex: number
+  /** 当前节气名 */
+  termName: string
+  /** 节气内第几候(0 初候 / 1 次候 / 2 末候) */
+  houInTerm: number
+  /** 当前候：立春起序号(0-71，立春初候=0) */
+  houIndex: number
+  /** 当前候名 */
+  houName: string
+}
+
+// tyme4ts 节气索引以冬至=0 起算，立春在 tyme4ts 中为 3；
+// 本项目环数据以立春=0 起序，故需平移 3 位。
+const LICHUN_TYME_INDEX = 3
+
+/**
+ * 获取当前节气与候的「立春起序号」，用于与节气环/候环对齐高亮。
+ *
+ * - 节气：tyme4ts(冬至=0) → 立春起序号 = (tymeIdx - 3 + 24) % 24
+ * - 候：每节气均分三候，约 5 天一候；候序 = termIndex*3 + floor(进入节气天数/5)
+ *
+ * @param houNames 七十二候名数组（立春起，长度 72），用于回填候名
+ */
+export function getTermHouInfo(date: Date, houNames: string[]): TermHouInfo {
+  const solarDay = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
+  const term = solarDay.getTerm()
+  const termIndex = (term.getIndex() - LICHUN_TYME_INDEX + 24) % 24
+  // getTermDay().getDayIndex()：进入当前节气后的第几天(0 起)
+  const dayInTerm = solarDay.getTermDay().getDayIndex()
+  const houInTerm = Math.min(2, Math.floor(dayInTerm / 5)) // 防节气偏长溢出
+  const houIndex = termIndex * 3 + houInTerm
+  return {
+    termIndex,
+    termName: term.getName(),
+    houInTerm,
+    houIndex,
+    houName: houNames[houIndex] ?? ''
+  }
+}

@@ -59,3 +59,52 @@ export function getJiaziIndices(date: Date): JiaziIndices {
 export function ganzhiName(index: number): string {
   return STEMS[index % 10]! + BRANCHES[index % 12]!
 }
+
+/** 由六十甲子序号(0-59) 取地支序号（0-11，子=0）。日柱、时柱通用。 */
+export function branchOf(jiaziIndex: number): number {
+  return jiaziIndex % 12
+}
+
+/**
+ * 由时柱六十甲子序号取十二时辰序号（0-11，子=0）。
+ * 时辰只看地支，故为甲子序号对 12 取模；一天循环一圈 12 格。
+ */
+export function shichenIndex(hourJiaziIndex: number): number {
+  return branchOf(hourJiaziIndex)
+}
+
+/** 由时辰序号(0-11) 得时辰名，如 0 → 子时 */
+export function shichenName(index: number): string {
+  return BRANCHES[index]! + '时'
+}
+
+/** 十二地支位的天干分布 + 两空亡位（旬空）。日柱、时柱通用。 */
+export interface XunInfo {
+  /** 下标=地支序号(子=0)，值=天干序号(0-9) 或 null(空亡) */
+  stems: (number | null)[]
+  /** 两空亡地支序号，按旬序 [空, 亡] */
+  kongwang: [number, number]
+}
+
+/**
+ * 由某柱六十甲子序号，推十二地支位各自的天干与旬空（旬空通用算法）。
+ *
+ * 该柱落在某旬（甲X 起的 10 个连号），把十天干依次贴到 10 个地支上：
+ *   旬首甲所在地支起，甲乙丙…癸顺贴 10 位；剩下 2 位无干 = 空亡（旬空）。
+ * 十干配十二支必空两位，故每旬空亡两支，随柱序推进而移位。
+ *
+ * 性质：当前柱(地支 = 序号%12)那一格的天干恰为该柱天干(序号%10)。
+ * 时柱传入即得时干/时空亡；日柱传入即得日干/日空亡——同一算法。
+ */
+export function xunInfo(jiaziIndex: number): XunInfo {
+  const xunHead = Math.floor(jiaziIndex / 10) * 10 // 旬首甲X 的六十甲子序号
+  const headBranch = xunHead % 12 // 旬首(甲)所在地支
+  const stems: (number | null)[] = new Array(12).fill(null)
+  for (let k = 0; k < 10; k++) {
+    stems[(headBranch + k) % 12] = k
+  }
+  return {
+    stems,
+    kongwang: [(headBranch + 10) % 12, (headBranch + 11) % 12]
+  }
+}
