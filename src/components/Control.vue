@@ -10,7 +10,7 @@
     <!-- 标题栏：可拖拽 -->
     <div class="control-header" :class="{ 'minimal': allCollapsed }">
       <h3 v-if="!allCollapsed" class="title">控制面板</h3>
-      <div v-else class="minimal-time">{{ formatTime(currentTime) }}</div>
+      <div v-else class="minimal-time">{{ formatDateTime(currentTime) }}</div>
       <div class="header-controls">
         <button
           class="header-btn"
@@ -448,10 +448,10 @@ const panelStyle = computed(() => {
   const expandedCount = Object.values(modules.value).filter(m => !m.collapsed).length
 
   if (expandedCount === 0) {
-    // 所有模块都折叠，只显示标题栏和时间
+    // 所有模块都折叠，只显示标题栏和「年月日 时分秒」
     return {
       ...basePosition,
-      width: '200px',
+      width: '230px',
       height: '44px',
       overflow: 'hidden'
     }
@@ -564,6 +564,11 @@ const formatDate = (date: Date): string => {
     month: '2-digit',
     day: '2-digit'
   })
+}
+
+// 格式化「年月日 时分秒」（折叠态标题栏用）
+const formatDateTime = (date: Date): string => {
+  return `${formatDate(date)} ${formatTime(date)}`
 }
 
 // 更新时间
@@ -821,11 +826,7 @@ const handleMouseMove = (e: MouseEvent) => {
   panelPositionX.value += deltaX  // 修复：应该是 += 而不是 -=
   panelPositionY.value += deltaY
 
-  const maxOffsetX = window.innerWidth - 100
-  const maxOffsetY = window.innerHeight - 100
-
-  panelPositionX.value = Math.max(-maxOffsetX, Math.min(20, panelPositionX.value))
-  panelPositionY.value = Math.max(-maxOffsetY, Math.min(window.innerHeight - 200, panelPositionY.value))
+  clampPanelPosition()
 
   dragStartX.value = e.clientX
   dragStartY.value = e.clientY
@@ -1033,11 +1034,23 @@ onUnmounted(() => {
 
 // 窗口大小变化处理
 const handleResize = () => {
-  const maxOffsetX = window.innerWidth - 100
-  const maxOffsetY = window.innerHeight - 100
+  clampPanelPosition()
+}
 
-  panelPositionX.value = Math.max(-maxOffsetX, Math.min(20, panelPositionX.value))
-  panelPositionY.value = Math.max(-maxOffsetY, Math.min(window.innerHeight - 200, panelPositionY.value))
+/**
+ * 夹取面板位置，保证面板始终留在视口内且标题栏可抓取。
+ * 面板用 right:(20−X)、top:(20+Y) 定位：
+ *   - X 越大越往左；上限 20 使其不越出右边界，下限 −(视口宽−留白) 让它能拖到最左。
+ *   - Y 越大越往下；上限留出一个标题栏高度(HEADER)，使面板可一直拖到贴近底部仍能抓住标题栏。
+ */
+const HEADER_KEEP = 44 // 标题栏高度，保证拖到底部时仍可抓取
+const clampPanelPosition = () => {
+  const maxLeft = window.innerWidth - 100
+  panelPositionX.value = Math.max(-maxLeft, Math.min(20, panelPositionX.value))
+
+  // top = 20 + Y，允许 top 最大到 (视口高 − 标题栏)，故 Y 上限 = 视口高 − 标题栏 − 20
+  const maxY = window.innerHeight - HEADER_KEEP - 20
+  panelPositionY.value = Math.max(-20, Math.min(maxY, panelPositionY.value))
 }
 </script>
 
