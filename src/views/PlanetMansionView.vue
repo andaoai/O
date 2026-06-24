@@ -1,17 +1,13 @@
 <script setup lang="ts">
-import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
-import DataRing from '../components/DataRing.vue'
-import DegreeScale from '../components/DegreeScale.vue'
-import SolarEcliptic from '../components/SolarEcliptic.vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import SkyChart from '../components/SkyChart.vue'
 import Control from '../components/Control.vue'
-import RingStack from '../components/base/RingStack.vue'
-import { twentyEightConstellations } from '../data/rings'
 import { getPlanetMansions } from '../utils/planetMansion'
 
 // 时间控制（与控制面板双向绑定）
 const controlledTime = ref(new Date())
 
-// 实时时钟：默认每秒推进 controlledTime，五星随真实时间移动。
+// 实时时钟：默认每秒推进 controlledTime，七曜随真实时间移动。
 // 一旦用户用控制面板调时，停掉实时跟随，把控制权交还用户。
 let tickTimer: number | null = null
 const liveMode = ref(true)
@@ -47,59 +43,8 @@ const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
-const DataRingComp = markRaw(DataRing)
-
-// 当前五星落宿（随时间重算）
+// 当前七曜落宿（随时间重算，供右侧信息面板）
 const planetMansions = computed(() => getPlanetMansions(controlledTime.value))
-
-// 命中的宿名集合 → 宿名到落于其上的行星列表
-const hitMap = computed(() => {
-  const map = new Map<string, { symbol: string; color: string }[]>()
-  for (const pm of planetMansions.value) {
-    if (!pm.mansion) continue
-    const list = map.get(pm.mansion.label) ?? []
-    list.push({ symbol: pm.symbol, color: pm.color })
-    map.set(pm.mansion.label, list)
-  }
-  return map
-})
-
-// 暗灰：未命中宿压灰
-const GREY = '#555'
-
-// 二十八宿高亮环：命中宿保留本色并高亮呼吸，其余压灰
-const constellationRing = computed(() => ({
-  ...twentyEightConstellations,
-  items: twentyEightConstellations.items.map((it) => {
-    const hit = hitMap.value.has(it.label)
-    return {
-      ...it,
-      color: hit ? it.color : GREY,
-      fontSize: hit ? 15 : 11,
-      highlight: hit
-    }
-  })
-}))
-
-// RingStack 环配置（由外到内）：外圈度盘 + 二十八宿高亮环
-const rings = computed(() => [
-  {
-    component: markRaw(DegreeScale),
-    thickness: 20,
-    props: {
-      showSectors: true,
-      sectorColor: '#666666',
-      sectorOpacity: 0.1,
-      showLabels: true,
-      labelColor: '#888888',
-      scaleInterval: 6,
-      showCircle: true,
-      circleColor: '#666666',
-      circleWidth: 1
-    }
-  },
-  { component: DataRingComp, thickness: 40, props: { data: constellationRing.value } }
-])
 </script>
 
 <template>
@@ -123,28 +68,17 @@ const rings = computed(() => [
 
     <svg :width="1200" :height="1200" viewBox="0 0 1200 1200">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
-        <!-- 度盘 + 二十八宿高亮环 -->
-        <RingStack
-          :outer-radius="480"
-          :gap="2"
-          :rings="rings"
-          :rotation-direction="rotationDirection"
-        />
-
-        <!-- 黄道 + 太阳 + 七曜（收在宿环内侧的专属轨道环带，不侵入二十八宿环） -->
-        <!-- 二十八宿环内边界约 418；七曜环带 [330, 405] 留出安全间隙 -->
-        <!-- 不开整体旋转：天体位置由 time 驱动，整盘旋转会让天体绕中心乱转 -->
-        <SolarEcliptic
-          :radius="370"
-          :band-inner="330"
-          :band-outer="405"
+        <!-- 天极投影星图：赤道正圆居中，黄道/白道偏心，二十八宿按距星实位，七曜各按赤经落位 -->
+        <SkyChart
           :time="controlledTime"
-          :enable-animation="false"
+          :radius="360"
+          :show-equator="true"
           :show-ecliptic="true"
-          :show-moon="true"
           :show-white-way="true"
+          :show-mansions="true"
           :show-planets="true"
-          :rotation-direction="rotationDirection"
+          :show-sun="true"
+          :show-moon="true"
         />
       </g>
     </svg>

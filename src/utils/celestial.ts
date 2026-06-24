@@ -21,6 +21,9 @@ import {
   SearchMoonNode,
   NextMoonNode,
   NodeEventKind,
+  Equator,
+  Observer,
+  DefineStar,
   Body,
   type NodeEventInfo
 } from 'astronomy-engine'
@@ -182,3 +185,72 @@ export const moonOrbitPath = (time: Date, steps = 40): MoonOrbitSample[] => {
 
   return samples
 }
+
+/* ────────────────────────────────────────────────────────────
+ * 赤道坐标（供天极投影星图使用）
+ * 赤经按当前历元（ofdate，含岁差章动），与二十八宿距星同口径
+ * ──────────────────────────────────────────────────────────── */
+
+/** 天体赤道位置 */
+export interface EquatorialPosition {
+  /** 赤经（0-360 度，当前历元 ofdate） */
+  ra: number
+  /** 赤纬（度） */
+  dec: number
+}
+
+/** 地心观测者（赤经赤纬以地心为准，位置无关） */
+const GEOCENTRIC = new Observer(0, 0, 0)
+
+/** astronomy-engine 自定义恒星槽位（Star1~Star8 共 8 个，循环复用） */
+const STAR_SLOTS = [
+  Body.Star1, Body.Star2, Body.Star3, Body.Star4,
+  Body.Star5, Body.Star6, Body.Star7, Body.Star8
+] as const
+
+/**
+ * 计算行星的赤道坐标（当前历元）
+ */
+export const planetEquatorial = (time: Date, key: PlanetKey): EquatorialPosition => {
+  const eq = Equator(PLANETS_CONFIG[key].body, new AstroTime(time), GEOCENTRIC, true, true)
+  return { ra: normalizeDegree(eq.ra * 15), dec: eq.dec }
+}
+
+/**
+ * 计算太阳的赤道坐标（当前历元）
+ */
+export const sunEquatorial = (time: Date): EquatorialPosition => {
+  const eq = Equator(Body.Sun, new AstroTime(time), GEOCENTRIC, true, true)
+  return { ra: normalizeDegree(eq.ra * 15), dec: eq.dec }
+}
+
+/**
+ * 计算月亮的赤道坐标（当前历元）
+ */
+export const moonEquatorial = (time: Date): EquatorialPosition => {
+  const eq = Equator(Body.Moon, new AstroTime(time), GEOCENTRIC, true, true)
+  return { ra: normalizeDegree(eq.ra * 15), dec: eq.dec }
+}
+
+/**
+ * 计算距星（自定义恒星）的赤道坐标（当前历元，含岁差）
+ *
+ * @param time 观测时刻
+ * @param raJ2000 J2000 赤经（度）
+ * @param decJ2000 J2000 赤纬（度）
+ * @param distanceLy 距离（光年）
+ * @param slot 槽位索引（0-27，内部对 8 取模复用 Star1~8）
+ */
+export const fixedStarEquatorial = (
+  time: Date,
+  raJ2000: number,
+  decJ2000: number,
+  distanceLy: number,
+  slot: number
+): EquatorialPosition => {
+  const body = STAR_SLOTS[slot % STAR_SLOTS.length]!
+  DefineStar(body, raJ2000 / 15, decJ2000, distanceLy)
+  const eq = Equator(body, new AstroTime(time), GEOCENTRIC, true, true)
+  return { ra: normalizeDegree(eq.ra * 15), dec: eq.dec }
+}
+
