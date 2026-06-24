@@ -4,9 +4,13 @@ import {
   planetHeliocentric,
   earthHeliocentric,
   inferiorConjunctionKind,
+  moonPosition,
+  detectAspects,
+  formatAspect,
   PLANET_SEMI_MAJOR_AU,
   PLANETS_CONFIG,
-  type PlanetKey
+  type PlanetKey,
+  type LuminaryKey
 } from '@/utils/celestial'
 
 /**
@@ -28,12 +32,15 @@ interface Props {
   /** 最内圈与中心（太阳）之间的预留半径（像素） */
   innerRadius?: number
   showLabels?: boolean
+  /** 显示七曜合/冲相位连线 */
+  showAspects?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 180,
   innerRadius: 28,
-  showLabels: true
+  showLabels: true,
+  showAspects: true
 })
 
 const currentTime = computed(() => props.time ?? new Date())
@@ -78,6 +85,22 @@ const earthLine = computed(() => {
   return { x1: -p.x, y1: -p.y, x2: p.x, y2: p.y }
 })
 
+/**
+ * 月亮：绕地球的小卫星圈（真实月地距离仅 0.0026 AU，必须放大才可见）。
+ * 月亮地心黄经 = 它相对地球的方向；卫星圈半径取固定像素。
+ * 朔：月亮转到地球朝太阳一侧；望：转到背侧 —— 与地心星图的日月合冲对应。
+ */
+const MOON_ORBIT_PX = computed(() => Math.max(14, props.innerRadius * 0.8))
+const moon = computed(() => {
+  const lon = moonPosition(currentTime.value).longitude
+  const local = place(lon, MOON_ORBIT_PX.value)
+  return {
+    orbitR: MOON_ORBIT_PX.value,
+    x: earth.value.x + local.x,
+    y: earth.value.y + local.y
+  }
+})
+
 /** 五星：位置 + 所在轨道半径 + 上下合标记 */
 const planets = computed(() =>
   (Object.keys(PLANETS_CONFIG) as PlanetKey[]).map((key) => {
@@ -100,6 +123,38 @@ const planets = computed(() =>
 
 /** 所有轨道圈半径（用于画同心圆） */
 const orbitCircles = computed(() => ORBIT_ORDER.value.map((k, i) => ({ key: k, r: orbitRadius(i) })))
+
+/* ── 七曜相位（合/冲）连线 ──
+ * 合/冲本质是「从地球看两天体同向/反向」，即地球、A、B 三点共线。
+ * 在日心盘上连接成相位的两天体，连线自然穿过地球点 —— 这正是地心视线的几何体现。
+ */
+/** 各天体在日心盘上的画布坐标（太阳=中心，五星=轨道，月=卫星圈） */
+const luminaryPoint = computed<Record<LuminaryKey, { x: number; y: number }>>(() => {
+  const map = {} as Record<LuminaryKey, { x: number; y: number }>
+  map.sun = { x: 0, y: 0 }
+  map.moon = { x: moon.value.x, y: moon.value.y }
+  for (const p of planets.value) map[p.key] = { x: p.x, y: p.y }
+  return map
+})
+
+/** 当前合/冲相位连线（连接成相位的两天体，过地球点） */
+const aspectLines = computed(() =>
+  detectAspects(currentTime.value, 6).map((e) => {
+    const pa = luminaryPoint.value[e.a]
+    const pb = luminaryPoint.value[e.b]
+    return {
+      key: `${e.a}-${e.b}-${e.kind}`,
+      conjunction: e.kind === 'conjunction',
+      x1: pa.x,
+      y1: pa.y,
+      x2: pb.x,
+      y2: pb.y,
+      labelX: (pa.x + pb.x) / 2,
+      labelY: (pa.y + pb.y) / 2,
+      label: formatAspect(e)
+    }
+  })
+)
 </script>
 
 <template>
@@ -130,6 +185,35 @@ const orbitCircles = computed(() => ORBIT_ORDER.value.map((k, i) => ({ key: k, r
       opacity="0.45"
     />
 
+    <!-- 七曜相位连线（合=青实线，冲=橙虚线），连接成相位的两天体、过地球点 -->
+    <g v-if="showAspects" class="aspects">
+      <template v-for="a in aspectLines" :key="a.key">
+        <line
+          :x1="a.x1"
+          :y1="a.y1"
+          :x2="a.x2"
+          :y2="a.y2"
+          :stroke="a.conjunction ? '#00e5ff' : '#ff9500'"
+          stroke-width="1.5"
+          :stroke-dasharray="a.conjunction ? 'none' : '5,4'"
+          opacity="0.8"
+        />
+        <text
+          v-if="showLabels"
+          :x="a.labelX"
+          :y="a.labelY"
+          :fill="a.conjunction ? '#00e5ff' : '#ff9500'"
+          font-size="11"
+          font-weight="bold"
+          text-anchor="middle"
+          dominant-baseline="middle"
+          paint-order="stroke"
+          stroke="#000"
+          stroke-width="3"
+        >{{ a.label }}</text>
+      </template>
+    </g>
+
     <!-- 太阳（中心） -->
     <circle cx="0" cy="0" r="14" fill="#ffdd00" opacity="0.25" />
     <circle cx="0" cy="0" r="9" fill="#ffcc00" />
@@ -138,6 +222,11 @@ const orbitCircles = computed(() => ORBIT_ORDER.value.map((k, i) => ({ key: k, r
     <!-- 地球 -->
     <circle :cx="earth.x" :cy="earth.y" r="7" fill="#4a90d9" />
     <text v-if="showLabels" :x="earth.x" :y="earth.y" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">地</text>
+
+    <!-- 月亮：绕地球的小卫星圈（放大显示，朔=朝太阳侧/望=背侧） -->
+    <circle :cx="earth.x" :cy="earth.y" :r="moon.orbitR" fill="none" stroke="#c0c0c0" stroke-width="0.6" stroke-dasharray="2,2" opacity="0.4" />
+    <circle :cx="moon.x" :cy="moon.y" r="4.5" fill="#c0c0c0" />
+    <text v-if="showLabels" :x="moon.x" :y="moon.y" fill="#333" font-size="7" font-weight="bold" text-anchor="middle" dominant-baseline="middle">月</text>
 
     <!-- 五星 -->
     <g v-for="p in planets" :key="p.key">

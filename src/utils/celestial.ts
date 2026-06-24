@@ -357,3 +357,89 @@ export const fixedStarEquatorial = (
   return { ra: normalizeDegree(eq.ra * 15), dec: eq.dec }
 }
 
+/* ────────────────────────────────────────────────────────────
+ * 七曜相位（合 / 冲）
+ *
+ * 古代天象的「合」「冲」本质都是两天体的地心黄经夹角：
+ *   合（conjunction）= 黄经差 ≈ 0°   —— 朔（日月合）、五星互合、行星合月
+ *   冲（opposition） = 黄经差 ≈ 180° —— 望（日月冲）、太岁（木星）冲月
+ * 这里对七曜（日月五星）两两组合统一检测，覆盖所有合冲情形。
+ * ──────────────────────────────────────────────────────────── */
+
+/** 参与相位检测的天体键名（日月五星） */
+export type LuminaryKey = 'sun' | 'moon' | PlanetKey
+
+/** 七曜地心黄经（度），供相位检测与连线定位共用 */
+export const luminaryLongitude = (time: Date, key: LuminaryKey): number => {
+  if (key === 'sun') return sunLongitude(time)
+  if (key === 'moon') return moonPosition(time).longitude
+  return planetPosition(time, key).longitude
+}
+
+/** 七曜显示名（用于相位事件文案） */
+export const LUMINARY_NAME: Record<LuminaryKey, string> = {
+  sun: '日',
+  moon: '月',
+  mercury: '水',
+  venus: '金',
+  mars: '火',
+  jupiter: '木',
+  saturn: '土'
+} as const
+
+/** 相位类型 */
+export type AspectKind = 'conjunction' | 'opposition'
+
+/** 一次相位事件 */
+export interface AspectEvent {
+  a: LuminaryKey
+  b: LuminaryKey
+  kind: AspectKind
+  /** 两天体黄经夹角（0-180 度） */
+  separation: number
+}
+
+/** 两黄经夹角，归一化到 [0,180] */
+const angularSeparation = (lonA: number, lonB: number): number => {
+  const d = Math.abs(normalizeDegree(lonA - lonB))
+  return d > 180 ? 360 - d : d
+}
+
+/**
+ * 检测当前时刻七曜两两之间的合 / 冲相位
+ *
+ * @param time 观测时刻
+ * @param tolDeg 容差（度）：夹角 < tol 记为合，|夹角−180| < tol 记为冲
+ */
+export const detectAspects = (time: Date, tolDeg = 6): AspectEvent[] => {
+  const keys: LuminaryKey[] = ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn']
+  const lons = new Map<LuminaryKey, number>()
+  for (const k of keys) lons.set(k, luminaryLongitude(time, k))
+
+  const events: AspectEvent[] = []
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = i + 1; j < keys.length; j++) {
+      const a = keys[i]!
+      const b = keys[j]!
+      const separation = angularSeparation(lons.get(a)!, lons.get(b)!)
+      if (separation < tolDeg) {
+        events.push({ a, b, kind: 'conjunction', separation })
+      } else if (Math.abs(separation - 180) < tolDeg) {
+        events.push({ a, b, kind: 'opposition', separation })
+      }
+    }
+  }
+  return events
+}
+
+/** 把相位事件格式化为中文文案，如「日☌月（朔）」「木☍月」 */
+export const formatAspect = (e: AspectEvent): string => {
+  const glyph = e.kind === 'conjunction' ? '☌' : '☍'
+  const base = `${LUMINARY_NAME[e.a]}${glyph}${LUMINARY_NAME[e.b]}`
+  // 日月合冲的传统名：朔 / 望
+  if ((e.a === 'sun' && e.b === 'moon') || (e.a === 'moon' && e.b === 'sun')) {
+    return `${base}（${e.kind === 'conjunction' ? '朔' : '望'}）`
+  }
+  return base
+}
+
