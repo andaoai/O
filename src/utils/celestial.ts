@@ -115,6 +115,26 @@ export const planetPosition = (time: Date, key: PlanetKey): PlanetEclipticPositi
 }
 
 /**
+ * 判断行星此刻是否逆行（地心黄经向西退行）
+ *
+ * 逆行 = 地心黄经随时间减小。用中心差分取瞬时黄经变化率：
+ * 比较 time±halfSpan 两时刻的黄经，归一化到 (-180, 180]，
+ * 负值即逆行。日月不会逆行，故只对五星调用。
+ *
+ * @param time 观测时刻
+ * @param key 行星键名
+ * @param halfSpanDays 中心差分半步长（天，默认 0.5 天）
+ */
+export const planetRetrograde = (time: Date, key: PlanetKey, halfSpanDays = 0.5): boolean => {
+  const ms = halfSpanDays * 24 * 60 * 60 * 1000
+  const before = planetPosition(new Date(time.getTime() - ms), key).longitude
+  const after = planetPosition(new Date(time.getTime() + ms), key).longitude
+  // 黄经差归一化到 (-180, 180]，避免 360°→0° 跨越误判
+  let delta = ((after - before) % 360 + 540) % 360 - 180
+  return delta < 0
+}
+
+/**
  * 计算月亮的黄道位置（黄经 + 黄纬 + 距离）
  */
 export const moonPosition = (time: Date): MoonEclipticPosition => {

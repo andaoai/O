@@ -11,6 +11,7 @@ import {
 import {
   sunLongitude,
   planetPosition,
+  planetRetrograde,
   moonPosition,
   lunarOrbit,
   planetEquatorial,
@@ -165,12 +166,13 @@ const mansions = computed(() => {
 /* ── 天体位置 ── */
 /** 太阳（黄道圈） */
 const sun = computed(() => ecl2c(sunLongitude(currentTime.value)))
-/** 五星（黄道圈，带各自黄纬） */
+/** 五星（黄道圈，带各自黄纬；retro 标记逆行） */
 const planets = computed(() =>
   (Object.keys(PLANETS_CONFIG) as PlanetKey[]).map((key) => {
     const cfg = PLANETS_CONFIG[key]
     const pos = planetPosition(currentTime.value, key)
-    return { key, symbol: cfg.symbol, color: cfg.color, size: cfg.size, ...ecl2c(pos.longitude, pos.latitude) }
+    const retro = planetRetrograde(currentTime.value, key)
+    return { key, symbol: cfg.symbol, color: cfg.color, size: cfg.size, retro, ...ecl2c(pos.longitude, pos.latitude) }
   })
 )
 /** 月球（白道圈） */
@@ -284,11 +286,33 @@ const moon = computed(() => {
       <text :x="moon.x" :y="moon.y" fill="#333" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle">月</text>
     </g>
 
-    <!-- 五星（黄道圈） -->
+    <!-- 五星（黄道圈；逆行加红色虚线环 + 「逆」角标） -->
     <g v-if="showPlanets" class="planets">
       <g v-for="p in planets" :key="p.key">
         <circle :cx="p.x" :cy="p.y" :r="(p.size ?? 10) + 4" :fill="p.color" opacity="0.25" />
         <circle :cx="p.x" :cy="p.y" :r="p.size ?? 10" :fill="p.color" />
+        <!-- 逆行标记 -->
+        <template v-if="p.retro">
+          <circle
+            :cx="p.x"
+            :cy="p.y"
+            :r="(p.size ?? 10) + 7"
+            fill="none"
+            stroke="#ff3b30"
+            stroke-width="1.5"
+            stroke-dasharray="4,3"
+            class="retro-ring"
+          />
+          <text
+            :x="p.x + (p.size ?? 10) + 6"
+            :y="p.y - (p.size ?? 10) - 4"
+            fill="#ff3b30"
+            font-size="11"
+            font-weight="bold"
+            text-anchor="middle"
+            dominant-baseline="middle"
+          >逆</text>
+        </template>
         <text :x="p.x" :y="p.y" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle">{{ p.symbol }}</text>
       </g>
     </g>
@@ -301,4 +325,9 @@ const moon = computed(() => {
 .planets text,
 .nodes text,
 .centers text { font-family: 'Microsoft YaHei', sans-serif; pointer-events: none; }
+.retro-ring { animation: retro-pulse 1.6s ease-in-out infinite; transform-origin: center; }
+@keyframes retro-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
 </style>
