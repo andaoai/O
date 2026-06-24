@@ -85,12 +85,20 @@ const earthLine = computed(() => {
   return { x1: -p.x, y1: -p.y, x2: p.x, y2: p.y }
 })
 
+/** 相邻轨道圈的径向间距（等间距布局） */
+const orbitSpacing = computed(() => (props.radius - props.innerRadius) / ORBIT_ORDER.value.length)
+
 /**
  * 月亮：绕地球的小卫星圈（真实月地距离仅 0.0026 AU，必须放大才可见）。
- * 月亮地心黄经 = 它相对地球的方向；卫星圈半径取固定像素。
+ * 月亮地心黄经 = 它相对地球的方向；卫星圈半径跟随轨道间距并留安全余量，
+ * 保证月亮始终待在地球轨道两侧的环带内，不越界撞到相邻的金星/火星星点。
  * 朔：月亮转到地球朝太阳一侧；望：转到背侧 —— 与地心星图的日月合冲对应。
  */
-const MOON_ORBIT_PX = computed(() => Math.max(14, props.innerRadius * 0.8))
+const MOON_ORBIT_PX = computed(() => {
+  // 上限取轨道间距的 0.4：月亮最远也只伸到地球与相邻轨道之间的中段，留出余量
+  const cap = orbitSpacing.value * 0.4
+  return Math.max(10, Math.min(cap, 22))
+})
 const moon = computed(() => {
   const lon = moonPosition(currentTime.value).longitude
   const local = place(lon, MOON_ORBIT_PX.value)
