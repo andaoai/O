@@ -147,7 +147,7 @@ const outerRings = computed(() => [
 
     <!-- 落宿信息面板 -->
     <div class="mansion-panel">
-      <h3>五星与月入宿</h3>
+      <h3>七曜入宿</h3>
       <ul>
         <li v-for="pm in planetMansions" :key="pm.key">
           <span class="planet" :style="{ color: pm.color }">{{ pm.symbol }} {{ pm.name }}</span>

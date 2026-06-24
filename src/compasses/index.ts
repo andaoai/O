@@ -43,8 +43,8 @@ export const compasses: CompassMeta[] = [
   },
   {
     id: 'planet-mansion',
-    name: '五星入宿盘',
-    description: '水金火木土五星与月亮的实时黄道位置，高亮各天体当前所入的二十八星宿，跟随真实时间并可调',
+    name: '七曜入宿天象盘',
+    description: '天极投影盖天图，赤道·黄道·白道三道斜交，日月五星各居其道并实时入二十八宿，外缠二十四节气与 360° 赤经刻度，跟随真实时间并可调',
     category: '天文',
     component: () => import('@/views/PlanetMansionView.vue')
   }
