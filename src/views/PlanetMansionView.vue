@@ -3,6 +3,7 @@ import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
 import Control from '../components/Control.vue'
 import DataRing from '../components/DataRing.vue'
+import DegreeScale from '../components/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { twentyEightConstellations } from '../data/rings/twentyEightConstellations'
 import { twentyFourSolarTerms } from '../data/rings/twentyFourSolarTerms'
@@ -113,10 +114,26 @@ const solarTermRingData = computed<RingData>(() => {
   }
 })
 
-// 外圈布局：由外到内 —— 二十四节气 → 二十八星宿；
-// 起始半径 540 > 黄道最大鼓出(≈454)，与星图彻底分离不重叠。
+// 外圈布局：由外到内 —— 360°赤经刻度 → 二十四节气 → 二十八星宿；
+// 起始半径 580 > 黄道最大鼓出(≈454)，与星图彻底分离不重叠。
+// 度数环按等分生成、标签为度数，无法逐项重映射，只能靠方向对齐：
+// 赤经 ra 在 y 取反下落于屏幕标准角 −ra，故用 counterclockwise + startDegree 0，
+// 使 0°刻度对准春分点、度数沿赤经方向递增（与 28 宿/节气的 clockwise 方向相反）。
 const outerRings = computed(() => [
-  { component: markRaw(DataRing), thickness: 30, props: { data: solarTermRingData.value } },
+  {
+    component: markRaw(DegreeScale),
+    thickness: 22,
+    props: {
+      scaleInterval: 10,
+      startDegree: 0,
+      rotationDirection: 'counterclockwise',
+      showSectors: false,
+      showLabels: true,
+      labelColor: '#888888',
+      circleColor: '#555555'
+    }
+  },
+  { component: markRaw(DataRing), thickness: 30, gapBefore: 6, props: { data: solarTermRingData.value } },
   { component: markRaw(DataRing), thickness: 40, gapBefore: 8, props: { data: mansionRingData.value } }
 ])
 
@@ -142,11 +159,11 @@ const outerRings = computed(() => [
       </ul>
     </div>
 
-    <svg :width="1200" :height="1200" viewBox="0 0 1200 1200">
+    <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
-        <!-- 外圈复用环：二十四节气 + 二十八星宿（动态对齐星图赤经，始终顺时针） -->
+        <!-- 外圈复用环：360°赤经刻度 + 二十四节气 + 二十八星宿（动态对齐星图赤经） -->
         <RingStack
-          :outer-radius="540"
+          :outer-radius="580"
           :rings="outerRings"
           rotation-direction="clockwise"
         />
@@ -191,8 +208,11 @@ const outerRings = computed(() => [
   position: relative;
 }
 
-svg {
+.sky-svg {
   display: block;
+  /* 按视口最短边自适应，正方形保持星图不变形；viewBox 不变，内部坐标无需调整 */
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
 }
 
 .back-link {
