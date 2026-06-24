@@ -360,10 +360,12 @@ export const fixedStarEquatorial = (
 /* ────────────────────────────────────────────────────────────
  * 七曜相位（合 / 冲）
  *
- * 古代天象的「合」「冲」本质都是两天体的地心黄经夹角：
- *   合（conjunction）= 黄经差 ≈ 0°   —— 朔（日月合）、五星互合、行星合月
- *   冲（opposition） = 黄经差 ≈ 180° —— 望（日月冲）、太岁（木星）冲月
- * 这里对七曜（日月五星）两两组合统一检测，覆盖所有合冲情形。
+ * 合（conjunction）= 两天体地心黄经夹角 ≈ 0°
+ *   —— 朔（日月合）、五星互合、行星合月/合日，任意两天体皆可成合。
+ * 冲（opposition）= 与太阳地心黄经相差 ≈ 180°
+ *   —— 望（日月冲）、外行星冲日。冲的另一端恒为太阳：此时地球夹在正中，
+ *      行星离地最近、最亮、整夜可见，是地球参与且有观测回报的天象。
+ *      两颗行星之间的 180° 古代天文无此概念（地球不在排列中），不判为冲。
  * ──────────────────────────────────────────────────────────── */
 
 /** 参与相位检测的天体键名（日月五星） */
@@ -406,7 +408,12 @@ const angularSeparation = (lonA: number, lonB: number): number => {
 }
 
 /**
- * 检测当前时刻七曜两两之间的合 / 冲相位
+ * 检测当前时刻七曜之间的合 / 冲相位
+ *
+ * 合：任意两天体黄经夹角 < tol（两两检测，符合古人「某星合某星」）。
+ * 冲：仅在「另一端是太阳」时成立——即日月相望（望）与外行星冲日。
+ *   两颗行星之间的 180° 古代天文无此概念（地球不在排列中、无观测回报），故不判冲。
+ *   内行星（水/金）离日永不及 180°，天文上自动不会触发冲日。
  *
  * @param time 观测时刻
  * @param tolDeg 容差（度）：夹角 < tol 记为合，|夹角−180| < tol 记为冲
@@ -424,7 +431,8 @@ export const detectAspects = (time: Date, tolDeg = 6): AspectEvent[] => {
       const separation = angularSeparation(lons.get(a)!, lons.get(b)!)
       if (separation < tolDeg) {
         events.push({ a, b, kind: 'conjunction', separation })
-      } else if (Math.abs(separation - 180) < tolDeg) {
+      } else if (Math.abs(separation - 180) < tolDeg && (a === 'sun' || b === 'sun')) {
+        // 冲只在「与太阳相对」时成立：望（日月冲）、外行星冲日。两行星互冲不计。
         events.push({ a, b, kind: 'opposition', separation })
       }
     }
