@@ -4,8 +4,6 @@ import {
   project,
   eclipticToEquatorial,
   moonPointToEquatorial,
-  eclipticCenter,
-  whiteWayCenter,
   type PlanePoint
 } from '@/utils/skyProjection'
 import {
@@ -103,10 +101,6 @@ const descNode = computed(() => ecl2c(node.value + 180))
 /* ── 三圈圆心 ── */
 /** 赤道圆心 = 天极（原点） */
 const equatorCenter = { x: 0, y: 0 }
-/** 黄道几何中心（卵形对称轴上的偏心位置） */
-const eclCenter = computed(() => toCanvas(eclipticCenter()))
-/** 白道几何中心 */
-const wwCenter = computed(() => toCanvas(whiteWayCenter(node.value)))
 
 /* ── 落宿（28宿在赤道，七曜用赤经判断入宿）── */
 const spans = computed(() => getMansionSpans(currentTime.value))
@@ -201,20 +195,6 @@ const moon = computed(() => {
         <line :x1="equatorCenter.x - 7" :y1="equatorCenter.y" :x2="equatorCenter.x + 7" :y2="equatorCenter.y" />
         <line :x1="equatorCenter.x" :y1="equatorCenter.y - 7" :x2="equatorCenter.x" :y2="equatorCenter.y + 7" />
       </g>
-      <!-- 黄道圆心 -->
-      <g stroke="#ffdd00" stroke-width="1.5">
-        <line :x1="eclCenter.x - 7" :y1="eclCenter.y" :x2="eclCenter.x + 7" :y2="eclCenter.y" />
-        <line :x1="eclCenter.x" :y1="eclCenter.y - 7" :x2="eclCenter.x" :y2="eclCenter.y + 7" />
-      </g>
-      <circle :cx="eclCenter.x" :cy="eclCenter.y" r="2.5" fill="#ffdd00" />
-      <text :x="eclCenter.x + 10" :y="eclCenter.y - 8" fill="#ffdd00" font-size="11" dominant-baseline="middle">黄道心</text>
-      <!-- 白道圆心 -->
-      <g stroke="#ffffff" stroke-width="1.5">
-        <line :x1="wwCenter.x - 7" :y1="wwCenter.y" :x2="wwCenter.x + 7" :y2="wwCenter.y" />
-        <line :x1="wwCenter.x" :y1="wwCenter.y - 7" :x2="wwCenter.x" :y2="wwCenter.y + 7" />
-      </g>
-      <circle :cx="wwCenter.x" :cy="wwCenter.y" r="2.5" fill="#ffffff" />
-      <text :x="wwCenter.x + 10" :y="wwCenter.y + 12" fill="#ffffff" font-size="11" dominant-baseline="middle">白道心</text>
     </g>
 
     <!-- 交点标记 -->

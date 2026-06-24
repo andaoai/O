@@ -21,6 +21,21 @@ export const OBLIQUITY = 23.4392811
 /** 黄白交角（度） */
 export const LUNAR_INCLINATION = 5.145
 
+/**
+ * 白道相对赤道的最大倾角（度）= 黄赤交角 + 黄白交角。
+ * 白道最低点赤纬可达 −MAX_ORBIT_DEC，最高点 +MAX_ORBIT_DEC。
+ */
+export const MAX_ORBIT_DEC = OBLIQUITY + LUNAR_INCLINATION
+
+/**
+ * 投影几何系数（以赤道半径 R=1 为基准）：
+ * - OUTER_BULGE_RATIO：黄/白道最大鼓出极径 = (90 + MAX_ORBIT_DEC)/90，约 1.318
+ * - INNER_GAP_RATIO：黄/白道最靠近天极的极径 = (90 − MAX_ORBIT_DEC)/90，约 0.682
+ * 外层套环应留在 OUTER_BULGE_RATIO×R 之外；中心日心盘应缩在 INNER_GAP_RATIO×R 之内。
+ */
+export const OUTER_BULGE_RATIO = (90 + MAX_ORBIT_DEC) / 90
+export const INNER_GAP_RATIO = (90 - MAX_ORBIT_DEC) / 90
+
 export interface PlanePoint {
   x: number
   y: number

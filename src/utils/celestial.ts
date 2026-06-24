@@ -16,6 +16,7 @@ import {
   MakeTime,
   SunPosition,
   GeoVector,
+  HelioVector,
   Ecliptic,
   EclipticGeoMoon,
   SearchMoonNode,
@@ -132,6 +133,88 @@ export const planetRetrograde = (time: Date, key: PlanetKey, halfSpanDays = 0.5)
   // 黄经差归一化到 (-180, 180]，避免 360°→0° 跨越误判
   let delta = ((after - before) % 360 + 540) % 360 - 180
   return delta < 0
+}
+
+/* ────────────────────────────────────────────────────────────
+ * 日心坐标（供日心轨道盘使用）
+ *
+ * 以太阳为中心，画出地球与五星的公转轨道。上合/下合一目了然：
+ * 内行星（水金）落在「地球—太阳」连线靠地球侧 = 下合，靠太阳背侧 = 上合。
+ * ──────────────────────────────────────────────────────────── */
+
+/** 天体日心黄道位置（以太阳为原点） */
+export interface HeliocentricPosition {
+  /** 日心黄经（0-360 度） */
+  longitude: number
+  /** 日心黄纬（度） */
+  latitude: number
+  /** 与太阳的距离（AU） */
+  distance: number
+}
+
+/**
+ * 五星真实日心轨道半长轴（AU），用于确定轨道内外顺序。
+ * 地球 1.0 作为内外行星分界。
+ */
+export const PLANET_SEMI_MAJOR_AU: Record<PlanetKey, number> = {
+  mercury: 0.387,
+  venus: 0.723,
+  mars: 1.524,
+  jupiter: 5.203,
+  saturn: 9.537
+} as const
+
+/** 地球日心黄道位置（用于「地球—太阳」基准线与上下合判定） */
+export const earthHeliocentric = (time: Date): HeliocentricPosition => {
+  const vec = HelioVector(Body.Earth, new AstroTime(time))
+  const ecl = Ecliptic(vec)
+  return {
+    longitude: normalizeDegree(ecl.elon),
+    latitude: ecl.elat,
+    distance: Math.hypot(vec.x, vec.y, vec.z)
+  }
+}
+
+/** 单个行星的日心黄道位置 */
+export const planetHeliocentric = (time: Date, key: PlanetKey): HeliocentricPosition => {
+  const vec = HelioVector(PLANETS_CONFIG[key].body, new AstroTime(time))
+  const ecl = Ecliptic(vec)
+  return {
+    longitude: normalizeDegree(ecl.elon),
+    latitude: ecl.elat,
+    distance: Math.hypot(vec.x, vec.y, vec.z)
+  }
+}
+
+/**
+ * 判断内行星（水/金）此刻处于上合还是下合（外行星返回 null）
+ *
+ * 几何判据：比较「行星到地球的距离」与「行星到太阳的距离 + 地球到太阳的距离」。
+ * 下合 = 行星在地球与太阳之间，离地最近；上合 = 行星在太阳背后，离地最远。
+ * 仅当行星与太阳的「地心黄经」接近（合日，差值 < tolDeg）时才判定，否则返回 null。
+ *
+ * @param time 观测时刻
+ * @param key 行星键名
+ * @param tolDeg 合日容差（度，默认 8°）
+ */
+export const inferiorConjunctionKind = (
+  time: Date,
+  key: PlanetKey,
+  tolDeg = 8
+): 'inferior' | 'superior' | null => {
+  if (PLANET_SEMI_MAJOR_AU[key] >= 1) return null // 仅内行星有上下合
+  // 合日判定：行星地心黄经 ≈ 太阳地心黄经
+  const planetGeoLon = planetPosition(time, key).longitude
+  const sunLon = sunLongitude(time)
+  let sep = ((planetGeoLon - sunLon) % 360 + 540) % 360 - 180
+  if (Math.abs(sep) > tolDeg) return null
+  // 离地近 → 下合，离地远 → 上合
+  const planet = planetHeliocentric(time, key)
+  const earth = earthHeliocentric(time)
+  // 行星与地球的日心黄经差，判断在太阳同侧还是异侧
+  let lonDiff = ((planet.longitude - earth.longitude) % 360 + 540) % 360 - 180
+  // |lonDiff| 小 → 行星与地球同方向（同侧）→ 下合；接近 180° → 异侧 → 上合
+  return Math.abs(lonDiff) < 90 ? 'inferior' : 'superior'
 }
 
 /**

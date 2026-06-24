@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
+import HelioOrbits from '../components/HelioOrbits.vue'
 import Control from '../components/Control.vue'
 import DataRing from '../components/DataRing.vue'
 import DegreeScale from '../components/DegreeScale.vue'
@@ -9,7 +10,7 @@ import { twentyEightConstellations } from '../data/rings/twentyEightConstellatio
 import { twentyFourSolarTerms } from '../data/rings/twentyFourSolarTerms'
 import type { RingData } from '../data/rings/types'
 import { getPlanetMansions, getMansionSpans } from '../utils/planetMansion'
-import { eclipticToEquatorial } from '../utils/skyProjection'
+import { eclipticToEquatorial, OUTER_BULGE_RATIO, INNER_GAP_RATIO } from '../utils/skyProjection'
 import { sunLongitude } from '../utils/celestial'
 
 // 时间控制（与控制面板双向绑定）
@@ -114,15 +115,55 @@ const solarTermRingData = computed<RingData>(() => {
   }
 })
 
+/* ──────────────────────────────────────────────────────────────
+ * 半径级联布局（单一来源：DISK_OUTER_RADIUS）
+ *
+ * 四层半径过去全靠手写常量，改环厚度就要逐个重算。现在从最外缘一个数
+ * 级联推算出全部：
+ *   最外 RingStack 外缘 = DISK_OUTER_RADIUS
+ *     └ RingStack 内缘 = 外缘 − Σ(厚度) − Σ(间隙)
+ *         └ SkyChart 赤道半径 = (内缘 − GAP) / 黄白道最大鼓出比(≈1.318)
+ *               └ HelioOrbits 外半径 = 赤道半径 × 中心空区比(≈0.682) − GAP
+ *                     └ HelioOrbits 内半径 = 外半径 × 0.16（留太阳本体）
+ * 改任意环厚度，下游半径自动重排，永不重叠。
+ * ────────────────────────────────────────────────────────────── */
+const DISK_OUTER_RADIUS = 580
+const RING_GAP = 8
+
+// 外圈三环的厚度与间隙（由外到内）
+interface OuterRingDef {
+  thickness: number
+  gapBefore: number
+}
+const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef] = [
+  { thickness: 22, gapBefore: 0 }, // 360°赤经刻度
+  { thickness: 30, gapBefore: 6 }, // 二十四节气
+  { thickness: 40, gapBefore: 8 } // 二十八星宿
+]
+
+/** RingStack 累加后的内缘半径 */
+const ringStackInner = computed(
+  () =>
+    DISK_OUTER_RADIUS -
+    OUTER_RING_DEFS.reduce((sum, r) => sum + r.thickness + r.gapBefore, 0)
+)
+
+/** 星图赤道半径：让黄/白道最大鼓出顶到外圈内缘下方 RING_GAP 处 */
+const skyRadius = computed(() => (ringStackInner.value - RING_GAP) / OUTER_BULGE_RATIO)
+
+/** 日心盘外半径：填满星图中心空区（INNER_GAP_RATIO×R）再留 RING_GAP */
+const helioRadius = computed(() => skyRadius.value * INNER_GAP_RATIO - RING_GAP)
+/** 日心盘内半径：留出太阳本体空间 */
+const helioInnerRadius = computed(() => Math.max(20, helioRadius.value * 0.16))
+
 // 外圈布局：由外到内 —— 360°赤经刻度 → 二十四节气 → 二十八星宿；
-// 起始半径 580 > 黄道最大鼓出(≈454)，与星图彻底分离不重叠。
 // 度数环按等分生成、标签为度数，无法逐项重映射，只能靠方向对齐：
 // 赤经 ra 在 y 取反下落于屏幕标准角 −ra，故用 counterclockwise + startDegree 0，
 // 使 0°刻度对准春分点、度数沿赤经方向递增（与 28 宿/节气的 clockwise 方向相反）。
 const outerRings = computed(() => [
   {
     component: markRaw(DegreeScale),
-    thickness: 22,
+    thickness: OUTER_RING_DEFS[0].thickness,
     props: {
       scaleInterval: 10,
       startDegree: 0,
@@ -133,8 +174,8 @@ const outerRings = computed(() => [
       circleColor: '#555555'
     }
   },
-  { component: markRaw(DataRing), thickness: 30, gapBefore: 6, props: { data: solarTermRingData.value } },
-  { component: markRaw(DataRing), thickness: 40, gapBefore: 8, props: { data: mansionRingData.value } }
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[1].thickness, gapBefore: OUTER_RING_DEFS[1].gapBefore, props: { data: solarTermRingData.value } },
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } }
 ])
 
 
@@ -163,7 +204,7 @@ const outerRings = computed(() => [
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <!-- 外圈复用环：360°赤经刻度 + 二十四节气 + 二十八星宿（动态对齐星图赤经） -->
         <RingStack
-          :outer-radius="580"
+          :outer-radius="DISK_OUTER_RADIUS"
           :rings="outerRings"
           rotation-direction="clockwise"
         />
@@ -172,7 +213,7 @@ const outerRings = computed(() => [
         <!-- 二十八宿改由外圈 RingStack 渲染（已同口径对齐），此处关闭内圈宿弧避免重复 -->
         <SkyChart
           :time="controlledTime"
-          :radius="288"
+          :radius="skyRadius"
           :show-equator="true"
           :show-ecliptic="true"
           :show-white-way="true"
@@ -181,6 +222,10 @@ const outerRings = computed(() => [
           :show-sun="true"
           :show-moon="true"
         />
+
+        <!-- 最里层：日心轨道盘（太阳居中，地球+五星按日心黄经落于等间距轨道圈，
+             内行星合日时标注上合/下合）。内外半径由星图中心空区自动推算，互不重叠。 -->
+        <HelioOrbits :time="controlledTime" :radius="helioRadius" :inner-radius="helioInnerRadius" :show-labels="true" />
       </g>
     </svg>
 
