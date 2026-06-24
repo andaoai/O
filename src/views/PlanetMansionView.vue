@@ -186,20 +186,6 @@ const outerRings = computed(() => [
     <!-- 返回首页 -->
     <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
 
-    <!-- 落宿信息面板 -->
-    <div class="mansion-panel">
-      <h3>七曜入宿</h3>
-      <ul>
-        <li v-for="pm in planetMansions" :key="pm.key">
-          <span class="planet" :style="{ color: pm.color }">{{ pm.symbol }} {{ pm.name }}</span>
-          <span class="mansion">
-            入 <b :style="{ color: pm.mansion?.color }">{{ pm.mansion?.label ?? '—' }}</b> 宿
-          </span>
-          <span class="degree" v-if="pm.mansion">{{ pm.mansion.degreeInMansion.toFixed(1) }}°</span>
-        </li>
-      </ul>
-    </div>
-
     <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <!-- 外圈复用环：360°赤经刻度 + 二十四节气 + 二十八星宿（动态对齐星图赤经） -->
@@ -277,54 +263,5 @@ const outerRings = computed(() => [
 .back-link:hover {
   color: #fff;
   border-color: #888;
-}
-
-.mansion-panel {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  min-width: 180px;
-  padding: 12px 16px;
-  border: 1px solid #444;
-  border-radius: 6px;
-  background-color: rgba(0, 0, 0, 0.6);
-  color: #ddd;
-  font-size: 13px;
-}
-
-.mansion-panel h3 {
-  margin: 0 0 8px;
-  font-size: 14px;
-  color: #fff;
-  font-weight: 600;
-}
-
-.mansion-panel ul {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.mansion-panel li {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 3px 0;
-}
-
-.mansion-panel .planet {
-  font-weight: 600;
-  min-width: 56px;
-}
-
-.mansion-panel .mansion b {
-  font-size: 15px;
-}
-
-.mansion-panel .degree {
-  margin-left: auto;
-  color: #888;
-  font-size: 12px;
 }
 </style>
