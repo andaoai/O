@@ -13,13 +13,11 @@ import {
   planetPosition,
   moonPosition,
   lunarOrbit,
-  fixedStarEquatorial,
   planetEquatorial,
   moonEquatorial,
   PLANETS_CONFIG,
   type PlanetKey
 } from '@/utils/celestial'
-import { LUNAR_MANSIONS } from '@/data/lunarMansions'
 import { getMansionSpans, findMansion } from '@/utils/planetMansion'
 
 /**
@@ -123,15 +121,44 @@ const hitLabels = computed(() => {
   return s
 })
 
-/** 二十八宿距星（赤道圈） */
+/** 沿赤道采样一段弧（startRa→endRa，含跨 360°）的折线路径 */
+const arcPath = (startRa: number, endRa: number): string => {
+  const span = ((endRa - startRa) % 360 + 360) % 360
+  const step = 2
+  const n = Math.max(2, Math.ceil(span / step))
+  const pts: string[] = []
+  for (let i = 0; i <= n; i++) {
+    const ra = startRa + (span * i) / n
+    const c = eq2c(ra, 0)
+    pts.push(`${i === 0 ? 'M' : 'L'} ${c.x.toFixed(2)} ${c.y.toFixed(2)}`)
+  }
+  return pts.join(' ')
+}
+
+/**
+ * 二十八宿（赤道圈上的「宿区间」）
+ * 每宿 = [本宿距星赤经, 下一宿距星赤经) 的一段赤道弧，宿名标在弧段中点。
+ * 距星点（区间起点）用径向短线分隔，命中宿高亮。
+ */
 const mansions = computed(() => {
-  const t = currentTime.value
-  return LUNAR_MANSIONS.map((m, i) => {
-    const ra = fixedStarEquatorial(t, m.raJ2000, m.decJ2000, m.distanceLy, i).ra
-    const onRing = eq2c(ra, 0)
-    const label = toCanvas({ x: project(ra, 0).x * 1.08, y: project(ra, 0).y * 1.08 })
-    const hit = hitLabels.value.has(m.label)
-    return { label: m.label, color: m.color, onRing, label2: label, hit }
+  return spans.value.map((s) => {
+    const span = ((s.endRa - s.startRa) % 360 + 360) % 360
+    const midRa = s.startRa + span / 2
+    // 距星处径向分隔短线（赤道圈内外各延伸一点）
+    const bIn = toCanvas({ x: project(s.startRa, 0).x * 0.96, y: project(s.startRa, 0).y * 0.96 })
+    const bOut = toCanvas({ x: project(s.startRa, 0).x * 1.04, y: project(s.startRa, 0).y * 1.04 })
+    // 宿名标在弧段中点、略偏圈外
+    const labelPt = toCanvas({ x: project(midRa, 0).x * 1.1, y: project(midRa, 0).y * 1.1 })
+    const hit = hitLabels.value.has(s.label)
+    return {
+      label: s.label,
+      color: s.color,
+      span,
+      arc: arcPath(s.startRa, s.endRa),
+      boundary: { x1: bIn.x, y1: bIn.y, x2: bOut.x, y2: bOut.y },
+      labelPt,
+      hit
+    }
   })
 })
 
@@ -206,13 +233,32 @@ const moon = computed(() => {
       </g>
     </g>
 
-    <!-- 二十八宿距星 + 宿名（赤道圈） -->
+    <!-- 二十八宿（赤道圈上的宿区间：弧段 + 宿界 + 宿名） -->
     <g v-if="showMansions" class="mansions">
       <template v-for="m in mansions" :key="m.label">
-        <circle :cx="m.onRing.x" :cy="m.onRing.y" :r="m.hit ? 4 : 2.5" :fill="m.hit ? m.color : '#999'" />
+        <!-- 宿区间弧段（命中宿加粗高亮） -->
+        <path
+          :d="m.arc"
+          fill="none"
+          :stroke="m.hit ? m.color : '#888'"
+          :stroke-width="m.hit ? 5 : 3"
+          :opacity="m.hit ? 0.9 : 0.55"
+          stroke-linecap="butt"
+        />
+        <!-- 宿界（距星处径向短线） -->
+        <line
+          :x1="m.boundary.x1"
+          :y1="m.boundary.y1"
+          :x2="m.boundary.x2"
+          :y2="m.boundary.y2"
+          stroke="#bbb"
+          stroke-width="1"
+          opacity="0.8"
+        />
+        <!-- 宿名（弧段中点） -->
         <text
-          :x="m.label2.x"
-          :y="m.label2.y"
+          :x="m.labelPt.x"
+          :y="m.labelPt.y"
           :fill="m.hit ? m.color : '#aaa'"
           :font-size="m.hit ? 15 : 11"
           :font-weight="m.hit ? 'bold' : 'normal'"
