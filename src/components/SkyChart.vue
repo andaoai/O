@@ -18,6 +18,7 @@ import {
   type PlanetKey
 } from '@/utils/celestial'
 import { getMansionSpans, findMansion } from '@/utils/planetMansion'
+import BodyMarker from './celestial/BodyMarker.vue'
 
 /**
  * 天极投影星图
@@ -253,25 +254,45 @@ const moon = computed(() => {
     </g>
 
     <!-- 太阳（黄道圈） -->
-    <g v-if="showSun">
-      <circle :cx="sun.x" :cy="sun.y" r="20" fill="#ffdd00" opacity="0.25" />
-      <circle :cx="sun.x" :cy="sun.y" r="13" fill="#ffdd00" />
-      <text :x="sun.x" :y="sun.y" fill="#333" font-size="12" font-weight="bold" text-anchor="middle" dominant-baseline="middle">日</text>
-    </g>
+    <BodyMarker
+      v-if="showSun"
+      :x="sun.x"
+      :y="sun.y"
+      :radius="13"
+      color="#ffdd00"
+      :halos="[{ radius: 20, opacity: 0.25 }]"
+      symbol="日"
+      symbol-color="#333"
+      :symbol-font-size="12"
+    />
 
     <!-- 月球（白道圈） -->
-    <g v-if="showMoon">
-      <circle :cx="moon.x" :cy="moon.y" r="13" fill="#c0c0c0" opacity="0.3" />
-      <circle :cx="moon.x" :cy="moon.y" r="9" fill="#c0c0c0" />
-      <text :x="moon.x" :y="moon.y" fill="#333" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle">月</text>
-    </g>
+    <BodyMarker
+      v-if="showMoon"
+      :x="moon.x"
+      :y="moon.y"
+      :radius="9"
+      color="#c0c0c0"
+      :halos="[{ radius: 13, opacity: 0.3 }]"
+      symbol="月"
+      symbol-color="#333"
+      :symbol-font-size="11"
+    />
 
     <!-- 五星（黄道圈；逆行加红色虚线环 + 「逆」角标） -->
     <g v-if="showPlanets" class="planets">
       <g v-for="p in planets" :key="p.key">
-        <circle :cx="p.x" :cy="p.y" :r="(p.size ?? 10) + 4" :fill="p.color" opacity="0.25" />
-        <circle :cx="p.x" :cy="p.y" :r="p.size ?? 10" :fill="p.color" />
-        <!-- 逆行标记 -->
+        <BodyMarker
+          :x="p.x"
+          :y="p.y"
+          :radius="p.size ?? 10"
+          :color="p.color"
+          :halos="[{ radius: (p.size ?? 10) + 4, opacity: 0.25 }]"
+          :symbol="p.symbol"
+          symbol-color="#fff"
+          :symbol-font-size="11"
+        />
+        <!-- 逆行标记（SkyChart 特有装饰） -->
         <template v-if="p.retro">
           <circle
             :cx="p.x"
@@ -293,7 +314,6 @@ const moon = computed(() => {
             dominant-baseline="middle"
           >逆</text>
         </template>
-        <text :x="p.x" :y="p.y" fill="#fff" font-size="11" font-weight="bold" text-anchor="middle" dominant-baseline="middle">{{ p.symbol }}</text>
       </g>
     </g>
   </g>

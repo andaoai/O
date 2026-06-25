@@ -12,6 +12,7 @@ import {
   type PlanetKey,
   type LuminaryKey
 } from '@/utils/celestial'
+import BodyMarker from './celestial/BodyMarker.vue'
 
 /**
  * 日心轨道盘（最里层）
@@ -223,24 +224,52 @@ const aspectLines = computed(() =>
     </g>
 
     <!-- 太阳（中心） -->
-    <circle cx="0" cy="0" r="14" fill="#ffdd00" opacity="0.25" />
-    <circle cx="0" cy="0" r="9" fill="#ffcc00" />
-    <text v-if="showLabels" x="0" y="0" fill="#663300" font-size="10" font-weight="bold" text-anchor="middle" dominant-baseline="middle">日</text>
+    <BodyMarker
+      :x="0"
+      :y="0"
+      :radius="9"
+      color="#ffcc00"
+      :halos="[{ radius: 14, opacity: 0.25 }]"
+      :symbol="showLabels ? '日' : ''"
+      symbol-color="#663300"
+      :symbol-font-size="10"
+    />
 
     <!-- 地球 -->
-    <circle :cx="earth.x" :cy="earth.y" r="7" fill="#4a90d9" />
-    <text v-if="showLabels" :x="earth.x" :y="earth.y" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">地</text>
+    <BodyMarker
+      :x="earth.x"
+      :y="earth.y"
+      :radius="7"
+      color="#4a90d9"
+      :symbol="showLabels ? '地' : ''"
+      symbol-color="#fff"
+      :symbol-font-size="9"
+    />
 
     <!-- 月亮：绕地球的小卫星圈（放大显示，朔=朝太阳侧/望=背侧） -->
     <circle :cx="earth.x" :cy="earth.y" :r="moon.orbitR" fill="none" stroke="#c0c0c0" stroke-width="0.6" stroke-dasharray="2,2" opacity="0.4" />
-    <circle :cx="moon.x" :cy="moon.y" r="4.5" fill="#c0c0c0" />
-    <text v-if="showLabels" :x="moon.x" :y="moon.y" fill="#333" font-size="7" font-weight="bold" text-anchor="middle" dominant-baseline="middle">月</text>
+    <BodyMarker
+      :x="moon.x"
+      :y="moon.y"
+      :radius="4.5"
+      color="#c0c0c0"
+      :symbol="showLabels ? '月' : ''"
+      symbol-color="#333"
+      :symbol-font-size="7"
+    />
 
     <!-- 五星 -->
     <g v-for="p in planets" :key="p.key">
-      <circle :cx="p.x" :cy="p.y" :r="p.size + 3" :fill="p.color" opacity="0.25" />
-      <circle :cx="p.x" :cy="p.y" :r="p.size" :fill="p.color" />
-      <text v-if="showLabels" :x="p.x" :y="p.y" fill="#fff" font-size="9" font-weight="bold" text-anchor="middle" dominant-baseline="middle">{{ p.symbol }}</text>
+      <BodyMarker
+        :x="p.x"
+        :y="p.y"
+        :radius="p.size"
+        :color="p.color"
+        :halos="[{ radius: p.size + 3, opacity: 0.25 }]"
+        :symbol="showLabels ? p.symbol : ''"
+        symbol-color="#fff"
+        :symbol-font-size="9"
+      />
       <!-- 上合/下合标注（仅内行星合日时出现） -->
       <text
         v-if="showLabels && p.conj"

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import { lunarOrbit, moonOrbitPath } from '@/utils/celestial'
+import { polarToCartesian } from '@/utils/geometry'
 
 /**
  * 白道（月球轨道）组件
@@ -38,33 +39,33 @@ const orbit = computed(() => lunarOrbit(currentTime.value))
 /** 白道轨迹采样点（黄经/黄纬） */
 const orbitSamples = computed(() => moonOrbitPath(currentTime.value))
 
-/** 把"黄经"转为黄道圆上的坐标 */
-const longitudeToPoint = (longitude: number, polarToCartesian: Function) => {
-  return polarToCartesian(longitude, props.radius, 0, 0)
-}
+/** 把"黄经"转为黄道圆上的坐标（中心 0,0，统一走 geometry） */
+const longitudeToPoint = (longitude: number) =>
+  polarToCartesian(longitude, props.radius, props.rotationDirection)
 
 /** 把"黄经+黄纬"转为含偏移的坐标（与月亮本体口径一致） */
-const sampleToPoint = (
-  longitude: number,
-  latitude: number,
-  polarToCartesian: Function
-) => {
-  const base = longitudeToPoint(longitude, polarToCartesian)
+const sampleToPoint = (longitude: number, latitude: number) => {
+  const base = longitudeToPoint(longitude)
   const latOffset = Math.sin((latitude * Math.PI) / 180) * props.latScale
   const perpX = base.x / props.radius
   const perpY = base.y / props.radius
   return { x: base.x + perpX * latOffset, y: base.y + perpY * latOffset }
 }
 
-/** 生成白道轨迹的 SVG path */
-const orbitPath = (centerX: number, centerY: number, polarToCartesian: Function): string => {
-  return orbitSamples.value
+/** 白道轨迹 SVG path（中心 0,0） */
+const orbitPathD = computed(() =>
+  orbitSamples.value
     .map((s, index) => {
-      const p = sampleToPoint(s.longitude, s.latitude, polarToCartesian)
-      return `${index === 0 ? 'M' : 'L'} ${centerX + p.x} ${centerY + p.y}`
+      const p = sampleToPoint(s.longitude, s.latitude)
+      return `${index === 0 ? 'M' : 'L'} ${p.x} ${p.y}`
     })
     .join(' ')
-}
+)
+
+/** 升交点坐标 */
+const ascNode = computed(() => longitudeToPoint(orbit.value.ascendingNodeLongitude))
+/** 降交点坐标 */
+const descNode = computed(() => longitudeToPoint(orbit.value.descendingNodeLongitude))
 </script>
 
 <template>
@@ -74,11 +75,11 @@ const orbitPath = (centerX: number, centerY: number, polarToCartesian: Function)
     :center-x="0"
     :center-y="0"
   >
-    <template #default="slotProps">
+    <template #default>
       <g class="white-way">
         <!-- 白道轨迹 -->
         <path
-          :d="orbitPath(slotProps.centerX, slotProps.centerY, slotProps.polarToCartesian)"
+          :d="orbitPathD"
           fill="none"
           stroke="#ffffff"
           stroke-width="1.5"
@@ -89,27 +90,13 @@ const orbitPath = (centerX: number, centerY: number, polarToCartesian: Function)
         <!-- 轨道交点 -->
         <g v-if="showOrbitalNodes" class="orbital-nodes">
           <!-- 升交点（绿点） -->
-          <circle
-            class="ascending-node"
-            :cx="slotProps.centerX + longitudeToPoint(orbit.ascendingNodeLongitude, slotProps.polarToCartesian).x"
-            :cy="slotProps.centerY + longitudeToPoint(orbit.ascendingNodeLongitude, slotProps.polarToCartesian).y"
-            r="6"
-            fill="#00ff00"
-            opacity="0.9"
-          />
+          <circle class="ascending-node" :cx="ascNode.x" :cy="ascNode.y" r="6" fill="#00ff00" opacity="0.9" />
           <!-- 降交点（红点） -->
-          <circle
-            class="descending-node"
-            :cx="slotProps.centerX + longitudeToPoint(orbit.descendingNodeLongitude, slotProps.polarToCartesian).x"
-            :cy="slotProps.centerY + longitudeToPoint(orbit.descendingNodeLongitude, slotProps.polarToCartesian).y"
-            r="6"
-            fill="#ff0000"
-            opacity="0.9"
-          />
+          <circle class="descending-node" :cx="descNode.x" :cy="descNode.y" r="6" fill="#ff0000" opacity="0.9" />
         </g>
 
         <!-- 黄道圆心标记 -->
-        <circle :cx="slotProps.centerX" :cy="slotProps.centerY" r="4" fill="#ffdd00" opacity="0.6" />
+        <circle :cx="0" :cy="0" r="4" fill="#ffdd00" opacity="0.6" />
       </g>
     </template>
   </PolarCanvas>

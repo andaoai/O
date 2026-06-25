@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import { radialTextRotation } from '@/utils/geometry'
+import BodyMarker from './BodyMarker.vue'
+import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
 
 /**
  * 通用单天体组件
@@ -56,11 +58,11 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 /**
- * 黄道基础点坐标（仅黄经，忽略黄纬）
+ * 黄道基础点坐标（仅黄经，忽略黄纬），中心 0,0，统一走 geometry
  */
-const baseCoordinates = (polarToCartesian: Function) => {
-  return polarToCartesian(props.longitude, props.radius, 0, 0)
-}
+const baseCoordinates = computed(() =>
+  polarToCartesian(props.longitude, props.radius, props.rotationDirection)
+)
 
 /**
  * 天体实际坐标（含黄纬偏移）
@@ -69,8 +71,8 @@ const baseCoordinates = (polarToCartesian: Function) => {
  * 若提供了 clampInner/clampOuter，则把天体（含光晕外缘）约束在轨道环带内，
  * 使其不侵入相邻环带（如二十八宿环）。
  */
-const bodyCoordinates = (polarToCartesian: Function) => {
-  const base = baseCoordinates(polarToCartesian)
+const bodyCoordinates = computed(() => {
+  const base = baseCoordinates.value
   const perpX = base.x / props.radius
   const perpY = base.y / props.radius
 
@@ -98,13 +100,10 @@ const bodyCoordinates = (polarToCartesian: Function) => {
     x: base.x + perpX * offset,
     y: base.y + perpY * offset
   }
-}
+})
 
-/** 符号旋转角，使文字始终正立（统一走 geometry，按 longitude 作径向角） */
-const symbolRotation = (cx: number, cy: number): string => {
-  const angle = radialTextRotation(props.longitude, props.rotationDirection)
-  return `rotate(${angle}, ${cx}, ${cy})`
-}
+/** 符号旋转角（度），使文字始终正立（统一走 geometry，按 longitude 作径向角） */
+const symbolRot = computed(() => radialTextRotation(props.longitude, props.rotationDirection))
 </script>
 
 <template>
@@ -119,59 +118,31 @@ const symbolRotation = (cx: number, cy: number): string => {
         <!-- 黄纬偏移指示线 -->
         <line
           v-if="showLatLine && Math.abs(latitude) > 0.5"
-          :x1="slotProps.centerX + baseCoordinates(slotProps.polarToCartesian).x"
-          :y1="slotProps.centerY + baseCoordinates(slotProps.polarToCartesian).y"
-          :x2="slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x"
-          :y2="slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y"
+          :x1="slotProps.centerX + baseCoordinates.x"
+          :y1="slotProps.centerY + baseCoordinates.y"
+          :x2="slotProps.centerX + bodyCoordinates.x"
+          :y2="slotProps.centerY + bodyCoordinates.y"
           :stroke="color"
           stroke-width="1"
           opacity="0.3"
           stroke-dasharray="2,2"
         />
 
-        <!-- 光晕 -->
-        <circle
-          :cx="slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x"
-          :cy="slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y"
-          :r="size + 10"
-          :fill="color"
-          opacity="0.2"
+        <!-- 光晕 + 本体 + 符号（统一走 BodyMarker） -->
+        <BodyMarker
+          :x="slotProps.centerX + bodyCoordinates.x"
+          :y="slotProps.centerY + bodyCoordinates.y"
+          :radius="size"
+          :color="color"
+          :halos="[
+            { radius: size + 10, opacity: 0.2 },
+            { radius: size + 5, opacity: 0.4 }
+          ]"
+          :symbol="symbol"
+          :symbol-color="symbolColor"
+          :symbol-font-size="symbolFontSize || Math.max(10, size * 0.8)"
+          :symbol-rotation="symbolRot"
         />
-        <circle
-          :cx="slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x"
-          :cy="slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y"
-          :r="size + 5"
-          :fill="color"
-          opacity="0.4"
-        />
-
-        <!-- 本体 -->
-        <circle
-          :cx="slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x"
-          :cy="slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y"
-          :r="size"
-          :fill="color"
-        />
-
-        <!-- 符号 -->
-        <text
-          v-if="symbol"
-          :x="slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x"
-          :y="slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y"
-          :fill="symbolColor"
-          :font-size="symbolFontSize || Math.max(10, size * 0.8)"
-          font-weight="bold"
-          text-anchor="middle"
-          dominant-baseline="middle"
-          :transform="
-            symbolRotation(
-              slotProps.centerX + bodyCoordinates(slotProps.polarToCartesian).x,
-              slotProps.centerY + bodyCoordinates(slotProps.polarToCartesian).y
-            )
-          "
-        >
-          {{ symbol }}
-        </text>
       </g>
     </template>
   </PolarCanvas>
