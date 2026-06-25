@@ -52,6 +52,10 @@ export function useTimePlayback(onTimeChange: (t: Date) => void) {
 
   /** 切速时若在播放，重启动画以应用新速度 */
   const updatePlaySpeed = () => {
+    // select option value 为字符串，确保转为数字
+    if (typeof playSpeed.value === 'string') {
+      playSpeed.value = Number(playSpeed.value)
+    }
     if (isPlaying.value) {
       pause()
       play()
@@ -64,7 +68,7 @@ export function useTimePlayback(onTimeChange: (t: Date) => void) {
     updateTime(new Date(currentTime.value.getTime() + seconds * 1000))
   }
 
-  /** 步进月份（处理跨年） */
+  /** 步进月份（处理跨年，日期溢出时取新月份最后一天） */
   const stepMonth = (months: number) => {
     pause()
     const newTime = new Date(currentTime.value)
@@ -79,15 +83,25 @@ export function useTimePlayback(onTimeChange: (t: Date) => void) {
       newYear += Math.floor(newMonth / 12)
       newMonth = ((newMonth % 12) + 12) % 12
     }
-    newTime.setFullYear(newYear, newMonth, newTime.getDate())
+    // 防止日期溢出：1月31日 → +1月 → 2月28/29日（而非3月2日）
+    const originalDate = newTime.getDate()
+    const lastDayOfNewMonth = new Date(newYear, newMonth + 1, 0).getDate()
+    newTime.setFullYear(newYear, newMonth, Math.min(originalDate, lastDayOfNewMonth))
     updateTime(newTime)
   }
 
-  /** 步进年份 */
+  /** 步进年份（2月29日跨非闰年时取该月最后一天） */
   const stepYear = (years: number) => {
     pause()
     const newTime = new Date(currentTime.value)
+    const originalMonth = newTime.getMonth()
+    const originalDate = newTime.getDate()
     newTime.setFullYear(newTime.getFullYear() + years)
+    // 如果月份变了（2月29日 → 3月1日），回退到原月份的最后一天
+    if (newTime.getMonth() !== originalMonth) {
+      // setMonth(month+1, 0) = 下个月第0天 = 原月份最后一天
+      newTime.setMonth(originalMonth + 1, 0)
+    }
     updateTime(newTime)
   }
 

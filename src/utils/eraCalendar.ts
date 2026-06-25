@@ -27,8 +27,8 @@ const ZODIAC_BY_BRANCH: Record<string, string> = {
   午: '马', 未: '羊', 申: '猴', 酉: '鸡', 戌: '狗', 亥: '猪'
 }
 
-/** 日干 → 时干起始（甲己起丙、乙庚起戊、丙辛起庚、丁壬起壬、戊癸起甲） */
-const HOUR_START_STEM: number[] = [2, 4, 6, 8, 0, 2, 4, 6, 8, 0]
+/** 日干 → 子时时干起始（甲己起甲、乙庚起丙、丙辛起戊、丁壬起庚、戊癸起壬） */
+const HOUR_START_STEM: number[] = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
 
 // ── 公历格式化 ──
 
@@ -110,18 +110,13 @@ function indexToGanZhi(index: number): { stem: string; branch: string; full: str
 /**
  * 年干支（数学循环外推）
  *
- * 锚点：tyme4ts 验证 year=4（公历4年1月1日）= 癸亥年
- * 公式：delta = jsYear - 4，天干=(9+delta) mod 10，地支=(11+delta) mod 12
+ * 锚点：tyme4ts 验证 1984年 = 甲子年（六十甲子索引 0）
+ * 公式：delta = jsYear - 1984，index = delta mod 60
  */
 function getYearGanZhi(jsYear: number): { stem: string; branch: string; full: string } {
-  const delta = jsYear - 4
-  const stemIdx = ((9 + delta) % 10 + 10) % 10
-  const branchIdx = ((11 + delta) % 12 + 12) % 12
-  return {
-    stem: HEAVENLY_STEMS[stemIdx]!,
-    branch: EARTHLY_BRANCHES[branchIdx]!,
-    full: HEAVENLY_STEMS[stemIdx]! + EARTHLY_BRANCHES[branchIdx]!
-  }
+  const delta = jsYear - 1984
+  const index = ((delta % 60) + 60) % 60
+  return indexToGanZhi(index)
 }
 
 /**
@@ -206,14 +201,33 @@ export function getUniversalGanzhi(date: Date): UniversalGanzhiInfo {
   const jsYear = date.getFullYear()
   const canUseTyme = jsYear >= 4
 
-  // 年干支（始终外推，与 tyme4ts 在支持范围内一致）
-  const yearGz = getYearGanZhi(jsYear)
+  // 年干支（tyme4ts 支持范围内用它——自动处理立春分界；否则数学外推）
+  let yearGz: { stem: string; branch: string; full: string }
+  if (canUseTyme) {
+    try {
+      const solarDay = SolarDay.fromYmd(jsYear, date.getMonth() + 1, date.getDate())
+      const ysc = solarDay.getLunarDay().getYearSixtyCycle()
+      yearGz = {
+        stem: ysc.getHeavenStem().getName(),
+        branch: ysc.getEarthBranch().getName(),
+        full: ysc.getName()
+      }
+    } catch {
+      yearGz = getYearGanZhi(jsYear)
+    }
+  } else {
+    yearGz = getYearGanZhi(jsYear)
+  }
 
   // 日干支（天数差法）
   const dayGz = getDayGanZhi(date)
 
-  // 时干支
-  const hourGz = getHourGanZhi(date, dayGz.stem as (typeof HEAVENLY_STEMS)[number])
+  // 时干支（23:00 起属次日，需用次日日干起时）
+  const hourDayStem = (date.getHours() >= 23
+    ? getDayGanZhi(new Date(date.getTime() + 86400000))
+    : dayGz
+  ).stem as (typeof HEAVENLY_STEMS)[number]
+  const hourGz = getHourGanZhi(date, hourDayStem)
 
   // 月干支
   let monthGz: { stem: string; branch: string; full: string }

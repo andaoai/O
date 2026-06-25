@@ -23,35 +23,90 @@ export const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未',
 export type PillarId = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
 
 /** 六柱各自的六十甲子序号（0-59） */
-export type JiaziIndices = Record<PillarId, number>
+export type JiaziIndices = Record<PillarId, number> & { isApproximate?: boolean }
+
+// ── fallback 外推工具（tyme4ts 不支持年份用）──
+
+/** 年干支数学外推（锚点：1984年 = 甲子，索引 0） */
+function fallbackYearIndex(jsYear: number): number {
+  const delta = jsYear - 1984
+  return ((delta % 60) + 60) % 60
+}
+
+/** 日干支天数差法（锚点：2000-01-01 = 戊午，索引 54） */
+function fallbackDayIndex(date: Date): number {
+  const anchor = new Date(2000, 0, 1, 0, 0, 0, 0)
+  const target = new Date(date.getTime())
+  target.setHours(0, 0, 0, 0)
+  target.setMilliseconds(0)
+  const diffDays = Math.round((target.getTime() - anchor.getTime()) / 86400000)
+  return ((54 + diffDays) % 60 + 60) % 60
+}
+
+/** 日干 → 子时时干起始（甲己起甲、乙庚起丙、丙辛起戊、丁壬起庚、戊癸起壬） */
+const HOUR_START_STEM = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
+
+/** 时干支：23:00 起属次日，按次日日干起时 */
+function fallbackHourIndex(date: Date, dayIdx: number): number {
+  const hour = date.getHours()
+  const branchIdx = Math.floor(((hour + 1) % 24) / 2)
+  const dayStemIdx = dayIdx % 10
+  const startStem = HOUR_START_STEM[dayStemIdx] ?? 0
+  const stemIdx = (startStem + branchIdx) % 10
+  // 找唯一 n ∈ [0,59] 满足 n%10=stemIdx 且 n%12=branchIdx
+  for (let n = 0; n < 60; n++) {
+    if (n % 10 === stemIdx && n % 12 === branchIdx) return n
+  }
+  return 0
+}
 
 /**
  * 计算某时间点六柱各自的六十甲子序号（0-59，与圆环 items 顺序一致）
+ *
+ * tyme4ts 仅支持 year ≥ 1（部分功能需 year ≥ 4）。
+ * 不支持的公历年份自动降级为数学外推：年/日/时柱用天文算法，
+ * 月柱因无节气数据不可考，返回 0 并标记 isApproximate。
  */
 export function getJiaziIndices(date: Date): JiaziIndices {
-  const st = SolarTime.fromYmdHms(
-    date.getFullYear(),
-    date.getMonth() + 1,
-    date.getDate(),
-    date.getHours(),
-    date.getMinutes(),
-    date.getSeconds()
-  )
-  const lunarHour = st.getLunarHour()
-  const lunarDay = lunarHour.getLunarDay()
-  const lunarMonth = lunarDay.getLunarMonth()
-  const lunarYear = lunarMonth.getLunarYear()
+  try {
+    const st = SolarTime.fromYmdHms(
+      date.getFullYear(),
+      date.getMonth() + 1,
+      date.getDate(),
+      date.getHours(),
+      date.getMinutes(),
+      date.getSeconds()
+    )
+    const lunarHour = st.getLunarHour()
+    const lunarDay = lunarHour.getLunarDay()
+    const lunarMonth = lunarDay.getLunarMonth()
+    const lunarYear = lunarMonth.getLunarYear()
 
-  return {
-    // 四柱：直接取 tyme4ts 的 60 甲子序号
-    year: lunarYear.getSixtyCycle().getIndex(),
-    month: lunarMonth.getSixtyCycle().getIndex(),
-    day: lunarDay.getSixtyCycle().getIndex(),
-    hour: lunarHour.getSixtyCycle().getIndex(),
-    // 分柱：当前分钟数(0-59) 直接映射六十甲子，每分钟前进一格
-    minute: date.getMinutes(),
-    // 秒柱：当前秒数(0-59) 直接映射六十甲子，每秒前进一格
-    second: date.getSeconds()
+    return {
+      year: lunarYear.getSixtyCycle().getIndex(),
+      month: lunarMonth.getSixtyCycle().getIndex(),
+      day: lunarDay.getSixtyCycle().getIndex(),
+      hour: lunarHour.getSixtyCycle().getIndex(),
+      minute: date.getMinutes(),
+      second: date.getSeconds(),
+      isApproximate: false
+    }
+  } catch {
+    // tyme4ts 不支持：年/日/时柱数学外推，月柱不可考
+    const jsYear = date.getFullYear()
+    const dayIdx = fallbackDayIndex(date)
+    const hourDayIdx = date.getHours() >= 23
+      ? fallbackDayIndex(new Date(date.getTime() + 86400000))
+      : dayIdx
+    return {
+      year: fallbackYearIndex(jsYear),
+      month: 0,
+      day: dayIdx,
+      hour: fallbackHourIndex(date, hourDayIdx),
+      minute: date.getMinutes(),
+      second: date.getSeconds(),
+      isApproximate: true
+    }
   }
 }
 

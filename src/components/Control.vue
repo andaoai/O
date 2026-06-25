@@ -569,11 +569,6 @@ watch(() => props.rotationAngle, (newAngle) => {
   }
 }, { immediate: true })
 
-// 监听时间变化，同步输入框
-watch(() => currentTime.value, (newTime) => {
-  updateDateTimeInputs(newTime)
-}, { immediate: true })
-
 // 同步输入框：公元前年份在框内显示为负数（如 jsYear=-220 显示为 -221）
 const updateDateTimeInputs = (date: Date) => {
   const jsYear = date.getFullYear()
@@ -612,6 +607,11 @@ const applyInputTime = () => {
 
 const onDateChange = applyInputTime
 const onTimeChange = applyInputTime
+
+// 监听时间变化，同步输入框（必须在 updateDateTimeInputs 声明之后）
+watch(() => currentTime.value, (newTime) => {
+  updateDateTimeInputs(newTime)
+}, { immediate: true })
 
 // ── 缩放 ──
 const updateZoom = (newZoom: number) => {
