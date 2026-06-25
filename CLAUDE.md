@@ -6,16 +6,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Chinese traditional compass visualization platform** (中华传统罗盘可视化平台) built with Vue 3 + TypeScript. It is a multi-page app: a home page lists available "compasses" (罗盘), and each compass is a full-screen, polar-coordinate SVG visualization of traditional Chinese cosmological elements.
 
-Two compasses currently ship:
+Three compasses currently ship:
 
 - **中华天文圆环 (astronomy)** — a full astronomical disk stacking many concentric rings: 360-degree degree scale, 24 solar terms (二十四节气), 28 constellations (二十八星宿), 60 jiazi (六十甲子) with five-element nayin (五行纳音), 10 heavenly stems (十天干) with void positions (天干空亡), 12 longevity stages (十二长生), 12 earthly branches (十二地支), 8 gates (八门), four celestial symbols (四象), plus a solar ecliptic and a Taiji (太极) at the center.
 - **六十甲子六环 (liushi-jiazi)** — six concentric 60-jiazi rings (year/month/day/hour/minute/second pillars) that track real time and highlight the current ganzhi cell on each ring.
+- **七曜入宿 (planet-mansion)** — planetary positions mapped to 28 mansions, featuring point-based 24 solar terms ring and sky projection visualization.
 
 Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations, **vue-router** for the multi-page structure.
 
 ## Architecture
 
-The project recently moved from a "one .vue component per ring" design to a **data-driven, multi-page** architecture. Understanding these three pivots is essential:
+The project moved from a "one .vue component per ring" design to a **data-driven, multi-page** architecture, then further evolved to a **two-ring-type (segment + point) foundation**. Understanding these four pivots is essential:
 
 ### 1. Compass registry → routes (multi-page)
 
@@ -26,40 +27,82 @@ The project recently moved from a "one .vue component per ring" design to a **da
 
 **Adding a new compass = create `src/views/XxxView.vue` + add one entry to the `compasses` array.** No router edits needed.
 
-### 2. Data-driven rings (DataRing + RingData)
+### 2. Two ring types: Segment (CircleRing) vs Point (PointRing)
+
+There are **two fundamentally different types of rings**, each with its own data model and renderer:
+
+| Type | Use Case | Data Model | Component |
+|------|----------|------------|-----------|
+| **Segment (段)** | Items occupy angular *ranges* (60 jiazi, 12 branches, etc) | `RingData` → `RingItem[]` | `CircleRing` |
+| **Point (点)** | Items exist at *precise angles* (24 solar terms, 7 planets, etc) | `PointRingData` → `PointItem[]` | `PointRing` |
+
+Both share the same foundation via `useRingBase` composable.
+
+### 3. Data-driven rings (DataRing + DataPointRing)
 
 Traditional rings are no longer separate components. Instead:
 
-- `src/data/rings/*.ts` — each file exports a `RingData` object: the ring's `items` (labels, colors, angles, highlight flags) plus styling defaults. See `src/data/rings/types.ts` for `RingData` / `RingItem`.
-- `src/components/DataRing.vue` — a single generic component that takes a `RingData` and renders it via `CircleRing`. Layout props (`radius`, `innerRadius`, `startDegree`, `rotationDirection`) injected by `RingStack` override the data's defaults.
-- `src/components/base/CircleRing.vue` — the actual SVG ring renderer (sectors, ticks, labels, highlight breathing animation). Built on `PolarCanvas`.
+#### Segment-oriented (CircleRing):
+- `src/data/rings/*.ts` — each file exports a `RingData` object: the ring's `items` (labels, colors, angles, highlight flags) plus styling defaults.
+- `src/components/rings/DataRing.vue` — generic wrapper that takes a `RingData` and renders it via `CircleRing`.
+- `src/components/base/CircleRing.vue` — the actual SVG ring renderer (sectors, ticks, labels, highlight breathing animation).
+
+#### Point-oriented (PointRing):
+- `src/data/rings/*.ts` — exports a `PointRingData` object (e.g., `twentyFourSolarTerms`) with precise `angle` per item.
+- `src/components/rings/DataPointRing.vue` — generic wrapper for point-oriented data.
+- `src/components/base/PointRing.vue` — renders points/markers/ticks at precise angles (3 symbol types: `circle`/`diamond`/`tick`).
 
 This replaced the old `EarthlyBranches.vue`, `SiXiang.vue`, `SixtyJiazi.vue`, etc. — **those component files no longer exist**; their content lives in `src/data/rings/`.
 
-### 3. Concentric auto-layout (RingStack)
+### 4. Shared foundation: `useRingBase` composable
+
+All ring logic (radius resolution, highlight levels, font-size propagation, angle math) is centralized in `src/composables/useRingBase.ts`:
+
+```typescript
+// In DataRing or DataPointRing:
+const { resolvedRadius, resolvedInnerRadius, highlightLevelOf, itemsWithFontSize } =
+  useRingBase<RingData, RingItem>(props, defaults)
+```
+
+Type system uses inheritance to eliminate duplication (`RingItemBase` → `RingItem` / `PointItem`, `RingDataBase` → `RingData` / `PointRingData`).
+
+### 5. Concentric auto-layout (RingStack)
 
 `src/components/base/RingStack.vue` solves manual radius bookkeeping. You declare an `outerRadius` and a list of rings (outer → inner), each with just a `thickness` (radial width). RingStack accumulates inward from `outerRadius`, computing `radius`/`innerRadius` for every ring so they never overlap, and injects `rotationDirection` into all of them. Per-ring `gapBefore` overrides the default `gap`.
+
+Works for both `DataRing` (segment) and `DataPointRing` (point) components.
 
 ### Component layering
 
 ```
+┌─────────────────────────────────────────────────────────┐
+│  useRingBase.ts (composable)                            │
+│  ├─ useHighlight — highlight level calculation          │
+│  ├─ useRingProps — radius/angle resolution              │
+│  ├─ useRingItemsWithFontSize — font size propagation    │
+│  └─ useRingAngles — angle math utilities                 │
+└─────────────────────────────────────────────────────────┘
+                           ▲
+                           │
 PolarCanvas (base SVG canvas)
 ├── Standard polar coordinate system (0° at right/3 o'clock, clockwise)
 ├── Animation via useAnimation composable
 ├── polar ↔ cartesian conversion, arc/sector path generation
 └── exposes utilities to children via slot props
 
-CircleRing (generic ring renderer, built on PolarCanvas)
+CircleRing (segment-oriented ring renderer)
 └── DataRing (data-driven wrapper: RingData → CircleRing)
 
-DegreeScale (degree-tick ring, built on PolarCanvas; NOT data-driven —
-             generated from a scaleInterval rather than an items array)
+PointRing (point-oriented ring renderer: circle/diamond/tick)
+└── DataPointRing (data-driven wrapper: PointRingData → PointRing)
+
+DegreeScale (degree-tick ring, NOT data-driven — interval-based)
 
 SolarEcliptic (sun position via astronomy-engine, built on PolarCanvas)
 
 TaiChi (time-driven yin-yang disk, standalone SVG)
 
-RingStack (concentric auto-layout container; arranges DataRing/DegreeScale instances)
+RingStack (concentric auto-layout container; arranges all ring types)
 
 Control (unified time / zoom / pan / rotation panel)
 ```
@@ -77,21 +120,27 @@ src/
 ├── views/
 │   ├── HomeView.vue               # Home page: grid of compass cards
 │   ├── AstronomyView.vue          # 中华天文圆环 compass
-│   └── LiushiJiaziView.vue        # 六十甲子六环 compass
+│   ├── LiushiJiaziView.vue        # 六十甲子六环 compass
+│   └── PlanetMansionView.vue      # 七曜入宿 compass (point-based 节气)
 ├── components/
 │   ├── base/
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
-│   │   ├── CircleRing.vue          # Generic SVG ring renderer
+│   │   ├── CircleRing.vue          # Segment-oriented ring renderer
+│   │   ├── PointRing.vue           # Point-oriented ring renderer (3 symbol types)
 │   │   └── RingStack.vue           # Concentric auto-layout container
-│   ├── DataRing.vue               # Data-driven ring (RingData → CircleRing)
+│   ├── rings/
+│   │   ├── DataRing.vue            # Segment data-driven: RingData → CircleRing
+│   │   └── DataPointRing.vue       # Point data-driven: PointRingData → PointRing
 │   ├── DegreeScale.vue            # Degree-tick ring (interval-based)
 │   ├── SolarEcliptic.vue          # Solar ecliptic via astronomy-engine
 │   ├── TaiChi.vue                 # Time-driven Taiji disk
 │   └── Control.vue                # Unified control panel
-├── data/rings/                    # Ring DATA (one RingData per file)
-│   ├── types.ts                   # RingData / RingItem interfaces
+├── data/rings/                    # Ring DATA (one file per ring)
+│   ├── types.ts                   # Type hierarchy:
+│   │                              #   RingItemBase → RingItem / PointItem
+│   │                              #   RingDataBase → RingData / PointRingData
 │   ├── index.ts                   # Barrel re-export
-│   ├── twentyFourSolarTerms.ts    # 二十四节气
+│   ├── twentyFourSolarTerms.ts    # 二十四节气 (PointRingData: 精确黄经点)
 │   ├── twentyEightConstellations.ts # 二十八星宿
 │   ├── sixtyJiazi.ts              # 六十甲子
 │   ├── sixtyJiaziNayin.ts         # 五行纳音
@@ -102,7 +151,8 @@ src/
 │   ├── eightGates.ts              # 八门
 │   └── siXiang.ts                 # 四象
 ├── composables/
-│   └── useAnimation.ts            # Animation control composable
+│   ├── useAnimation.ts            # Animation control composable
+│   └── useRingBase.ts             # Shared ring logic foundation
 ├── utils/
 │   ├── chineseCalendar.ts         # Chinese calendar helpers (tyme4ts)
 │   └── liushiJiazi.ts             # Six-pillar 60-jiazi index calc (tyme4ts)
@@ -138,16 +188,62 @@ npm run test:e2e -- --debug                      # debug mode
 
 ### Adding a new compass
 
-1. Create `src/views/XxxView.vue`. Follow `AstronomyView.vue` / `LiushiJiaziView.vue`: a `.container` wrapping an `<svg>` with a `<g transform="translate(...) scale(...) rotate(...)">`, a back-link to `/`, and a `Control` panel bound via `v-model`.
+1. Create `src/views/XxxView.vue`. Follow `AstronomyView.vue` / `LiushiJiaziView.vue` / `PlanetMansionView.vue`: a `.container` wrapping an `<svg>` with a `<g transform="translate(...) scale(...) rotate(...)">`, a back-link to `/`, and a `Control` panel bound via `v-model`.
 2. Add an entry to the `compasses` array in `src/compasses/index.ts` with a unique `id`, `name`, `description`, `category`, and lazy `component`.
 3. The home card and `/compass/:id` route appear automatically.
 
-### Adding a new data-driven ring
+### Adding a new segment-oriented (CircleRing) data-driven ring
 
-1. Create `src/data/rings/myRing.ts` exporting a `RingData` (define `items`; styling fields are optional). Re-export it from `src/data/rings/index.ts`.
-2. In a view, add a `RingStack` entry: `{ component: markRaw(DataRing), thickness: N, props: { data: myRing } }`. Use `markRaw` to avoid wrapping the component in a reactive proxy.
+1. Create `src/data/rings/myRing.ts` exporting a `RingData`:
+```typescript
+export const myRing: RingData = {
+  radius: 400,
+  innerRadius: 380,
+  items: [
+    { label: 'Item 1', startAngle: 0, endAngle: 30 },
+    // ...
+  ]
+}
+```
+2. Re-export it from `src/data/rings/index.ts`.
+3. In a view, add to `RingStack`:
+```typescript
+{ component: markRaw(DataRing), thickness: 20, props: { data: myRing } }
+```
 
-`RingStack` rings are declared outer → inner. Only `thickness` is required per ring; `radius`/`innerRadius` are computed. Use `gapBefore: 0` to butt a ring directly against the previous one (as nayin does against sixty-jiazi).
+### Adding a new point-oriented (PointRing) data-driven ring
+
+1. Create `src/data/rings/myPoints.ts` exporting a `PointRingData`:
+```typescript
+export const myPoints: PointRingData = {
+  radius: 460,
+  innerRadius: 440,
+  pointSymbol: 'tick',  // or 'circle' / 'diamond'
+  labelOffset: -15,     // label position relative to points (+ out / - in)
+  items: [
+    { label: '春分', angle: 0, pointColor: '#ffdd00' },
+    { label: '清明', angle: 15 },
+    // ...
+  ]
+}
+```
+2. Re-export it from `src/data/rings/index.ts`.
+3. In a view, add to `RingStack`:
+```typescript
+{ component: markRaw(DataPointRing), thickness: 20, props: { data: myPoints } }
+```
+
+`RingStack` rings are declared **outer → inner**. Only `thickness` is required per ring; `radius`/`innerRadius` are computed. Use `gapBefore: 0` to butt a ring directly against the previous one (as nayin does against sixty-jiazi).
+
+### PointRing symbol types
+
+Use `pointSymbol` to control the visual style:
+
+| Symbol | Use Case | Visual |
+|--------|----------|--------|
+| `'tick'` | Solar terms, degree markers | Radial line from outer edge inward (25% of ring thickness) |
+| `'circle'` | Planets, markers | Filled circle at radius |
+| `'diamond'` | Special points (equinoxes, solstices) | Diamond shape at radius |
 
 ### Rotation direction
 
@@ -157,13 +253,17 @@ Ring components accept `rotationDirection: 'clockwise' | 'counterclockwise'` so 
 
 Components accept a `time?: Date` prop. Views own a `controlledTime` ref bound to `Control` via `v-model`. `LiushiJiaziView` additionally runs a 1s live clock that advances `controlledTime` until the user takes over via the panel (then it stops following real time).
 
-### Animation
+### Animation & shared logic
 
-Use the `useAnimation` composable for consistent self-rotating behavior:
-
+Use `useAnimation` composable for consistent self-rotating behavior:
 ```typescript
 import { useAnimation } from '@/composables/useAnimation'
 const { isAnimating, animationSpeed, startAnimation, stopAnimation } = useAnimation()
+```
+
+For ring-specific logic (highlight levels, radius resolution, font size propagation), use `useRingBase`:
+```typescript
+import { useRingBase, useHighlight } from '@/composables/useRingBase'
 ```
 
 ## Testing Strategy
@@ -187,9 +287,11 @@ GitHub Pages via `npm run deploy`, which runs the production build and publishes
 ## Key Files for Understanding
 
 - `src/compasses/index.ts` — the registry that wires everything together
-- `src/data/rings/types.ts` — the `RingData` contract for all rings
+- `src/composables/useRingBase.ts` — **the foundation**: shared logic for ALL ring types
+- `src/data/rings/types.ts` — type hierarchy: `RingItemBase` / `RingDataBase` → segment/point variants
 - `src/components/base/RingStack.vue` — concentric auto-layout
-- `src/components/DataRing.vue` — data → render bridge
-- `src/views/AstronomyView.vue` — the richest compass, shows the full stack
+- `src/components/rings/DataRing.vue` — segment-oriented data→render bridge
+- `src/components/rings/DataPointRing.vue` — point-oriented data→render bridge
+- `src/views/PlanetMansionView.vue` — richest example: mixed segment + point rings
 - `src/utils/liushiJiazi.ts` — six-pillar ganzhi calculation (tyme4ts usage)
 - `README.md` / `COMPONENT_DOCUMENTATION.md` — Chinese-language project & component docs
