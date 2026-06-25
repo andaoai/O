@@ -56,3 +56,59 @@ export interface RingData {
   /** 双字标签是否竖排 */
   verticalTwoChar?: boolean
 }
+
+/* ──────────────────────────────────────────────
+   PointRing: 点导向圆环（PointRing）
+   ────────────────────────────────────────────── */
+
+/** 点圆环上单个点的数据 */
+export interface PointItem {
+  /** 标签文字 */
+  label: string
+  /** 自定义颜色（同时影响点和标签，缺省用 style 默认） */
+  color?: string
+  /** 自定义字号 */
+  fontSize?: number
+  /** 点的精确角度（必填，不填则均分） */
+  angle?: number
+  /** 点的大小（像素） */
+  pointSize?: number
+  /** 点的颜色（独立于标签颜色） */
+  pointColor?: string
+  /** 点的符号形状 */
+  pointSymbol?: 'circle' | 'diamond' | 'tick'
+  /** 高亮当前点：呼吸发光 + 文字脉动 */
+  highlight?: boolean
+  /** 分级高亮（优先于 highlight）：0/缺省 不亮，1 微亮，2 中亮，3 强亮 */
+  highlightLevel?: 0 | 1 | 2 | 3
+}
+
+/** 点圆环的样式与默认布局 */
+export interface PointRingData {
+  /** 该环的点数据 */
+  items: PointItem[]
+  /** 默认起始度数偏移 */
+  startDegree?: number
+  /** 默认半径（点所在位置） */
+  radius?: number
+  /** 默认内半径（用于画内边界圆，0=不画） */
+  innerRadius?: number
+  /** 标签默认颜色 */
+  labelColor?: string
+  /** 标签径向偏移：正数向外，负数向内 */
+  labelOffset?: number
+  /** 标签角度偏移（度）：相对于点偏移一定角度，避免与刻度线重叠 */
+  labelAngleOffset?: number
+  /** 默认点大小 */
+  pointSize?: number
+  /** 默认点颜色 */
+  pointColor?: string
+  /** 默认点符号 */
+  pointSymbol?: 'circle' | 'diamond' | 'tick'
+  /** 圆环边线颜色 */
+  circleColor?: string
+  /** 圆环边线宽 */
+  circleWidth?: number
+  /** 统一字号（item.fontSize 优先） */
+  fontSize?: number
+}

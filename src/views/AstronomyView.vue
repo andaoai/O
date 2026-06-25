@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
 import DataRing from '../components/rings/DataRing.vue'
+import DataPointRing from '../components/rings/DataPointRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import SolarEcliptic from '../components/SolarEcliptic.vue'
 import TaiChi from '../components/TaiChi.vue'
@@ -38,9 +39,11 @@ const rotationAngle = ref(0)
 
 // 同心圆环自动布局配置（由外到内）。
 // 只声明每个环的径向厚度，RingStack 会从 outerRadius 起自动分配 radius/innerRadius。
-// 数据驱动的环统一用 DataRing 渲染，data 字段经 props 透传；
-// DegreeScale 按角度间隔生成（非数据驱动），保留独立组件。
+// - DataRing：段导向圆环（六十甲子、地支等区间数据）
+// - DataPointRing：点导向圆环（二十四节气等精确角度点）
+// - DegreeScale：按角度间隔生成（非数据驱动）
 const DataRingComp = markRaw(DataRing)
+const DataPointRingComp = markRaw(DataPointRing)
 const rings = [
   {
     component: markRaw(DegreeScale),
@@ -57,7 +60,8 @@ const rings = [
       circleWidth: 1
     }
   },
-  { component: DataRingComp, thickness: 24, props: { data: twentyFourSolarTerms } },
+  // 二十四节气：点导向（节气是精确黄经点，不是区间段）
+  { component: DataPointRingComp, thickness: 24, props: { data: twentyFourSolarTerms } },
   { component: DataRingComp, thickness: 30, props: { data: twentyEightConstellations } },
   { component: DataRingComp, thickness: 30, props: { data: sixtyJiazi } },
   // 五行纳音：与六十甲子同源同转，紧贴其内侧

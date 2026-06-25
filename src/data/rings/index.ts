@@ -1,4 +1,4 @@
-export type { RingData, RingItem } from './types'
+export type { RingData, RingItem, PointRingData, PointItem } from './types'
 
 export { twentyFourSolarTerms } from './twentyFourSolarTerms'
 export { twentyEightConstellations } from './twentyEightConstellations'

@@ -5,11 +5,12 @@ import HelioOrbits from '../components/HelioOrbits.vue'
 import PlanetDegreeRing from '../components/rings/PlanetDegreeRing.vue'
 import Control from '../components/Control.vue'
 import DataRing from '../components/rings/DataRing.vue'
+import DataPointRing from '../components/rings/DataPointRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { twentyEightConstellations } from '../data/rings/twentyEightConstellations'
 import { twentyFourSolarTerms } from '../data/rings/twentyFourSolarTerms'
-import type { RingData } from '../data/rings/types'
+import type { RingData, PointRingData } from '../data/rings/types'
 import { getPlanetMansions, getMansionSpans, findMansion } from '../utils/planetMansion'
 import { eclipticToEquatorial, OUTER_BULGE_RATIO, INNER_GAP_RATIO } from '../utils/skyProjection'
 import { sunLongitude, sunEquatorial } from '../utils/celestial'
@@ -165,25 +166,40 @@ const siXiangRingData = computed<RingData>(() => {
   }
 })
 
-/** 二十四节气环：按黄经定位（春分=黄经0），转赤经后映射，使春分边界对准星图春分点 */
-const solarTermRingData = computed<RingData>(() => {
-  const labels = twentyFourSolarTerms.items.map((it) => it.label)
+/** 二十四节气环：按黄经定位（春分=黄经0），点导向，径向短线刻度表示节气点 */
+const solarTermRingData = computed<PointRingData>(() => {
+  const labels = [
+    '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
+    '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
+    '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
+    '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'
+  ]
   // 当前太阳所在节气（黄经从立春 315° 起、每 15° 一气）用于高亮
   const sunLon = sunLongitude(controlledTime.value)
   const currentIndex = Math.floor(norm(sunLon - 315) / 15)
   return {
-    ...twentyFourSolarTerms,
     startDegree: 0,
+    labelOffset: -16,       // 标签向环内偏移，避开刻度区
+    labelAngleOffset: 0,    // 文字与刻度线同径向对齐
+    pointSize: 8,           // ✅ 细小刻度：stroke-width = 8/10 = 0.8px
+    pointColor: '#66aadd',  // 更柔和的蓝色
+    pointSymbol: 'tick',
+    circleColor: '#444444',
+    circleWidth: 0.5,
     items: labels.map((label, i) => {
-      const eclStart = norm(315 + i * 15) // 立春黄经 315°
-      const eclEnd = eclStart + 15
-      const raStart = eclipticToEquatorial(eclStart).ra
-      const raEnd = eclipticToEquatorial(eclEnd).ra
+      // 二分二至特殊高亮
+      const isSpecial = label === '春分' || label === '夏至' || label === '秋分' || label === '冬至'
+      const eclLon = norm(315 + i * 15) // 每个节气的精确黄经
+      const ra = eclipticToEquatorial(eclLon).ra
       return {
         label,
-        startAngle: raToAngle(raEnd),
-        endAngle: raToAngle(raStart),
-        highlight: i === currentIndex
+        angle: raToAngle(ra),
+        fontSize: isSpecial ? 12 : 10,
+        pointSize: isSpecial ? 12 : 10,
+        pointColor: isSpecial ? '#ffdd00' : '#88ccff',
+        color: isSpecial ? '#ffdd00' : '#ffffff',
+        highlight: i === currentIndex,
+        highlightLevel: i === currentIndex ? 2 : 0
       }
     })
   }
@@ -257,7 +273,8 @@ const outerRings = computed(() => [
     props: { markers: planetDegreeMarkers.value }
   },
   { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } },
-  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } },
+  // 二十四节气：点导向（径向短线刻度）
+  { component: markRaw(DataPointRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } },
   { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[4].thickness, gapBefore: OUTER_RING_DEFS[4].gapBefore, props: { data: siXiangRingData.value } }
 ])
 
