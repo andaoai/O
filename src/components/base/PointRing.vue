@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import PolarCanvas from './PolarCanvas.vue'
 import { polarToCartesian as polar, radialTextRotation } from '@/utils/geometry'
+import { useHighlight } from '@/composables/useRingBase'
 import type { PointItem } from '@/data/rings/types'
 
 /**
@@ -111,9 +112,8 @@ const points = computed(() =>
   })
 )
 
-/** 高亮点 */
-const highlightLevelOf = (item: PointItem): number =>
-  item.highlightLevel ?? (item.highlight ? 2 : 0)
+/** 高亮逻辑（复用 useRingBase 中的通用实现） */
+const { highlightLevelOf } = useHighlight<PointItem>()
 </script>
 
 <template>

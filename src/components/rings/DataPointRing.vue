@@ -4,10 +4,12 @@
  *
  * 类似于 DataRing，但用于点导向的数据（如二十四节气）。
  * 调用方传入 PointRingData 数据对象，渲染逻辑由 PointRing 处理。
+ *
+ * 使用 useRingBase composable 消除与 DataRing 的重复逻辑。
  */
-import { computed } from 'vue'
 import PointRing from '../base/PointRing.vue'
-import type { PointRingData } from '@/data/rings/types'
+import { useRingBase } from '@/composables/useRingBase'
+import type { PointRingData, PointItem } from '@/data/rings/types'
 
 interface Props {
   /** 点圆环数据 */
@@ -24,18 +26,16 @@ interface Props {
 
 const props = defineProps<Props>()
 
-/** 半径：优先用注入值，回退到数据默认值 */
-const resolvedRadius = computed(() => props.radius ?? props.data.radius ?? 200)
-const resolvedInnerRadius = computed(() => props.innerRadius ?? props.data.innerRadius ?? 0)
-const resolvedStartDegree = computed(() => props.startDegree ?? props.data.startDegree ?? 0)
-
-/** 把 data.fontSize 下发到没有单独指定字号的 item */
-const items = computed(() => {
-  const fontSize = props.data.fontSize
-  if (fontSize === undefined) return props.data.items
-  return props.data.items.map(item =>
-    item.fontSize === undefined ? { ...item, fontSize } : item
-  )
+/** 使用通用圆环基础逻辑（与 DataRing 共享同一实现） */
+const {
+  resolvedRadius,
+  resolvedInnerRadius,
+  resolvedStartDegree,
+  itemsWithFontSize: items
+} = useRingBase<PointRingData, PointItem>(props, {
+  radius: 200,
+  innerRadius: 0,
+  startDegree: 0
 })
 </script>
 
@@ -48,7 +48,7 @@ const items = computed(() => {
     :rotation-direction="rotationDirection ?? 'clockwise'"
     :label-color="data.labelColor ?? 'white'"
     :label-offset="data.labelOffset ?? 15"
-    :label-angle-offset="(data as any).labelAngleOffset ?? 0"
+    :label-angle-offset="data.labelAngleOffset ?? 0"
     :point-size="data.pointSize ?? 4"
     :point-color="data.pointColor ?? '#ffffff'"
     :point-symbol="data.pointSymbol ?? 'circle'"

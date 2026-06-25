@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import PolarCanvas from './PolarCanvas.vue'
 import { polarToCartesian as polar, getMidAngle, arcPath, radialTextRotation } from '@/utils/geometry'
+import { useHighlight } from '@/composables/useRingBase'
 import type { RingItem } from '@/data/rings/types'
 
 /**
@@ -155,11 +156,8 @@ const sectors = computed(() =>
   })
 )
 
-/**
- * 取 item 的高亮级别：highlightLevel 优先，回退到布尔 highlight（true=2）。
- * 0 不亮，1 微亮（仅文字），2 中亮（呼吸扇形），3 强亮（强呼吸+大字）。
- */
-const levelOf = (item: RingItem): number => item.highlightLevel ?? (item.highlight ? 2 : 0)
+/** 高亮逻辑（复用 useRingBase 中的通用实现） */
+const { highlightLevelOf: levelOf } = useHighlight<RingItem>()
 
 /**
  * 高亮扇形：仅级别 ≥ 2 的 item 渲染呼吸背景（微亮级别 1 只上色文字，不画扇形）。

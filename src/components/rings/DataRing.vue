@@ -6,10 +6,12 @@
  * 调用方只需传入一个 RingData 数据对象，渲染/布局/旋转全部由本组件
  * 和 CircleRing 处理。布局参数（radius/innerRadius/startDegree/rotationDirection）
  * 可由 RingStack 注入以覆盖 data 中的默认值。
+ *
+ * 使用 useRingBase composable 消除与 DataPointRing 的重复逻辑。
  */
-import { computed } from 'vue'
 import CircleRing from '../base/CircleRing.vue'
-import type { RingData } from '@/data/rings/types'
+import { useRingBase } from '@/composables/useRingBase'
+import type { RingData, RingItem } from '@/data/rings/types'
 
 interface Props {
   /** 圆环数据（items + 样式默认值） */
@@ -26,18 +28,16 @@ interface Props {
 
 const props = defineProps<Props>()
 
-/** 半径：优先用注入值，回退到数据默认值 */
-const resolvedRadius = computed(() => props.radius ?? props.data.radius ?? 200)
-const resolvedInnerRadius = computed(() => props.innerRadius ?? props.data.innerRadius ?? 0)
-const resolvedStartDegree = computed(() => props.startDegree ?? props.data.startDegree ?? 0)
-
-/** 把 data.fontSize 下发到没有单独指定字号的 item */
-const items = computed(() => {
-  const fontSize = props.data.fontSize
-  if (fontSize === undefined) return props.data.items
-  return props.data.items.map(item =>
-    item.fontSize === undefined ? { ...item, fontSize } : item
-  )
+/** 使用通用圆环基础逻辑（与 DataPointRing 共享同一实现） */
+const {
+  resolvedRadius,
+  resolvedInnerRadius,
+  resolvedStartDegree,
+  itemsWithFontSize: items
+} = useRingBase<RingData, RingItem>(props, {
+  radius: 200,
+  innerRadius: 0,
+  startDegree: 0
 })
 </script>
 
