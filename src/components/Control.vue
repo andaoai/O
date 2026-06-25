@@ -350,6 +350,9 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getChineseCalendarInfo, getSolarTermDescription } from '@/utils/chineseCalendar'
+import { useTimePlayback } from '@/composables/useTimePlayback'
+import { usePanelDrag } from '@/composables/usePanelDrag'
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
 
 interface Props {
   modelValue?: Date
@@ -375,16 +378,43 @@ const emit = defineEmits<{
   'rotationAngleChange': [value: number]
 }>()
 
-// 响应式数据
-const currentTime = ref(new Date())
-const isPlaying = ref(false)
-const playSpeed = ref(1)
+// 定义模块键类型以支持类型安全的索引访问
+type ModuleKey = 'time' | 'playback' | 'speed' | 'adjustment' | 'selector' | 'zoom' | 'offset' | 'rotation' | 'rotationAngle'
+
+// ── 时间播放（composable）──
+const {
+  currentTime,
+  isPlaying,
+  playSpeed,
+  updateTime,
+  pause,
+  togglePlayPause,
+  resetToNow,
+  updatePlaySpeed,
+  stepTime,
+  stepMonth,
+  stepYear
+} = useTimePlayback((t) => {
+  emit('update:modelValue', t)
+  emit('timeChange', t)
+})
+
+// ── 面板拖拽（composable）──
+const {
+  isDragging,
+  panelPositionX,
+  panelPositionY,
+  handleMouseDown,
+  handleResize,
+  clampPanelPosition
+} = usePanelDrag()
+
+// 视口控制状态
 const internalZoom = ref(1)
 const internalOffsetX = ref(0)
 const internalOffsetY = ref(0)
 const internalRotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
-let animationId: number | null = null
 
 // 模块折叠状态
 const modules = ref({
@@ -399,7 +429,7 @@ const modules = ref({
   rotationAngle: { collapsed: false }
 })
 
-// 从localStorage恢复状态
+// 从localStorage恢复模块折叠状态
 const savedState = localStorage.getItem('control-panel-modules-state')
 if (savedState) {
   try {
@@ -421,21 +451,6 @@ const timeInput = ref('')
 
 // 中国历法信息
 const chineseCalendar = computed(() => getChineseCalendarInfo(currentTime.value))
-
-// 拖拽相关
-const isDragging = ref(false)
-const dragStartX = ref(0)
-const dragStartY = ref(0)
-const panelPositionX = ref(0)
-const panelPositionY = ref(0)
-
-// 保存位置到localStorage
-const savedPosition = localStorage.getItem('control-panel-position')
-if (savedPosition) {
-  const pos = JSON.parse(savedPosition)
-  panelPositionX.value = pos.x || 0
-  panelPositionY.value = pos.y || 0
-}
 
 // 计算面板样式
 const panelStyle = computed(() => {
@@ -491,9 +506,6 @@ const toggleAllModules = () => {
   saveModuleState()
 }
 
-// 定义模块键类型以支持类型安全的索引访问
-type ModuleKey = 'time' | 'playback' | 'speed' | 'adjustment' | 'selector' | 'zoom' | 'offset' | 'rotation' | 'rotationAngle'
-
 // 保存模块状态
 const saveModuleState = () => {
   localStorage.setItem('control-panel-modules-state', JSON.stringify(modules.value))
@@ -543,7 +555,7 @@ const updateDateTimeInputs = (date: Date) => {
   timeInput.value = `${hours}:${minutes}:${seconds}`
 }
 
-// 监听时间变化
+// 监听时间变化，同步输入框
 watch(() => currentTime.value, (newTime) => {
   updateDateTimeInputs(newTime)
 }, { immediate: true })
@@ -571,176 +583,40 @@ const formatDateTime = (date: Date): string => {
   return `${formatDate(date)} ${formatTime(date)}`
 }
 
-// 更新时间
-const updateTime = (newTime: Date) => {
-  currentTime.value = newTime
-  emit('update:modelValue', newTime)
-  emit('timeChange', newTime)
-}
-
-// 播放/暂停
-const togglePlayPause = () => {
-  if (isPlaying.value) {
-    pause()
-  } else {
-    play()
-  }
-}
-
-// 开始播放
-const play = () => {
-  if (animationId) return
-
-  isPlaying.value = true
-  const startTime = Date.now()
-  const startModelTime = currentTime.value.getTime()
-
-  const animate = () => {
-    const elapsed = (Date.now() - startTime) / 1000
-    const timeDelta = elapsed * playSpeed.value * 1000
-
-    const newTime = new Date(startModelTime + timeDelta)
-    updateTime(newTime)
-
-    animationId = requestAnimationFrame(animate)
-  }
-
-  animate()
-}
-
-// 暂停播放
-const pause = () => {
-  isPlaying.value = false
-  if (animationId) {
-    cancelAnimationFrame(animationId)
-    animationId = null
-  }
-}
-
-// 重置到当前时间
-const resetToNow = () => {
-  pause()
-  updateTime(new Date())
-}
-
-// 处理日期变化
-const onDateChange = () => {
+// 从输入框解析时间（日期/时间输入共用）：手动改时间先暂停播放，再覆盖为解析值
+const applyInputTime = () => {
   if (!dateInput.value || !timeInput.value) return
-
-  pause()
   const dateParts = dateInput.value.split('-').map(Number)
   const timeParts = timeInput.value.split(':').map(Number)
-
   if (dateParts.length !== 3 || timeParts.length !== 3) return
   if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
 
-  const year = dateParts[0]!
-  const month = dateParts[1]!
-  const day = dateParts[2]!
-  const hours = timeParts[0]!
-  const minutes = timeParts[1]!
-  const seconds = timeParts[2]!
-
-  const newTime = new Date(year, month - 1, day, hours, minutes, seconds)
+  const newTime = new Date(
+    dateParts[0]!, dateParts[1]! - 1, dateParts[2]!,
+    timeParts[0]!, timeParts[1]!, timeParts[2]!
+  )
   if (!isNaN(newTime.getTime())) {
-    updateTime(newTime)
-  }
-}
-
-// 处理时间变化
-const onTimeChange = () => {
-  if (!dateInput.value || !timeInput.value) return
-
-  pause()
-  const dateParts = dateInput.value.split('-').map(Number)
-  const timeParts = timeInput.value.split(':').map(Number)
-
-  if (dateParts.length !== 3 || timeParts.length !== 3) return
-  if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
-
-  const year = dateParts[0]!
-  const month = dateParts[1]!
-  const day = dateParts[2]!
-  const hours = timeParts[0]!
-  const minutes = timeParts[1]!
-  const seconds = timeParts[2]!
-
-  const newTime = new Date(year, month - 1, day, hours, minutes, seconds)
-  if (!isNaN(newTime.getTime())) {
-    updateTime(newTime)
-  }
-}
-
-// 步进时间
-const stepTime = (seconds: number) => {
-  pause()
-  const newTime = new Date(currentTime.value.getTime() + seconds * 1000)
-  updateTime(newTime)
-}
-
-// 步进月份
-const stepMonth = (months: number) => {
-  pause()
-  const newTime = new Date(currentTime.value)
-  const currentMonth = newTime.getMonth()
-  const currentYear = newTime.getFullYear()
-
-  let newMonth = currentMonth + months
-  let newYear = currentYear
-
-  if (newMonth > 11) {
-    newYear += Math.floor(newMonth / 12)
-    newMonth = newMonth % 12
-  } else if (newMonth < 0) {
-    newYear += Math.floor(newMonth / 12)
-    newMonth = (newMonth % 12 + 12) % 12
-  }
-
-  newTime.setFullYear(newYear, newMonth, newTime.getDate())
-  updateTime(newTime)
-}
-
-// 步进年份
-const stepYear = (years: number) => {
-  pause()
-  const newTime = new Date(currentTime.value)
-  newTime.setFullYear(newTime.getFullYear() + years)
-  updateTime(newTime)
-}
-
-// 更新播放速度
-const updatePlaySpeed = () => {
-  if (isPlaying.value) {
     pause()
-    play()
+    updateTime(newTime)
   }
 }
 
-// 缩放功能
+const onDateChange = applyInputTime
+const onTimeChange = applyInputTime
+
+// ── 缩放 ──
 const updateZoom = (newZoom: number) => {
   const clampedZoom = Math.max(0.1, Math.min(3, newZoom))
   internalZoom.value = clampedZoom
   emit('update:zoom', clampedZoom)
   emit('zoomChange', clampedZoom)
 }
+const zoomIn = () => updateZoom(internalZoom.value + 0.1)
+const zoomOut = () => updateZoom(internalZoom.value - 0.1)
+const resetZoom = () => updateZoom(1)
+const setZoom = (zoom: number) => updateZoom(zoom)
 
-const zoomIn = () => {
-  updateZoom(internalZoom.value + 0.1)
-}
-
-const zoomOut = () => {
-  updateZoom(internalZoom.value - 0.1)
-}
-
-const resetZoom = () => {
-  updateZoom(1)
-}
-
-const setZoom = (zoom: number) => {
-  updateZoom(zoom)
-}
-
-// 平移功能
+// ── 平移 ──
 const updateOffset = (newOffsetX: number, newOffsetY: number) => {
   internalOffsetX.value = newOffsetX
   internalOffsetY.value = newOffsetY
@@ -748,310 +624,61 @@ const updateOffset = (newOffsetX: number, newOffsetY: number) => {
   emit('update:offsetY', newOffsetY)
   emit('offsetChange', { x: newOffsetX, y: newOffsetY })
 }
+const moveLeft = () => updateOffset(internalOffsetX.value - 50, internalOffsetY.value)
+const moveRight = () => updateOffset(internalOffsetX.value + 50, internalOffsetY.value)
+const moveUp = () => updateOffset(internalOffsetX.value, internalOffsetY.value - 50)
+const moveDown = () => updateOffset(internalOffsetX.value, internalOffsetY.value + 50)
+const resetOffset = () => updateOffset(0, 0)
 
-// 旋转方向控制
-const toggleRotationDirection = () => {
-  const newDirection = internalRotationDirection.value === 'clockwise' ? 'counterclockwise' : 'clockwise'
-  updateRotationDirection(newDirection)
-}
-
+// ── 旋转方向 ──
 const updateRotationDirection = (direction: 'clockwise' | 'counterclockwise') => {
   internalRotationDirection.value = direction
   emit('update:rotationDirection', direction)
   emit('rotationDirectionChange', direction)
 }
+const toggleRotationDirection = () => {
+  updateRotationDirection(internalRotationDirection.value === 'clockwise' ? 'counterclockwise' : 'clockwise')
+}
 
-// 旋转角度控制功能
+// ── 旋转角度 ──
 const updateRotationAngle = (angle: number) => {
-  // 标准化角度到 0-360 范围
   const normalizedAngle = ((angle % 360) + 360) % 360
   rotationAngle.value = normalizedAngle
   emit('update:rotationAngle', normalizedAngle)
   emit('rotationAngleChange', normalizedAngle)
 }
+const rotateLeft = () => updateRotationAngle(rotationAngle.value - 90)
+const rotateRight = () => updateRotationAngle(rotationAngle.value + 90)
+const resetRotationAngle = () => updateRotationAngle(0)
 
-const rotateLeft = () => {
-  updateRotationAngle(rotationAngle.value - 90)
-}
+// ── 键盘快捷键（composable）──
+useKeyboardShortcuts({
+  togglePlayPause,
+  resetToNow,
+  stepYear,
+  stepMonth,
+  stepTime,
+  zoomIn,
+  zoomOut,
+  resetZoom,
+  setZoom,
+  moveUp,
+  moveDown,
+  moveLeft,
+  moveRight,
+  resetOffset,
+  toggleRotationDirection,
+  rotateLeft,
+  rotateRight,
+  resetRotationAngle
+})
 
-const rotateRight = () => {
-  updateRotationAngle(rotationAngle.value + 90)
-}
-
-const resetRotationAngle = () => {
-  updateRotationAngle(0)
-}
-
-const moveLeft = () => {
-  updateOffset(internalOffsetX.value - 50, internalOffsetY.value)
-}
-
-const moveRight = () => {
-  updateOffset(internalOffsetX.value + 50, internalOffsetY.value)
-}
-
-const moveUp = () => {
-  updateOffset(internalOffsetX.value, internalOffsetY.value - 50)
-}
-
-const moveDown = () => {
-  updateOffset(internalOffsetX.value, internalOffsetY.value + 50)
-}
-
-const resetOffset = () => {
-  updateOffset(0, 0)
-}
-
-// 拖拽功能
-const handleMouseDown = (e: MouseEvent) => {
-  if (!(e.target as HTMLElement).closest('.control-header')) {
-    return
-  }
-
-  isDragging.value = true
-  dragStartX.value = e.clientX
-  dragStartY.value = e.clientY
-
-  document.addEventListener('mousemove', handleMouseMove)
-  document.addEventListener('mouseup', handleMouseUp)
-  e.preventDefault()
-}
-
-const handleMouseMove = (e: MouseEvent) => {
-  if (!isDragging.value) return
-
-  const deltaX = e.clientX - dragStartX.value
-  const deltaY = e.clientY - dragStartY.value
-
-  panelPositionX.value += deltaX  // 修复：应该是 += 而不是 -=
-  panelPositionY.value += deltaY
-
-  clampPanelPosition()
-
-  dragStartX.value = e.clientX
-  dragStartY.value = e.clientY
-}
-
-const handleMouseUp = () => {
-  isDragging.value = false
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseup', handleMouseUp)
-
-  localStorage.setItem('control-panel-position', JSON.stringify({
-    x: panelPositionX.value,
-    y: panelPositionY.value
-  }))
-}
-
-// 键盘快捷键处理
-const handleKeyDown = (event: KeyboardEvent) => {
-  if (event.target instanceof HTMLInputElement) {
-    return
-  }
-
-  switch (event.key) {
-    case ' ':
-    case 'Space':
-      event.preventDefault()
-      togglePlayPause()
-      break
-
-    case 'r':
-    case 'R':
-      event.preventDefault()
-      resetToNow()
-      break
-
-    case 'Y':
-    case 'y':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepYear(-1)
-      } else {
-        event.preventDefault()
-        stepYear(1)
-      }
-      break
-
-    case 'M':
-    case 'm':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepMonth(-1)
-      } else {
-        event.preventDefault()
-        stepMonth(1)
-      }
-      break
-
-    case 'D':
-    case 'd':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepTime(-86400)
-      } else {
-        event.preventDefault()
-        stepTime(86400)
-      }
-      break
-
-    case 'H':
-    case 'h':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepTime(-3600)
-      } else {
-        event.preventDefault()
-        stepTime(3600)
-      }
-      break
-
-    case 'N':
-    case 'n':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepTime(-60)
-      } else {
-        event.preventDefault()
-        stepTime(60)
-      }
-      break
-
-    case 'S':
-    case 's':
-      if (event.shiftKey) {
-        event.preventDefault()
-        stepTime(-1)
-      } else {
-        event.preventDefault()
-        stepTime(1)
-      }
-      break
-
-    case '+':
-    case '=':
-      event.preventDefault()
-      zoomIn()
-      break
-    case '-':
-    case '_':
-      event.preventDefault()
-      zoomOut()
-      break
-    case '0':
-      event.preventDefault()
-      resetZoom()
-      break
-
-    case '5':
-      event.preventDefault()
-      setZoom(0.5)
-      break
-    case '6':
-      event.preventDefault()
-      setZoom(0.75)
-      break
-    case '7':
-      event.preventDefault()
-      setZoom(1)
-      break
-    case '8':
-      event.preventDefault()
-      setZoom(1.25)
-      break
-    case '9':
-      event.preventDefault()
-      setZoom(1.5)
-      break
-
-    case 'ArrowUp':
-      event.preventDefault()
-      moveUp()
-      break
-    case 'ArrowDown':
-      event.preventDefault()
-      moveDown()
-      break
-    case 'ArrowLeft':
-      event.preventDefault()
-      moveLeft()
-      break
-    case 'ArrowRight':
-      event.preventDefault()
-      moveRight()
-      break
-
-    case 'Delete':
-    case 'Backspace':
-      event.preventDefault()
-      resetOffset()
-      break
-
-    case 'c':
-    case 'C':
-      event.preventDefault()
-      toggleRotationDirection()
-      break
-
-    case 'q':
-    case 'Q':
-      event.preventDefault()
-      rotateLeft()
-      break
-
-    case 'e':
-    case 'E':
-      event.preventDefault()
-      rotateRight()
-      break
-
-    case 'w':
-    case 'W':
-      event.preventDefault()
-      resetRotationAngle()
-      break
-  }
-}
-
-// 生命周期钩子
+// 窗口大小变化 → 夹取面板位置
 onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
   window.addEventListener('resize', handleResize)
-
-  // 移除自动刷新定时器，避免持续刷新
-  // 时间只在用户操作时更新
-})
-
-onUnmounted(() => {
-  pause()
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('resize', handleResize)
-  document.removeEventListener('mousemove', handleMouseMove)
-  document.removeEventListener('mouseup', handleMouseUp)
-
-  // 定时器已移除，无需清理
-})
-
-// 窗口大小变化处理
-const handleResize = () => {
   clampPanelPosition()
-}
-
-/**
- * 夹取面板位置，保证面板始终留在视口内且标题栏可抓取。
- * 面板用 right:(20−X)、top:(20+Y) 定位：
- *   - X 越大越往左；上限 20 使其不越出右边界，下限 −(视口宽−留白) 让它能拖到最左。
- *   - Y 越大越往下；上限留出一个标题栏高度(HEADER)，使面板可一直拖到贴近底部仍能抓住标题栏。
- */
-const HEADER_KEEP = 44 // 标题栏高度，保证拖到底部时仍可抓取
-const clampPanelPosition = () => {
-  const maxLeft = window.innerWidth - 100
-  panelPositionX.value = Math.max(-maxLeft, Math.min(20, panelPositionX.value))
-
-  // top = 20 + Y，允许 top 最大到 (视口高 − 标题栏)，故 Y 上限 = 视口高 − 标题栏 − 20
-  const maxY = window.innerHeight - HEADER_KEEP - 20
-  panelPositionY.value = Math.max(-20, Math.min(maxY, panelPositionY.value))
-}
+})
+onUnmounted(() => window.removeEventListener('resize', handleResize))
 </script>
 
 <style scoped>
