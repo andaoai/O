@@ -133,6 +133,38 @@ const mansionRingData = computed<RingData>(() => {
   }
 })
 
+/**
+ * 四象环：四象本是二十八宿的四个分组，故不另取角度，直接按各象名下七宿的
+ * 赤经区间合并而成 —— 起点即「角宿」距星赤经，与二十八宿环同一基准自动对齐，
+ * 随岁差/时间一起转，无需手设起始度数。
+ *   东·青龙 角→箕(0-6)，北·玄武 斗→壁(7-13)，西·白虎 奎→参(14-20)，南·朱雀 井→轸(21-27)
+ */
+const SI_XIANG_GROUPS = [
+  { label: '青龙', color: '#2ECC71', start: 0, end: 6 },
+  { label: '玄武', color: '#5DADE2', start: 7, end: 13 },
+  { label: '白虎', color: '#D4AF37', start: 14, end: 20 },
+  { label: '朱雀', color: '#E74C3C', start: 21, end: 27 }
+] as const
+
+const siXiangRingData = computed<RingData>(() => {
+  const spans = getMansionSpans(controlledTime.value)
+  return {
+    startDegree: 0,
+    circleColor: '#555555',
+    circleWidth: 1,
+    tickColor: '#444444',
+    tickWidth: 1,
+    fontSize: 18,
+    items: SI_XIANG_GROUPS.map((g) => ({
+      label: g.label,
+      color: g.color,
+      // 该象首宿起点 → 末宿终点（与宿环同样 endRa→startAngle 的方向约定）
+      startAngle: raToAngle(spans[g.end]!.endRa),
+      endAngle: raToAngle(spans[g.start]!.startRa)
+    }))
+  }
+})
+
 /** 二十四节气环：按黄经定位（春分=黄经0），转赤经后映射，使春分边界对准星图春分点 */
 const solarTermRingData = computed<RingData>(() => {
   const labels = twentyFourSolarTerms.items.map((it) => it.label)
@@ -172,16 +204,17 @@ const solarTermRingData = computed<RingData>(() => {
 const DISK_OUTER_RADIUS = 580
 const RING_GAP = 8
 
-// 外圈四环的厚度与间隙（由外到内）：360°刻度 → 入宿度 → 二十八星宿 → 二十四节气
+// 外圈五环的厚度与间隙（由外到内）：360°刻度 → 入宿度 → 二十八星宿 → 二十四节气 → 四象
 interface OuterRingDef {
   thickness: number
   gapBefore: number
 }
-const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
+const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
   { thickness: 22, gapBefore: 0 }, // 360°赤经刻度
   { thickness: 28, gapBefore: 6 }, // 七曜入宿度
   { thickness: 40, gapBefore: 6 }, // 二十八星宿
-  { thickness: 30, gapBefore: 8 } // 二十四节气
+  { thickness: 30, gapBefore: 8 }, // 二十四节气
+  { thickness: 34, gapBefore: 4 } // 四象
 ]
 
 /** RingStack 累加后的内缘半径 */
@@ -199,7 +232,7 @@ const helioRadius = computed(() => skyRadius.value * INNER_GAP_RATIO - RING_GAP)
 /** 日心盘内半径：留出太阳本体空间 */
 const helioInnerRadius = computed(() => Math.max(20, helioRadius.value * 0.16))
 
-// 外圈布局：由外到内 —— 360°赤经刻度 → 七曜入宿度 → 二十八星宿 → 二十四节气；
+// 外圈布局：由外到内 —— 360°赤经刻度 → 七曜入宿度 → 二十八星宿 → 二十四节气 → 四象；
 // 度数环按等分生成、标签为度数，无法逐项重映射，只能靠方向对齐：
 // 赤经 ra 在 y 取反下落于屏幕标准角 −ra，故用 counterclockwise + startDegree 0，
 // 使 0°刻度对准春分点、度数沿赤经方向递增（与 28 宿/节气的 clockwise 方向相反）。
@@ -224,7 +257,8 @@ const outerRings = computed(() => [
     props: { markers: planetDegreeMarkers.value }
   },
   { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } },
-  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } }
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } },
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[4].thickness, gapBefore: OUTER_RING_DEFS[4].gapBefore, props: { data: siXiangRingData.value } }
 ])
 
 
