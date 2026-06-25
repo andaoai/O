@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import PolarCanvas from '../base/PolarCanvas.vue'
+import { radialTextRotation } from '@/utils/geometry'
 
 /**
  * 通用单天体组件
@@ -99,12 +100,9 @@ const bodyCoordinates = (polarToCartesian: Function) => {
   }
 }
 
-/** 符号旋转角，使文字始终正立 */
+/** 符号旋转角，使文字始终正立（统一走 geometry，按 longitude 作径向角） */
 const symbolRotation = (cx: number, cy: number): string => {
-  const angle =
-    props.rotationDirection === 'counterclockwise'
-      ? -props.longitude + 90
-      : props.longitude + 90
+  const angle = radialTextRotation(props.longitude, props.rotationDirection)
   return `rotate(${angle}, ${cx}, ${cy})`
 }
 </script>

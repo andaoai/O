@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { computed, watch } from 'vue'
 import { useAnimation, AnimationType } from '@/composables/useAnimation'
+import {
+  polarToCartesian as polarUtil,
+  getMidAngle as getMidAngleUtil,
+  normalizeAngle as normalizeAngleUtil
+} from '@/utils/geometry'
 
 /**
  * 极坐标画布组件
@@ -183,17 +188,9 @@ const polarToCartesian = (
   centerX: number = props.centerX,
   centerY: number = props.centerY
 ): Point => {
-  // 根据旋转方向调整角度
-  const adjustedAngle = props.rotationDirection === 'counterclockwise'
-    ? -angle
-    : angle
-
-  // 将角度转换为弧度（JavaScript的Math函数使用弧度）
-  const angleRad = (adjustedAngle * Math.PI) / 180
-  return {
-    x: centerX + Math.cos(angleRad) * radius,
-    y: centerY + Math.sin(angleRad) * radius
-  }
+  // 统一走 geometry（相对 0,0），再叠加中心偏移，保持对外 slot 签名不变
+  const p = polarUtil(angle, radius, props.rotationDirection)
+  return { x: centerX + p.x, y: centerY + p.y }
 }
 
 /**
@@ -205,19 +202,8 @@ const polarToCartesian = (
  * @param endAngle - 结束角度（度数）
  * @returns 中间角度（度数）
  */
-const getMidAngle = (startAngle: number, endAngle: number): number => {
-  // 处理跨越0度的情况
-  // 例如：从345度到15度
-  if (startAngle > endAngle) {
-    // 计算跨越0度的角度跨度
-    const span = (360 - startAngle) + endAngle
-    // 中点角度 = 起始角度 + 跨度的一半
-    return (startAngle + span / 2 + 360) % 360
-  } else {
-    // 正常情况，直接取平均值
-    return (startAngle + endAngle) / 2
-  }
-}
+const getMidAngle = (startAngle: number, endAngle: number): number =>
+  getMidAngleUtil(startAngle, endAngle)
 
 /**
  * 计算两个角度之间的跨度
@@ -247,9 +233,7 @@ const getAngleSpan = (startAngle: number, endAngle: number): number => {
  * @param angle - 输入角度（度数）
  * @returns 标准化后的角度（0-360度）
  */
-const normalizeAngle = (angle: number): number => {
-  return ((angle % 360) + 360) % 360
-}
+const normalizeAngle = (angle: number): number => normalizeAngleUtil(angle)
 
 /**
  * 生成等分角度

@@ -165,8 +165,8 @@ export const earthlyBranches: RingData = {
 <script setup lang="ts">
 import { markRaw } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
-import DataRing from '@/components/DataRing.vue'
-import DegreeScale from '@/components/DegreeScale.vue'
+import DataRing from '@/components/rings/DataRing.vue'
+import DegreeScale from '@/components/rings/DegreeScale.vue'
 import { twentyFourSolarTerms, sixtyJiazi, sixtyJiaziNayin } from '@/data/rings'
 
 const DataRingComp = markRaw(DataRing)

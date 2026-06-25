@@ -8,7 +8,7 @@
  * 可由 RingStack 注入以覆盖 data 中的默认值。
  */
 import { computed } from 'vue'
-import CircleRing from './base/CircleRing.vue'
+import CircleRing from '../base/CircleRing.vue'
 import type { RingData } from '@/data/rings/types'
 
 interface Props {

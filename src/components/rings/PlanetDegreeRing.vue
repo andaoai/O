@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { polarToCartesian, radialTextRotation } from '@/utils/geometry'
 
 /**
  * 七曜入宿度环
@@ -36,13 +37,8 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-const D2R = Math.PI / 180
-
-/** clockwise 极坐标 → 笛卡尔（与 CircleRing.polarToCartesian 同口径） */
-const polar = (angle: number, r: number) => ({
-  x: Math.cos(angle * D2R) * r,
-  y: Math.sin(angle * D2R) * r
-})
+/** clockwise/counterclockwise 统一走 geometry，修复此前写死 clockwise 的逆时针错位 bug */
+const polar = (angle: number, r: number) => polarToCartesian(angle, r, props.rotationDirection)
 
 const items = computed(() =>
   props.markers.map((m, i) => {
@@ -59,7 +55,7 @@ const items = computed(() =>
       y2: outer.y,
       tx: pos.x,
       ty: pos.y,
-      rotation: m.angle + 90, // 顶部指向圆心，与宿名朝向一致
+      rotation: radialTextRotation(m.angle, props.rotationDirection), // 顶部指向圆心，与宿名朝向一致
       color: m.color,
       text: `${m.symbol}${m.degree.toFixed(0)}°`
     }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import PolarCanvas from './base/PolarCanvas.vue'
+import PolarCanvas from '../base/PolarCanvas.vue'
+import { normalizeAngle, radialTextRotation, polarToCartesian, getMidAngle, arcPath } from '@/utils/geometry'
 
 /**
  * 通用度数刻度环组件
@@ -251,124 +252,62 @@ const props = withDefaults(defineProps<Props>(), {
  */
 const scaleCount = computed(() => Math.floor(360 / props.scaleInterval))
 
+/** 旋转方向（供 geometry 统一坐标/路径/文字朝向） */
+const dir = computed(() => props.rotationDirection)
+
 /**
- * 生成扇形区域数据
- * 每个刻度间隔对应一个扇形区域，用于视觉上的分区
- *
- * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
- * @param generateArcPath - 从 PolarCanvas 传入的弧形路径生成函数
- * @returns 扇形区域数组，每个元素包含起始角度、结束角度和SVG路径
+ * 扇形区域数据（computed，直接走 geometry，不再依赖 PolarCanvas slot 函数）
  */
-const generateSectors = (getMidAngle: Function, generateArcPath: Function) => {
-  const sectors = []
-
-  // 遍历每个刻度间隔
+const sectors = computed(() => {
+  const out: { startAngle: number; endAngle: number; path: string }[] = []
   for (let i = 0; i < scaleCount.value; i++) {
-    // 计算当前刻度的度数值（5, 10, 15, ...）
     const degree = props.scaleInterval + i * props.scaleInterval
-
-    // 计算扇形的起始和结束角度
-    // 起始角度 = 当前度数 - 间隔
-    const startAngle = (degree - props.scaleInterval + props.startDegree) % 360
-    // 结束角度 = 当前度数
-    const endAngle = (degree + props.startDegree) % 360
-
-    // 生成扇形路径（使用极坐标转SVG路径）
-    sectors.push({
-      startAngle,  // 扇形起始角度
-      endAngle,    // 扇形结束角度
-      path: generateArcPath(0, 0, props.radius, startAngle, endAngle, props.innerRadius)
+    const startAngle = normalizeAngle(degree - props.scaleInterval + props.startDegree)
+    const endAngle = normalizeAngle(degree + props.startDegree)
+    out.push({
+      startAngle,
+      endAngle,
+      path: arcPath(props.radius, startAngle, endAngle, props.innerRadius, dir.value)
     })
   }
-
-  return sectors
-}
+  return out
+})
 
 /**
- * 生成所有刻度线数据
- * 包括每个刻度的边界线，确保文字之间有清晰的分隔
- * 这是组件的核心功能之一，保证了刻度的完整性
- *
- * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @returns 刻度线数组，每个元素包含线的起点和终点坐标
+ * 所有刻度线（含 360° 闭合线，故用 <= scaleCount）
  */
-const generateAllTicks = (polarToCartesian: Function) => {
-  const ticks = []
-
-  // 生成所有刻度线（从0度到360度）
-  // 重要：使用 <= scaleCount 确保生成360度的闭合线
-  // 这样可以保证最后一个刻度也有边界线，形成完整的闭环
+const ticks = computed(() => {
+  const out: { x1: number; y1: number; x2: number; y2: number; angle: number }[] = []
   for (let i = 0; i <= scaleCount.value; i++) {
-    // 计算当前刻度线的角度
-    const angle = (i * props.scaleInterval + props.startDegree) % 360
-
-    // 将极坐标转换为笛卡尔坐标
-    // 内圆端点
-    const inner = polarToCartesian(angle, props.innerRadius)
-    // 外圆端点
-    const outer = polarToCartesian(angle, props.radius)
-
-    // 存储刻度线数据
-    ticks.push({
-      x1: inner.x,      // 起点X坐标
-      y1: inner.y,      // 起点Y坐标
-      x2: outer.x,      // 终点X坐标
-      y2: outer.y,      // 终点Y坐标
-      angle            // 当前角度（用于key值）
-    })
+    const angle = normalizeAngle(i * props.scaleInterval + props.startDegree)
+    const inner = polarToCartesian(angle, props.innerRadius, dir.value)
+    const outer = polarToCartesian(angle, props.radius, dir.value)
+    out.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y, angle })
   }
-
-  return ticks
-}
+  return out
+})
 
 /**
- * 生成标签文字位置数据
- * 标签位于每个扇形区域的中央，确保文字清晰可读
- *
- * @param getMidAngle - 从 PolarCanvas 传入的角度计算函数
- * @param polarToCartesian - 从 PolarCanvas 传入的极坐标转换函数
- * @returns 标签数组，每个元素包含位置坐标、文字内容和旋转角度
+ * 度数标签（位置 + 文字 + 径向旋转）
  */
-const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
-  const labels = []
-
-  // 遍历每个刻度
+const labels = computed(() => {
+  const out: { x: number; y: number; text: string; textRotation: number }[] = []
   for (let i = 0; i < scaleCount.value; i++) {
-    // 计算当前刻度的度数值
     const degree = props.scaleInterval + i * props.scaleInterval
-
-    // 计算扇形的起始和结束角度
-    const startAngle = (degree - props.scaleInterval + props.startDegree) % 360
-    const endAngle = (degree + props.startDegree) % 360
-
-    // 使用工具函数计算扇形的中点角度
-    // 这是标签显示的理想位置
+    const startAngle = normalizeAngle(degree - props.scaleInterval + props.startDegree)
+    const endAngle = normalizeAngle(degree + props.startDegree)
     const midAngle = getMidAngle(startAngle, endAngle)
-
-    // 计算文字的径向位置
-    // 在内圆和外圆之间，根据 labelPosition 调整
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
-    const position = polarToCartesian(midAngle, textRadius)
-
-    // 计算文字的旋转角度
-    // 文字应该始终"站立"，底部指向圆心
-    // 注意：PolarCanvas 在 counterclockwise 模式下会将角度取反进行坐标转换
-    // 但 getMidAngle 返回的仍是原始角度值，所以需要相应调整
-    const textRotation = props.rotationDirection === 'counterclockwise'
-      ? -midAngle + 90  // 逆时针体系：角度取反后再加90度
-      : midAngle + 90   // 顺时针体系：直接加90度
-
-    // 存储标签数据
-    labels.push({
-      x: position.x,        // 标签X坐标
-      y: position.y,        // 标签Y坐标
-      text: degree.toString(), // 显示的度数文字
-      textRotation         // 文字旋转角度
+    const position = polarToCartesian(midAngle, textRadius, dir.value)
+    out.push({
+      x: position.x,
+      y: position.y,
+      text: degree.toString(),
+      textRotation: radialTextRotation(midAngle, dir.value)
     })
   }
-
-  return labels
-}
+  return out
+})
 </script>
 
 <template>
@@ -391,11 +330,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
       -->
       <g class="degree-scale">
 
-        <!--
-          外圆边线
-          当 showCircle 为 true 时显示
-          使用 slotProps.centerX/Y 确保圆心对齐
-        -->
+        <!-- 外圆边线 -->
         <circle
           v-if="showCircle"
           :cx="slotProps.centerX"
@@ -406,11 +341,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
           :stroke-width="circleWidth"
         />
 
-        <!--
-          内圆边线
-          仅当 innerRadius > 0 时显示
-          创建环形效果的内边界
-        -->
+        <!-- 内圆边线（仅 innerRadius > 0 时） -->
         <circle
           v-if="innerRadius > 0"
           :cx="slotProps.centerX"
@@ -421,44 +352,35 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
           :stroke-width="circleWidth"
         />
 
-        <!--
-          扇形区域（背景）
-          每个刻度间隔显示为一个扇形
-          用于提供视觉上的分区效果
-        -->
-        <g v-if="showSectors" v-for="sector in generateSectors(slotProps.getMidAngle, slotProps.generateArcPath)" :key="sector.startAngle">
+        <!-- 扇形区域（背景） -->
+        <g v-if="showSectors">
           <path
+            v-for="sector in sectors"
+            :key="sector.startAngle"
             :d="sector.path"
             :fill="sectorColor"
             :opacity="sectorOpacity"
           />
         </g>
 
-        <!--
-          刻度线
-          这是最重要的元素之一
-          包括所有刻度的边界线，形成完整的网格
-          确保每个区域都有清晰的边界
-        -->
-        <g v-for="tick in generateAllTicks(slotProps.polarToCartesian)" :key="tick.angle">
-          <line
-            :x1="tick.x1"
-            :y1="tick.y1"
-            :x2="tick.x2"
-            :y2="tick.y2"
-            :stroke="circleColor"
-            :stroke-width="1"
-            opacity="0.6"
-          />
-        </g>
+        <!-- 刻度线（含 360° 闭合线） -->
+        <line
+          v-for="tick in ticks"
+          :key="tick.angle"
+          :x1="tick.x1"
+          :y1="tick.y1"
+          :x2="tick.x2"
+          :y2="tick.y2"
+          :stroke="circleColor"
+          :stroke-width="1"
+          opacity="0.6"
+        />
 
-        <!--
-          度数标签
-          显示在每个扇形的中央
-          文字会自动旋转，始终保持"站立"姿态
-        -->
-        <g v-if="showLabels" v-for="label in generateLabels(slotProps.getMidAngle, slotProps.polarToCartesian)" :key="label.text">
+        <!-- 度数标签 -->
+        <g v-if="showLabels">
           <text
+            v-for="label in labels"
+            :key="label.text"
             :x="label.x"
             :y="label.y"
             :fill="labelColor"
@@ -467,10 +389,7 @@ const generateLabels = (getMidAngle: Function, polarToCartesian: Function) => {
             dominant-baseline="central"
             font-weight="bold"
             :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
-          >
-            <!-- 显示度数并添加度符号 -->
-            {{ label.text }}°
-          </text>
+          >{{ label.text }}°</text>
         </g>
 
       </g>

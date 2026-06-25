@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import PolarCanvas from './PolarCanvas.vue'
+import { polarToCartesian as polar, getMidAngle, arcPath, radialTextRotation } from '@/utils/geometry'
+import type { RingItem } from '@/data/rings/types'
 
 /**
  * 圆环组件
@@ -47,24 +49,8 @@ import PolarCanvas from './PolarCanvas.vue'
 
 /**
  * 圆环项目接口
- * 定义每个环上项目的数据结构
+ * 统一使用数据层 RingItem（见 @/data/rings/types），不再本地另定义，避免类型漂移。
  */
-interface RingItem {
-  /** 标签文字 */
-  label: string
-  /** 自定义颜色（可选） */
-  color?: string
-  /** 字体大小（像素，可选） */
-  fontSize?: number
-  /** 自定义起始角度（0-360度，可选） */
-  startAngle?: number
-  /** 自定义结束角度（0-360度，可选） */
-  endAngle?: number
-  /** 高亮当前格：渲染呼吸扇形背景 + 文字脉动（可选，默认 false） */
-  highlight?: boolean
-  /** 分级高亮（可选，优先于 highlight）：0 不亮 1 微亮 2 中亮 3 强亮 */
-  highlightLevel?: 0 | 1 | 2 | 3
-}
 
 /**
  * 组件属性接口定义
@@ -140,40 +126,16 @@ const props = withDefaults(defineProps<Props>(), {
 const angleStep = computed(() => 360 / props.items.length)
 
 /**
- * 极坐标转笛卡尔坐标（纯函数，相对中心 0,0）
- * 与 PolarCanvas 的坐标系一致：counterclockwise 模式下角度取反
+ * 极坐标转笛卡尔坐标（统一走 geometry，按 rotationDirection 处理顺/逆时针）
  */
-const polarToCartesian = (angle: number, radius: number) => {
-  const adjustedAngle = props.rotationDirection === 'counterclockwise' ? -angle : angle
-  const rad = (adjustedAngle * Math.PI) / 180
-  return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius }
-}
+const polarToCartesian = (angle: number, radius: number) =>
+  polar(angle, radius, props.rotationDirection)
 
 /**
- * 计算角度区间中点（处理跨 0 度）
+ * 生成环弧形 path（统一走 geometry）
  */
-const getMidAngle = (startAngle: number, endAngle: number): number => {
-  if (startAngle > endAngle) {
-    const span = 360 - startAngle + endAngle
-    return (startAngle + span / 2 + 360) % 360
-  }
-  return (startAngle + endAngle) / 2
-}
-
-/**
- * 生成环弧形 path（环形：内外两条弧）
- */
-const generateArcPath = (radius: number, startAngle: number, endAngle: number, innerRadius: number): string => {
-  const start = polarToCartesian(startAngle, radius)
-  const end = polarToCartesian(endAngle, radius)
-  const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
-  if (innerRadius === 0) {
-    return `M 0,0 L ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} Z`
-  }
-  const startInner = polarToCartesian(startAngle, innerRadius)
-  const endInner = polarToCartesian(endAngle, innerRadius)
-  return `M ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} L ${endInner.x},${endInner.y} A ${innerRadius},${innerRadius} 0 ${largeArcFlag},0 ${startInner.x},${startInner.y} Z`
-}
+const generateArcPath = (radius: number, startAngle: number, endAngle: number, innerRadius: number): string =>
+  arcPath(radius, startAngle, endAngle, innerRadius, props.rotationDirection)
 
 /**
  * 扇形区域（仅依赖 items/radius/innerRadius/startDegree，与动画帧无关）
@@ -239,10 +201,8 @@ const labels = computed(() =>
     const midAngle = getMidAngle(startAngle, endAngle)
     const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
     const position = polarToCartesian(midAngle, textRadius)
-    // counterclockwise 模式下坐标转换会取反角度，文字旋转需相应调整
-    const textRotation = props.rotationDirection === 'counterclockwise'
-      ? -midAngle + 90
-      : midAngle + 90
+    // 文字顶部指向圆心（统一走 geometry，按 rotationDirection 处理）
+    const textRotation = radialTextRotation(midAngle, props.rotationDirection)
     const isTwoCharacter = item.label.length === 2 && props.verticalTwoChar
     return {
       x: position.x,
@@ -310,8 +270,10 @@ const labels = computed(() =>
           每个项目对应一个扇形
           用于提供视觉上的分区效果
         -->
-        <g v-if="showSectors" v-for="sector in sectors" :key="sector.startAngle">
+        <g v-if="showSectors">
           <path
+            v-for="sector in sectors"
+            :key="sector.startAngle"
             :d="sector.path"
             :fill="sector.item.color || '#ffffff'"
             opacity="0.3"
@@ -336,8 +298,10 @@ const labels = computed(() =>
           从内圆到外圆的分隔线
           标记每个项目的边界
         -->
-        <g v-if="showTicks" v-for="tick in ticks" :key="tick.angle">
+        <g v-if="showTicks">
           <line
+            v-for="tick in ticks"
+            :key="tick.angle"
             :x1="tick.x1"
             :y1="tick.y1"
             :x2="tick.x2"
@@ -352,56 +316,58 @@ const labels = computed(() =>
           显示在环的内部，每个扇形的中央位置
           支持单字符和双字符两种显示方式
         -->
-        <g v-if="showLabels" v-for="label in labels" :key="label.angle">
-          <!--
-            单字符或四象标签（水平显示）
-            适用于天干、地支、四象等单字标签
-          -->
-          <text
-            v-if="!label.isTwoCharacter"
-            :x="label.x"
-            :y="label.y"
-            :class="{ 'highlight-label': levelOf(label.item) >= 2, 'highlight-label-strong': levelOf(label.item) >= 3 }"
-            :fill="label.item.color || labelColor"
-            :font-size="label.item.fontSize || 14"
-            text-anchor="middle"
-            dominant-baseline="central"
-            font-weight="bold"
-            :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
-          >
-            {{ label.item.label }}
-          </text>
+        <g v-if="showLabels">
+          <g v-for="label in labels" :key="label.angle">
+            <!--
+              单字符或四象标签（水平显示）
+              适用于天干、地支、四象等单字标签
+            -->
+            <text
+              v-if="!label.isTwoCharacter"
+              :x="label.x"
+              :y="label.y"
+              :class="{ 'highlight-label': levelOf(label.item) >= 2, 'highlight-label-strong': levelOf(label.item) >= 3 }"
+              :fill="label.item.color || labelColor"
+              :font-size="label.item.fontSize || 14"
+              text-anchor="middle"
+              dominant-baseline="central"
+              font-weight="bold"
+              :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
+            >
+              {{ label.item.label }}
+            </text>
 
-          <!--
-            双字符标签垂直排列
-            适用于十二长生等双字标签
-            上下两个字分别显示
-          -->
-          <g v-else :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`">
-            <!-- 上面的字 -->
-            <text
-              :x="label.x"
-              :y="label.y - 6"
-              :fill="label.item.color || labelColor"
-              :font-size="label.item.fontSize || 14"
-              text-anchor="middle"
-              dominant-baseline="central"
-              font-weight="bold"
-            >
-              {{ label.item.label[0] }}
-            </text>
-            <!-- 下面的字 -->
-            <text
-              :x="label.x"
-              :y="label.y + 6"
-              :fill="label.item.color || labelColor"
-              :font-size="label.item.fontSize || 14"
-              text-anchor="middle"
-              dominant-baseline="central"
-              font-weight="bold"
-            >
-              {{ label.item.label[1] }}
-            </text>
+            <!--
+              双字符标签垂直排列
+              适用于十二长生等双字标签
+              上下两个字分别显示
+            -->
+            <g v-else :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`">
+              <!-- 上面的字 -->
+              <text
+                :x="label.x"
+                :y="label.y - 6"
+                :fill="label.item.color || labelColor"
+                :font-size="label.item.fontSize || 14"
+                text-anchor="middle"
+                dominant-baseline="central"
+                font-weight="bold"
+              >
+                {{ label.item.label[0] }}
+              </text>
+              <!-- 下面的字 -->
+              <text
+                :x="label.x"
+                :y="label.y + 6"
+                :fill="label.item.color || labelColor"
+                :font-size="label.item.fontSize || 14"
+                text-anchor="middle"
+                dominant-baseline="central"
+                font-weight="bold"
+              >
+                {{ label.item.label[1] }}
+              </text>
+            </g>
           </g>
         </g>
 

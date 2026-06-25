@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
-import DataRing from '../components/DataRing.vue'
+import DataRing from '../components/rings/DataRing.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { sixtyJiazi, twelveShichen, twentyFourSolarTerms, seventyTwoHou, sixtyJiaziNayin } from '../data/rings'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import DataRing from '../components/DataRing.vue'
-import DegreeScale from '../components/DegreeScale.vue'
+import DataRing from '../components/rings/DataRing.vue'
+import DegreeScale from '../components/rings/DegreeScale.vue'
 import SolarEcliptic from '../components/SolarEcliptic.vue'
 import TaiChi from '../components/TaiChi.vue'
 import Control from '../components/Control.vue'

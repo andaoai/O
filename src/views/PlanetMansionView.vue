@@ -2,10 +2,10 @@
 import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
 import HelioOrbits from '../components/HelioOrbits.vue'
-import PlanetDegreeRing from '../components/PlanetDegreeRing.vue'
+import PlanetDegreeRing from '../components/rings/PlanetDegreeRing.vue'
 import Control from '../components/Control.vue'
-import DataRing from '../components/DataRing.vue'
-import DegreeScale from '../components/DegreeScale.vue'
+import DataRing from '../components/rings/DataRing.vue'
+import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { twentyEightConstellations } from '../data/rings/twentyEightConstellations'
 import { twentyFourSolarTerms } from '../data/rings/twentyFourSolarTerms'
@@ -13,6 +13,7 @@ import type { RingData } from '../data/rings/types'
 import { getPlanetMansions, getMansionSpans, findMansion } from '../utils/planetMansion'
 import { eclipticToEquatorial, OUTER_BULGE_RATIO, INNER_GAP_RATIO } from '../utils/skyProjection'
 import { sunLongitude, sunEquatorial } from '../utils/celestial'
+import { normalizeAngle } from '../utils/geometry'
 import { getMansionEvents } from '../utils/skyEvents'
 
 // 时间控制（与控制面板双向绑定）
@@ -92,8 +93,8 @@ const planetDegreeMarkers = computed(() => {
  * 概念，翻转只会让外圈与星图错位（整盘 rotationAngle 作用于共同的 <g>，不受影响）。
  * ────────────────────────────────────────────────────────────── */
 
-/** 角度归一化到 [0,360) */
-const norm = (a: number) => ((a % 360) + 360) % 360
+/** 角度归一化到 [0,360)（统一走 geometry） */
+const norm = normalizeAngle
 /** 赤经 → DataRing 顺时针角度 */
 const raToAngle = (ra: number) => norm(360 - ra)
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import PolarCanvas from './base/PolarCanvas.vue'
+import PolarCanvas from '../base/PolarCanvas.vue'
+import { polarToCartesian as polarUtil, arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
 import { XIANTIAN_64_GUA, GUA_STEP, type XiantianGuaItem } from '@/data/sixtyFourGua'
 
 /**
@@ -77,22 +78,13 @@ const props = withDefaults(defineProps<Props>(), {
   lineStrokeWidth: 2
 })
 
-/** 极坐标 → 笛卡尔（与 PolarCanvas 一致：counterclockwise 取反角度），中心 0,0 */
-const polarToCartesian = (angle: number, radius: number) => {
-  const adjusted = props.rotationDirection === 'counterclockwise' ? -angle : angle
-  const rad = (adjusted * Math.PI) / 180
-  return { x: Math.cos(rad) * radius, y: Math.sin(rad) * radius }
-}
+/** 极坐标 → 笛卡尔（统一走 geometry，按 rotationDirection 处理顺/逆时针），中心 0,0 */
+const polarToCartesian = (angle: number, radius: number) =>
+  polarUtil(angle, radius, props.rotationDirection)
 
 /** 环形扇形 path（内外两弧），用于阴阳两仪背景 */
-const arcPath = (rOuter: number, rInner: number, startAngle: number, endAngle: number): string => {
-  const so = polarToCartesian(startAngle, rOuter)
-  const eo = polarToCartesian(endAngle, rOuter)
-  const si = polarToCartesian(startAngle, rInner)
-  const ei = polarToCartesian(endAngle, rInner)
-  const large = endAngle - startAngle > 180 ? 1 : 0
-  return `M ${so.x},${so.y} A ${rOuter},${rOuter} 0 ${large},1 ${eo.x},${eo.y} L ${ei.x},${ei.y} A ${rInner},${rInner} 0 ${large},0 ${si.x},${si.y} Z`
-}
+const arcPath = (rOuter: number, rInner: number, startAngle: number, endAngle: number): string =>
+  arcPathUtil(rOuter, startAngle, endAngle, rInner, props.rotationDirection)
 
 /** 实际内半径：视图传入则用之；否则按内容自动算环带宽度（铺满够用即可，不留多余空白）。
  *  - 显示爻线：需容纳 6 爻 + 卦符 + 卦名，环带较宽；
@@ -138,9 +130,8 @@ const nameRadius = computed(() => {
 const lineBandInner = computed(() => resolvedInnerRadius.value + band.value * 0.08)
 const lineBandOuter = computed(() => resolvedInnerRadius.value + band.value * 0.62)
 
-/** 文字旋转：顶部指向圆心（沿用 CircleRing 约定） */
-const textRotationOf = (midAngle: number) =>
-  props.rotationDirection === 'counterclockwise' ? -midAngle + 90 : midAngle + 90
+/** 文字旋转：顶部指向圆心（统一走 geometry） */
+const textRotationOf = (midAngle: number) => radialTextRotation(midAngle, props.rotationDirection)
 
 /** 阴阳两仪背景扇形：阳仪 pos>=32，阴仪 pos<32 */
 const yinYangSectors = computed(() => {
@@ -209,9 +200,8 @@ const nameLabels = computed(() =>
   <PolarCanvas :center-x="0" :center-y="0" :rotation-direction="rotationDirection">
     <template #default>
       <g class="gua-ring">
-        <!-- 阴阳两仪淡背景 -->
+        <!-- 阴阳两仪淡背景（showYinYang 关时 yinYangSectors 为空，无需 v-if） -->
         <path
-          v-if="showYinYang"
           v-for="s in yinYangSectors"
           :key="`yy-${s.key}`"
           :d="s.path"
@@ -251,37 +241,39 @@ const nameLabels = computed(() =>
         </g>
 
         <!-- 卦符 -->
-        <text
-          v-if="showUnicode"
-          v-for="u in unicodeLabels"
-          :key="`uni-${u.key}`"
-          :x="u.x"
-          :y="u.y"
-          :fill="unicodeColor"
-          :font-size="unicodeFontSize"
-          text-anchor="middle"
-          dominant-baseline="central"
-          :transform="`rotate(${u.rot} ${u.x} ${u.y})`"
-        >
-          {{ u.char }}
-        </text>
+        <g v-if="showUnicode">
+          <text
+            v-for="u in unicodeLabels"
+            :key="`uni-${u.key}`"
+            :x="u.x"
+            :y="u.y"
+            :fill="unicodeColor"
+            :font-size="unicodeFontSize"
+            text-anchor="middle"
+            dominant-baseline="central"
+            :transform="`rotate(${u.rot} ${u.x} ${u.y})`"
+          >
+            {{ u.char }}
+          </text>
+        </g>
 
         <!-- 卦名 -->
-        <text
-          v-if="showNames"
-          v-for="n in nameLabels"
-          :key="`name-${n.key}`"
-          :x="n.x"
-          :y="n.y"
-          :fill="nameColor"
-          :font-size="nameFontSize"
-          text-anchor="middle"
-          dominant-baseline="central"
-          font-weight="bold"
-          :transform="`rotate(${n.rot} ${n.x} ${n.y})`"
-        >
-          {{ n.name }}
-        </text>
+        <g v-if="showNames">
+          <text
+            v-for="n in nameLabels"
+            :key="`name-${n.key}`"
+            :x="n.x"
+            :y="n.y"
+            :fill="nameColor"
+            :font-size="nameFontSize"
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-weight="bold"
+            :transform="`rotate(${n.rot} ${n.x} ${n.y})`"
+          >
+            {{ n.name }}
+          </text>
+        </g>
       </g>
     </template>
   </PolarCanvas>

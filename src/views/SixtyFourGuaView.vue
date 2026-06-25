@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import GuaRing from '../components/GuaRing.vue'
+import GuaRing from '../components/rings/GuaRing.vue'
 import Control from '../components/Control.vue'
 import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 
