@@ -131,7 +131,7 @@ export const planetRetrograde = (time: Date, key: PlanetKey, halfSpanDays = 0.5)
   const before = planetPosition(new Date(time.getTime() - ms), key).longitude
   const after = planetPosition(new Date(time.getTime() + ms), key).longitude
   // 黄经差归一化到 (-180, 180]，避免 360°→0° 跨越误判
-  let delta = ((after - before) % 360 + 540) % 360 - 180
+  const delta = ((after - before) % 360 + 540) % 360 - 180
   return delta < 0
 }
 
@@ -206,13 +206,13 @@ export const inferiorConjunctionKind = (
   // 合日判定：行星地心黄经 ≈ 太阳地心黄经
   const planetGeoLon = planetPosition(time, key).longitude
   const sunLon = sunLongitude(time)
-  let sep = ((planetGeoLon - sunLon) % 360 + 540) % 360 - 180
+  const sep = ((planetGeoLon - sunLon) % 360 + 540) % 360 - 180
   if (Math.abs(sep) > tolDeg) return null
   // 离地近 → 下合，离地远 → 上合
   const planet = planetHeliocentric(time, key)
   const earth = earthHeliocentric(time)
   // 行星与地球的日心黄经差，判断在太阳同侧还是异侧
-  let lonDiff = ((planet.longitude - earth.longitude) % 360 + 540) % 360 - 180
+  const lonDiff = ((planet.longitude - earth.longitude) % 360 + 540) % 360 - 180
   // |lonDiff| 小 → 行星与地球同方向（同侧）→ 下合；接近 180° → 异侧 → 上合
   return Math.abs(lonDiff) < 90 ? 'inferior' : 'superior'
 }
@@ -450,4 +450,3 @@ export const formatAspect = (e: AspectEvent): string => {
   }
   return base
 }
-

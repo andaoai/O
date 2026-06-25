@@ -62,6 +62,8 @@ interface RingItem {
   endAngle?: number
   /** 高亮当前格：渲染呼吸扇形背景 + 文字脉动（可选，默认 false） */
   highlight?: boolean
+  /** 分级高亮（可选，优先于 highlight）：0 不亮 1 微亮 2 中亮 3 强亮 */
+  highlightLevel?: 0 | 1 | 2 | 3
 }
 
 /**
@@ -192,11 +194,17 @@ const sectors = computed(() =>
 )
 
 /**
- * 高亮扇形：仅 highlight 标记的 item，渲染呼吸背景。
+ * 取 item 的高亮级别：highlightLevel 优先，回退到布尔 highlight（true=2）。
+ * 0 不亮，1 微亮（仅文字），2 中亮（呼吸扇形），3 强亮（强呼吸+大字）。
+ */
+const levelOf = (item: RingItem): number => item.highlightLevel ?? (item.highlight ? 2 : 0)
+
+/**
+ * 高亮扇形：仅级别 ≥ 2 的 item 渲染呼吸背景（微亮级别 1 只上色文字，不画扇形）。
  * 复用 sectors 的路径，不论 showSectors 是否开启都会出现。
  */
 const highlightSectors = computed(() =>
-  sectors.value.filter(s => s.item.highlight)
+  sectors.value.filter(s => levelOf(s.item) >= 2)
 )
 
 /**
@@ -318,7 +326,7 @@ const labels = computed(() =>
         <path
           v-for="hs in highlightSectors"
           :key="`hl-${hs.startAngle}`"
-          class="highlight-sector"
+          :class="levelOf(hs.item) >= 3 ? 'highlight-sector-strong' : 'highlight-sector'"
           :d="hs.path"
           :fill="hs.item.color || '#ffffff'"
         />
@@ -353,7 +361,7 @@ const labels = computed(() =>
             v-if="!label.isTwoCharacter"
             :x="label.x"
             :y="label.y"
-            :class="{ 'highlight-label': label.item.highlight }"
+            :class="{ 'highlight-label': levelOf(label.item) >= 2, 'highlight-label-strong': levelOf(label.item) >= 3 }"
             :fill="label.item.color || labelColor"
             :font-size="label.item.fontSize || 14"
             text-anchor="middle"
@@ -433,6 +441,17 @@ const labels = computed(() =>
   50% { opacity: 0.55; }
 }
 
+/* 强亮扇形（四/五星聚）：更强呼吸幅度 */
+.highlight-sector-strong {
+  animation: highlight-breathe-strong 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes highlight-breathe-strong {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.85; }
+}
+
 /* 高亮文字：同步脉动 + 轻微发光 */
 .highlight-label {
   animation: highlight-pulse 1.6s ease-in-out infinite;
@@ -446,6 +465,22 @@ const labels = computed(() =>
   50% {
     opacity: 1;
     filter: drop-shadow(0 0 4px currentColor);
+  }
+}
+
+/* 强亮文字（四/五星聚）：更强发光 */
+.highlight-label-strong {
+  animation: highlight-pulse-strong 1.2s ease-in-out infinite;
+}
+
+@keyframes highlight-pulse-strong {
+  0%, 100% {
+    opacity: 0.85;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+  50% {
+    opacity: 1;
+    filter: drop-shadow(0 0 7px currentColor);
   }
 }
 </style>

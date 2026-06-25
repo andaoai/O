@@ -2,6 +2,7 @@
 import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
 import HelioOrbits from '../components/HelioOrbits.vue'
+import PlanetDegreeRing from '../components/PlanetDegreeRing.vue'
 import Control from '../components/Control.vue'
 import DataRing from '../components/DataRing.vue'
 import DegreeScale from '../components/DegreeScale.vue'
@@ -9,9 +10,10 @@ import RingStack from '../components/base/RingStack.vue'
 import { twentyEightConstellations } from '../data/rings/twentyEightConstellations'
 import { twentyFourSolarTerms } from '../data/rings/twentyFourSolarTerms'
 import type { RingData } from '../data/rings/types'
-import { getPlanetMansions, getMansionSpans } from '../utils/planetMansion'
+import { getPlanetMansions, getMansionSpans, findMansion } from '../utils/planetMansion'
 import { eclipticToEquatorial, OUTER_BULGE_RATIO, INNER_GAP_RATIO } from '../utils/skyProjection'
-import { sunLongitude } from '../utils/celestial'
+import { sunLongitude, sunEquatorial } from '../utils/celestial'
+import { getMansionEvents } from '../utils/skyEvents'
 
 // 时间控制（与控制面板双向绑定）
 const controlledTime = ref(new Date())
@@ -55,6 +57,30 @@ const rotationAngle = ref(0)
 // 当前七曜落宿（随时间重算，供右侧信息面板）
 const planetMansions = computed(() => getPlanetMansions(controlledTime.value))
 
+/** 七曜入宿度标记：按赤经定位、显示入宿度数（含太阳，getPlanetMansions 仅五星+月亮） */
+const planetDegreeMarkers = computed(() => {
+  const t = controlledTime.value
+  const markers: { angle: number; symbol: string; color: string; degree: number }[] = []
+  // 五星 + 月亮（已含 ra 与入宿度）
+  for (const pm of planetMansions.value) {
+    if (!pm.mansion) continue
+    markers.push({
+      angle: raToAngle(pm.ra),
+      symbol: pm.symbol,
+      color: pm.color,
+      degree: pm.mansion.degreeInMansion
+    })
+  }
+  // 补太阳
+  const spans = getMansionSpans(t)
+  const sunRa = sunEquatorial(t).ra
+  const sunHit = findMansion(sunRa, spans)
+  if (sunHit) {
+    markers.push({ angle: raToAngle(sunRa), symbol: '日', color: '#ffdd00', degree: sunHit.degreeInMansion })
+  }
+  return markers
+})
+
 /* ──────────────────────────────────────────────────────────────
  * 外圈复用环（动态对齐星图）
  *
@@ -71,23 +97,38 @@ const norm = (a: number) => ((a % 360) + 360) % 360
 /** 赤经 → DataRing 顺时针角度 */
 const raToAngle = (ra: number) => norm(360 - ra)
 
-/** 二十八宿环：用实时距星赤经区间，七曜所入之宿高亮（与星图内宿位同口径） */
+/** 当前各宿的天象事件（合/冲/聚 → 落宿分级），随时间重算 */
+const mansionEvents = computed(() => getMansionEvents(controlledTime.value))
+
+/**
+ * 二十八宿环：高亮语义从「单曜落宿」改为「天象事件分级」。
+ *   level 0 不亮：文字灰白
+ *   level 1 微亮：仅单曜路过 → 文字上宿本色，无扇形
+ *   level 2 中亮：合/冲/三星聚 → 呼吸扇形 + 文字脉动
+ *   level 3 强亮：四/五星聚 → 强呼吸 + 强发光
+ */
 const mansionRingData = computed<RingData>(() => {
   const spans = getMansionSpans(controlledTime.value)
-  const hitLabels = new Set(
+  // 单曜路过的宿（常态，仅给微亮）
+  const litLabels = new Set(
     planetMansions.value.map((pm) => pm.mansion?.label).filter(Boolean) as string[]
   )
+  const events = mansionEvents.value
   return {
     ...twentyEightConstellations,
     startDegree: 0,
-    items: spans.map((s) => ({
-      label: s.label,
-      color: s.color,
-      // 区间 [startRa, endRa) 映射到屏幕角：起点取较小角(360−endRa)，顺时针扫到 360−startRa
-      startAngle: raToAngle(s.endRa),
-      endAngle: raToAngle(s.startRa),
-      highlight: hitLabels.has(s.label)
-    }))
+    items: spans.map((s) => {
+      const evt = events.get(s.label)
+      const level = evt ? evt.level : litLabels.has(s.label) ? 1 : 0
+      return {
+        label: s.label,
+        // 不亮=灰白；微亮及以上=宿本色
+        color: level >= 1 ? s.color : '#cccccc',
+        startAngle: raToAngle(s.endRa),
+        endAngle: raToAngle(s.startRa),
+        highlightLevel: level as 0 | 1 | 2 | 3
+      }
+    })
   }
 })
 
@@ -130,15 +171,16 @@ const solarTermRingData = computed<RingData>(() => {
 const DISK_OUTER_RADIUS = 580
 const RING_GAP = 8
 
-// 外圈三环的厚度与间隙（由外到内）
+// 外圈四环的厚度与间隙（由外到内）：360°刻度 → 入宿度 → 二十八星宿 → 二十四节气
 interface OuterRingDef {
   thickness: number
   gapBefore: number
 }
-const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef] = [
+const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
   { thickness: 22, gapBefore: 0 }, // 360°赤经刻度
-  { thickness: 30, gapBefore: 6 }, // 二十四节气
-  { thickness: 40, gapBefore: 8 } // 二十八星宿
+  { thickness: 28, gapBefore: 6 }, // 七曜入宿度
+  { thickness: 40, gapBefore: 6 }, // 二十八星宿
+  { thickness: 30, gapBefore: 8 } // 二十四节气
 ]
 
 /** RingStack 累加后的内缘半径 */
@@ -156,7 +198,7 @@ const helioRadius = computed(() => skyRadius.value * INNER_GAP_RATIO - RING_GAP)
 /** 日心盘内半径：留出太阳本体空间 */
 const helioInnerRadius = computed(() => Math.max(20, helioRadius.value * 0.16))
 
-// 外圈布局：由外到内 —— 360°赤经刻度 → 二十四节气 → 二十八星宿；
+// 外圈布局：由外到内 —— 360°赤经刻度 → 七曜入宿度 → 二十八星宿 → 二十四节气；
 // 度数环按等分生成、标签为度数，无法逐项重映射，只能靠方向对齐：
 // 赤经 ra 在 y 取反下落于屏幕标准角 −ra，故用 counterclockwise + startDegree 0，
 // 使 0°刻度对准春分点、度数沿赤经方向递增（与 28 宿/节气的 clockwise 方向相反）。
@@ -174,8 +216,14 @@ const outerRings = computed(() => [
       circleColor: '#555555'
     }
   },
-  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[1].thickness, gapBefore: OUTER_RING_DEFS[1].gapBefore, props: { data: solarTermRingData.value } },
-  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } }
+  {
+    component: markRaw(PlanetDegreeRing),
+    thickness: OUTER_RING_DEFS[1].thickness,
+    gapBefore: OUTER_RING_DEFS[1].gapBefore,
+    props: { markers: planetDegreeMarkers.value }
+  },
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } },
+  { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } }
 ])
 
 

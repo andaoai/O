@@ -20,6 +20,11 @@ export interface RingItem {
   endAngle?: number
   /** 高亮当前格：呼吸扇形背景 + 文字脉动（可选，默认 false） */
   highlight?: boolean
+  /**
+   * 分级高亮（可选，优先于 highlight）：
+   *   0/缺省 不亮，1 微亮（仅文字，不画扇形），2 中亮（呼吸扇形），3 强亮（强呼吸+大字）
+   */
+  highlightLevel?: 0 | 1 | 2 | 3
 }
 
 /** 圆环的样式与默认布局，描述这个环"长什么样" */
