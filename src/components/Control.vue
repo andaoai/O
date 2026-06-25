@@ -10,7 +10,11 @@
     <!-- 标题栏：可拖拽 -->
     <div class="control-header" :class="{ 'minimal': allCollapsed }">
       <h3 v-if="!allCollapsed" class="title">控制面板</h3>
-      <div v-else class="minimal-time">{{ formatDateTime(currentTime) }}</div>
+      <div v-else class="minimal-time">
+        <span class="mini-date">{{ formatEraDateShort(currentTime) }}</span>
+        <span class="mini-ganzhi">{{ universalGanzhi.year.full }}年</span>
+        <span v-if="dynastyInfo" class="mini-dynasty" :style="{ color: dynastyInfo.color }">{{ dynastyInfo.name }}</span>
+      </div>
       <div class="header-controls">
         <button
           class="header-btn"
@@ -30,20 +34,33 @@
       </div>
       <div v-if="!modules.time.collapsed" class="module-content">
         <div class="time-display">
-          <div class="current-time">{{ formatTime(currentTime) }}</div>
-          <div class="date-display">{{ formatDate(currentTime) }}</div>
-          <div class="lunar-display">
-            <div class="lunar-date">{{ chineseCalendar.lunarDate }}</div>
-            <div class="ganzhi-year">{{ chineseCalendar.ganzhi.year.full }}年 {{ chineseCalendar.ganzhi.year.animal }}</div>
+          <!-- 公历 -->
+          <div class="era-date">{{ formatEraDate(currentTime) }}</div>
+
+          <!-- 朝代 -->
+          <div v-if="dynastyInfo" class="dynasty-display">
+            <span class="dynasty-name" :style="{ color: dynastyInfo.color }">{{ dynastyInfo.name }}</span>
+            <span class="dynasty-range">（{{ dynastyInfo.rangeText }}）</span>
           </div>
-          <div v-if="chineseCalendar.solarTerm" class="solar-term-display">
-            <div class="solar-term-text">
+
+          <!-- 干支 -->
+          <div class="ganzhi-display">
+            <span class="gz-year" :title="universalGanzhi.year.element + '·' + universalGanzhi.year.animal">
+              {{ universalGanzhi.year.full }}年
+            </span>
+            <span class="gz-month">{{ universalGanzhi.month.full }}月</span>
+            <span class="gz-day">{{ universalGanzhi.day.full }}日</span>
+            <span class="gz-hour">{{ universalGanzhi.hour.full }}时</span>
+          </div>
+
+          <!-- 农历与节气（仅 tyme4ts 支持范围显示） -->
+          <div v-if="!universalGanzhi.isApproximate" class="lunar-info">
+            <div class="lunar-date">{{ chineseCalendar.lunarDate }}</div>
+            <div v-if="chineseCalendar.solarTerm" class="solar-term-text">
               {{ getSolarTermDescription(chineseCalendar.solarTerm) }}
             </div>
           </div>
-          <div class="daily-ganzhi">
-            {{ chineseCalendar.ganzhi.day.full }}日 {{ chineseCalendar.ganzhi.hour.full }}时
-          </div>
+          <div v-else class="lunar-unavailable">农历 / 节气：历不可考</div>
         </div>
       </div>
     </div>
@@ -350,6 +367,12 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { getChineseCalendarInfo, getSolarTermDescription } from '@/utils/chineseCalendar'
+import {
+  formatEraDate,
+  formatEraDateShort,
+  getDynastyInfo,
+  getUniversalGanzhi
+} from '@/utils/eraCalendar'
 import { useTimePlayback } from '@/composables/useTimePlayback'
 import { usePanelDrag } from '@/composables/usePanelDrag'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
@@ -452,6 +475,10 @@ const timeInput = ref('')
 // 中国历法信息
 const chineseCalendar = computed(() => getChineseCalendarInfo(currentTime.value))
 
+// 跨全时间域补充信息（朝代 + 通用干支）
+const dynastyInfo = computed(() => getDynastyInfo(currentTime.value))
+const universalGanzhi = computed(() => getUniversalGanzhi(currentTime.value))
+
 // 计算面板样式
 const panelStyle = computed(() => {
   const basePosition = {
@@ -542,12 +569,18 @@ watch(() => props.rotationAngle, (newAngle) => {
   }
 }, { immediate: true })
 
-// 更新时间选择器的值
+// 监听时间变化，同步输入框
+watch(() => currentTime.value, (newTime) => {
+  updateDateTimeInputs(newTime)
+}, { immediate: true })
+
+// 同步输入框：公元前年份在框内显示为负数（如 jsYear=-220 显示为 -221）
 const updateDateTimeInputs = (date: Date) => {
-  const year = date.getFullYear()
+  const jsYear = date.getFullYear()
+  const displayYear = jsYear > 0 ? jsYear : jsYear - 1
   const month = String(date.getMonth() + 1).padStart(2, '0')
   const day = String(date.getDate()).padStart(2, '0')
-  dateInput.value = `${year}-${month}-${day}`
+  dateInput.value = `${displayYear}-${month}-${day}`
 
   const hours = String(date.getHours()).padStart(2, '0')
   const minutes = String(date.getMinutes()).padStart(2, '0')
@@ -555,35 +588,7 @@ const updateDateTimeInputs = (date: Date) => {
   timeInput.value = `${hours}:${minutes}:${seconds}`
 }
 
-// 监听时间变化，同步输入框
-watch(() => currentTime.value, (newTime) => {
-  updateDateTimeInputs(newTime)
-}, { immediate: true })
-
-// 格式化时间
-const formatTime = (date: Date): string => {
-  return date.toLocaleTimeString('zh-CN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
-}
-
-// 格式化日期
-const formatDate = (date: Date): string => {
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  })
-}
-
-// 格式化「年月日 时分秒」（折叠态标题栏用）
-const formatDateTime = (date: Date): string => {
-  return `${formatDate(date)} ${formatTime(date)}`
-}
-
-// 从输入框解析时间（日期/时间输入共用）：手动改时间先暂停播放，再覆盖为解析值
+// 从输入框解析时间：支持 - 前缀表示公元前，用 setFullYear 规避构造函数 0-99 映射陷阱
 const applyInputTime = () => {
   if (!dateInput.value || !timeInput.value) return
   const dateParts = dateInput.value.split('-').map(Number)
@@ -591,10 +596,14 @@ const applyInputTime = () => {
   if (dateParts.length !== 3 || timeParts.length !== 3) return
   if (dateParts.some(isNaN) || timeParts.some(isNaN)) return
 
-  const newTime = new Date(
-    dateParts[0]!, dateParts[1]! - 1, dateParts[2]!,
-    timeParts[0]!, timeParts[1]!, timeParts[2]!
-  )
+  const inputYear = dateParts[0]!
+  // inputYear > 0 → jsYear = inputYear；inputYear <= 0 → jsYear = inputYear + 1（-1 → 0 = 公元前1年）
+  const jsYear = inputYear > 0 ? inputYear : inputYear + 1
+
+  const newTime = new Date()
+  newTime.setFullYear(jsYear, dateParts[1]! - 1, dateParts[2]!)
+  newTime.setHours(timeParts[0]!, timeParts[1]!, timeParts[2]!, 0)
+
   if (!isNaN(newTime.getTime())) {
     pause()
     updateTime(newTime)
@@ -725,15 +734,6 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
   color: #ffcc00;
 }
 
-.minimal-time {
-  font-size: 16px;
-  font-weight: bold;
-  color: #00ff00;
-  font-family: 'Courier New', monospace;
-  flex: 1;
-  text-align: center;
-}
-
 .header-controls {
   display: flex;
   gap: 4px;
@@ -817,47 +817,75 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
   }
 }
 
-/* 时间显示 */
+/* 时间显示（三条线：公历 / 朝代 / 干支） */
 .time-display {
   text-align: center;
   margin-bottom: 8px;
 }
 
-.current-time {
-  font-size: 16px;
+.era-date {
+  font-size: 13px;
   font-weight: bold;
   color: #00ff00;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
   font-family: 'Courier New', monospace;
+  line-height: 1.4;
 }
 
-.date-display {
+.dynasty-display {
+  margin-bottom: 5px;
   font-size: 11px;
-  color: #888;
-  margin-bottom: 4px;
 }
 
-.lunar-display {
-  margin-bottom: 4px;
-  padding: 3px 0;
+.dynasty-name {
+  font-weight: bold;
+  margin-right: 2px;
+}
+
+.dynasty-range {
+  color: #888;
+  font-size: 9px;
+}
+
+.ganzhi-display {
+  margin-bottom: 5px;
+  padding: 4px 0;
   border-top: 1px solid #222;
   border-bottom: 1px solid #222;
+  font-size: 11px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px;
+}
+
+.gz-year {
+  color: #ffcc00;
+  font-weight: bold;
+  cursor: help;
+}
+
+.gz-month {
+  color: #ccaa88;
+}
+
+.gz-day {
+  color: #99cc99;
+}
+
+.gz-hour {
+  color: #88bbcc;
+}
+
+.lunar-info {
+  margin-bottom: 3px;
 }
 
 .lunar-date {
   font-size: 10px;
   color: #ff9900;
   font-weight: bold;
-  margin-bottom: 1px;
-}
-
-.ganzhi-year {
-  font-size: 9px;
-  color: #ccaa00;
-}
-
-.solar-term-display {
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .solar-term-text {
@@ -866,10 +894,39 @@ onUnmounted(() => window.removeEventListener('resize', handleResize))
   font-weight: bold;
 }
 
-.daily-ganzhi {
+.lunar-unavailable {
   font-size: 9px;
-  color: #99cc99;
+  color: #666;
   font-style: italic;
+  margin-bottom: 3px;
+}
+
+/* 折叠态标题栏 */
+.minimal-time {
+  font-size: 13px;
+  font-weight: bold;
+  color: #00ff00;
+  font-family: 'Courier New', monospace;
+  flex: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.mini-date {
+  color: #00ff00;
+}
+
+.mini-ganzhi {
+  color: #ffcc00;
+}
+
+.mini-dynasty {
+  font-weight: bold;
 }
 
 /* 控制按钮 */
