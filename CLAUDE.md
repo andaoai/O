@@ -6,11 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a **Chinese traditional compass visualization platform** (中华传统罗盘可视化平台) built with Vue 3 + TypeScript. It is a multi-page app: a home page lists available "compasses" (罗盘), and each compass is a full-screen, polar-coordinate SVG visualization of traditional Chinese cosmological elements.
 
-Three compasses currently ship:
+Four compasses currently ship:
 
 - **中华天文圆环 (astronomy)** — a full astronomical disk stacking many concentric rings: 360-degree degree scale, 24 solar terms (二十四节气), 28 constellations (二十八星宿), 60 jiazi (六十甲子) with five-element nayin (五行纳音), 10 heavenly stems (十天干) with void positions (天干空亡), 12 longevity stages (十二长生), 12 earthly branches (十二地支), 8 gates (八门), four celestial symbols (四象), plus a solar ecliptic and a Taiji (太极) at the center.
 - **六十甲子六环 (liushi-jiazi)** — six concentric 60-jiazi rings (year/month/day/hour/minute/second pillars) that track real time and highlight the current ganzhi cell on each ring.
-- **七曜入宿 (planet-mansion)** — planetary positions mapped to 28 mansions, featuring point-based 24 solar terms ring and sky projection visualization.
+- **七曜入宿天象盘 (planet-mansion)** — celestial sky projection with polar equator, ecliptic and lunar orbit obliquity, sun/moon/five planets real-time positioning into 28 mansions, featuring point-based 24 solar terms outer ring.
+- **先天六十四卦盘 (sixty-four-gua)** — Fu Xi/Shao Yong's先天 circular diagram: 64 hexagrams arranged by binary bit-reversal order, Qian south Kun north, displaying hexagram symbols, names and six lines.
 
 Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations, **vue-router** for the multi-page structure.
 
@@ -107,6 +108,21 @@ RingStack (concentric auto-layout container; arranges all ring types)
 Control (unified time / zoom / pan / rotation panel)
 ```
 
+### Control panel refactoring
+
+`Control.vue` functionality has been refactored into three reusable composables (commit c33f550):
+
+- `useTimePlayback` — time playback control: play/pause, speed, stepping by second/minute/hour/day/month/year, reset to now
+- `usePanelDrag` — draggable panel with position persistence to localStorage
+- `useKeyboardShortcuts` — global keyboard shortcuts with ignore when input focused
+
+The Control panel now features:
+- Collapsible modules with state persisted to localStorage
+- Three timeline displays: **Gregorian calendar** (公历) → **Dynasty** (朝代) → **Ganzhi** (干支)
+- Lunar date and solar term display
+- Support for BCE (公元前) years in date input
+- Draggable panel that remembers position
+
 ### State management
 
 Pinia is installed and registered in `src/main.ts`, but **there are currently no stores**. Each view holds its own state with `ref`s (`controlledTime`, `zoomLevel`, `offsetX/Y`, `rotationDirection`, `rotationAngle`) and wires them to `Control` via `v-model`. The viewport transform is applied directly on an SVG `<g transform>`.
@@ -121,7 +137,8 @@ src/
 │   ├── HomeView.vue               # Home page: grid of compass cards
 │   ├── AstronomyView.vue          # 中华天文圆环 compass
 │   ├── LiushiJiaziView.vue        # 六十甲子六环 compass
-│   └── PlanetMansionView.vue      # 七曜入宿 compass (point-based 节气)
+│   ├── PlanetMansionView.vue      # 七曜入宿天象盘 compass (point-based 节气)
+│   └── SixtyFourGuaView.vue       # 先天六十四卦盘 compass
 ├── components/
 │   ├── base/
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
@@ -130,8 +147,17 @@ src/
 │   │   └── RingStack.vue           # Concentric auto-layout container
 │   ├── rings/
 │   │   ├── DataRing.vue            # Segment data-driven: RingData → CircleRing
-│   │   └── DataPointRing.vue       # Point data-driven: PointRingData → PointRing
-│   ├── DegreeScale.vue            # Degree-tick ring (interval-based)
+│   │   ├── DataPointRing.vue       # Point data-driven: PointRingData → PointRing
+│   │   ├── DegreeScale.vue         # Degree-tick ring (interval-based)
+│   │   ├── GuaRing.vue             # 六十四卦 ring (special hexagram rendering)
+│   │   └── PlanetDegreeRing.vue   # Planet mansion degree ring
+│   ├── celestial/                  # Celestial visualization components
+│   │   ├── BodyMarker.vue          # Celestial body marker
+│   │   ├── CelestialBody.vue       # Celestial body container
+│   │   ├── EclipticCircle.vue      # Ecliptic circle rendering
+│   │   └── LunarOrbit.vue          # Lunar orbit rendering
+│   ├── HelioOrbits.vue             # Heliocentric orbits (planet-mansion)
+│   ├── SkyChart.vue                # Complete sky chart projection
 │   ├── SolarEcliptic.vue          # Solar ecliptic via astronomy-engine
 │   ├── TaiChi.vue                 # Time-driven Taiji disk
 │   └── Control.vue                # Unified control panel
@@ -149,13 +175,24 @@ src/
 │   ├── twelveLongevity.ts         # 十二长生
 │   ├── earthlyBranches.ts         # 十二地支
 │   ├── eightGates.ts              # 八门
-│   └── siXiang.ts                 # 四象
+│   ├── siXiang.ts                 # 四象
+│   ├── seventyTwoHou.ts          # 七十二候
+│   └── twelveShichen.ts           # 十二时辰
 ├── composables/
 │   ├── useAnimation.ts            # Animation control composable
-│   └── useRingBase.ts             # Shared ring logic foundation
+│   ├── useRingBase.ts             # Shared ring logic foundation
+│   ├── useTimePlayback.ts         # Time playback (extracted from Control)
+│   ├── usePanelDrag.ts            # Panel dragging (extracted from Control)
+│   └── useKeyboardShortcuts.ts    # Keyboard shortcuts (extracted from Control)
 ├── utils/
 │   ├── chineseCalendar.ts         # Chinese calendar helpers (tyme4ts)
-│   └── liushiJiazi.ts             # Six-pillar 60-jiazi index calc (tyme4ts)
+│   ├── liushiJiazi.ts             # Six-pillar 60-jiazi index calc (tyme4ts)
+│   ├── celestial.ts               # Celestial coordinate calculations
+│   ├── eraCalendar.ts             # Dynasty era conversion + universal ganzhi across all time
+│   ├── geometry.ts               # Polar geometry utilities
+│   ├── planetMansion.ts           # Planet mansion calculations
+│   ├── skyEvents.ts              # Celestial event calculations
+│   └── skyProjection.ts          # Sky coordinate projection
 ├── router/index.ts                # Routes generated from compass registry
 ├── App.vue                        # Shell: just <RouterView />
 └── main.ts                        # App entry (Vue + Pinia + Router)
@@ -266,6 +303,16 @@ For ring-specific logic (highlight levels, radius resolution, font size propagat
 import { useRingBase, useHighlight } from '@/composables/useRingBase'
 ```
 
+### Highlight levels
+
+Instead of just a boolean `highlight`, the type system now supports graded highlighting:
+- `0` / undefined: no highlight
+- `1`: weak highlight
+- `2`: medium highlight (breathing animation)
+- `3`: strong highlight (faster, more intense breathing)
+
+This allows multiple levels of highlighting (e.g., current year + current month + current day all highlighted with increasing intensity).
+
 ## Testing Strategy
 
 - **Unit tests** (Vitest) for calculation utilities — `utils/liushiJiazi.ts` and `utils/chineseCalendar.ts` are the prime targets (pure functions, easy to assert).
@@ -292,6 +339,7 @@ GitHub Pages via `npm run deploy`, which runs the production build and publishes
 - `src/components/base/RingStack.vue` — concentric auto-layout
 - `src/components/rings/DataRing.vue` — segment-oriented data→render bridge
 - `src/components/rings/DataPointRing.vue` — point-oriented data→render bridge
+- `src/composables/useTimePlayback.ts` — time playback logic extracted from Control
 - `src/views/PlanetMansionView.vue` — richest example: mixed segment + point rings
 - `src/utils/liushiJiazi.ts` — six-pillar ganzhi calculation (tyme4ts usage)
 - `README.md` / `COMPONENT_DOCUMENTATION.md` — Chinese-language project & component docs

@@ -5,19 +5,27 @@
 ## 📚 目录
 
 - [数据层](#数据层)
-  - [RingData / RingItem](#ringdata--ringitem-圆环数据契约)
+  - [类型继承体系](#类型继承体系)
+  - [RingData / RingItem](#ringdata--ringitem-段导向圆环数据契约)
+  - [PointRingData / PointItem](#pointringdata--pointitem-点导向圆环数据契约)
 - [基础组件](#基础组件)
   - [PolarCanvas](#polarcanvas-极坐标画布组件)
-  - [CircleRing](#circlering-通用圆环渲染器)
+  - [CircleRing](#circlering-通用段导向圆环渲染器)
+  - [PointRing](#pointring-通用点导向圆环渲染器)
   - [RingStack](#ringstack-同心圆环自动布局)
 - [圆环组件](#圆环组件)
-  - [DataRing](#dataring-数据驱动圆环)
+  - [DataRing](#dataring-数据驱动段圆环)
+  - [DataPointRing](#datapointring-数据驱动点圆环)
   - [DegreeScale](#degreescale-度数刻度环)
 - [天文组件](#天文组件)
   - [SolarEcliptic](#solarecliptic-黄道天体组件)
   - [TaiChi](#taichi-太极图组件)
 - [控制组件](#控制组件)
   - [Control](#control-统一控制面板)
+- [可复用 Composable](#可复用-composable)
+  - [useTimePlayback](#usetimeplayback-时间播放控制)
+  - [usePanelDrag](#usepaneldrag-面板拖拽)
+  - [useKeyboardShortcuts](#usekeyboardshortcuts-键盘快捷键)
 - [平台层](#平台层)
   - [罗盘注册表与路由](#罗盘注册表与路由)
 - [开发指南](#开发指南)
@@ -26,34 +34,61 @@
 
 ## 数据层
 
-### RingData / RingItem 圆环数据契约
+### 类型继承体系
 
-定义于 `src/data/rings/types.ts`。把「画什么」（数据）与「怎么画」（`DataRing`/`CircleRing`）、「画在哪」（`RingStack`）解耦。每个传统圆环只需提供一个 `RingData` 对象，不再各自编写近乎重复的 `.vue` 组件。
+定义于 `src/data/rings/types.ts`。项目使用类型继承消除重复代码：
+
+```
+RingItemBase (所有 item 通用)
+  ├─ RingItem (段导向分格)
+  └─ PointItem (点导向点)
+
+RingDataBase (所有环通用)
+  ├─ RingData (段导向环)
+  └─ PointRingData (点导向环)
+```
+
+**基础公共字段**（`RingItemBase`）：
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `label` | string | 标签文字 |
+| `color` | string? | 自定义颜色（缺省用环默认） |
+| `fontSize` | number? | 自定义字号 |
+| `highlight` | boolean? | 高亮（兼容旧数据） |
+| `highlightLevel` | 0 \| 1 \| 2 \| 3? | 分级高亮：0无/1弱/2中/3强（优先于 highlight） |
+
+**基础公共字段**（`RingDataBase`）：
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `startDegree` | number? | 默认起始度数偏移 |
+| `radius` | number? | 默认外半径 |
+| `innerRadius` | number? | 默认内半径 |
+| `labelColor` | string? | 标签默认颜色 |
+| `fontSize` | number? | 统一字号（item.fontSize 优先） |
+| `circleColor` | string? | 圆环边线颜色 |
+| `circleWidth` | number? | 圆环边线宽度 |
+
+---
+
+### RingData / RingItem（段导向圆环数据契约）
+
+段导向：每个条目占据一个角度区间 `[startAngle, endAngle]`。
 
 #### RingItem（单个分格）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `label` | string | 标签文字 |
-| `color` | string? | 自定义颜色（缺省用 `RingData.labelColor`） |
-| `fontSize` | number? | 自定义字号 |
-| `startAngle` | number? | 自定义起始角度（缺省按 `items` 均分 360°） |
+| `startAngle` | number? | 自定义起始角度（缺省按 items 均分 360°） |
 | `endAngle` | number? | 自定义结束角度 |
-| `highlight` | boolean? | 高亮当前格：呼吸扇形背景 + 文字脉动（默认 false） |
 
-#### RingData（一个环）
+#### RingData（一个段导向环）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `items` | RingItem[] | 该环的分格数据（必填） |
-| `startDegree` | number? | 默认起始度数偏移（可被注入覆盖） |
-| `radius` | number? | 默认外半径（单独使用时的回退值；`RingStack` 下由布局接管） |
-| `innerRadius` | number? | 默认内半径 |
-| `labelColor` | string? | 标签默认颜色 |
-| `labelPosition` | number? | 标签径向位置比例（0-1） |
-| `fontSize` | number? | 统一字号（`item.fontSize` 优先） |
-| `tickWidth` / `tickColor` | number? / string? | 刻度线宽 / 色 |
-| `circleColor` / `circleWidth` | string? / number? | 圆环边线色 / 宽 |
+| `labelPosition` | number? | 标签径向位置比例 (0-1) |
+| `tickWidth` | number? | 刻度线宽 |
+| `tickColor` | string? | 刻度线颜色 |
 | `showSectors` | boolean? | 是否显示扇形背景 |
 | `verticalTwoChar` | boolean? | 双字标签是否竖排 |
 
@@ -77,7 +112,59 @@ export const earthlyBranches: RingData = {
 }
 ```
 
-现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`earthlyBranches`、`eightGates`、`siXiang`，统一从 `src/data/rings/index.ts` 导出。
+---
+
+### PointRingData / PointItem（点导向圆环数据契约）
+
+点导向：每个条目落在**精确角度**上（如二十四节气按黄经精确到度）。
+
+#### PointItem（单个点）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `angle` | number? | 点的精确角度（缺省按 items 均分 360°） |
+| `pointSize` | number? | 点的大小（像素） |
+| `pointColor` | string? | 点的颜色（独立于标签） |
+| `pointSymbol` | `'circle' \| 'diamond' \| 'tick'`? | 点的符号形状 |
+
+#### PointRingData（一个点导向环）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `items` | PointItem[] | 该环的点数据（必填） |
+| `labelOffset` | number? | 标签径向偏移：正数向外，负数向内（相对于点位置） |
+| `labelAngleOffset` | number? | 标签角度偏移（度）：避免与刻度线重叠 |
+| `pointSize` | number? | 默认点大小 |
+| `pointColor` | string? | 默认点颜色 |
+| `pointSymbol` | `'circle' \| 'diamond' \| 'tick'`? | 默认点符号 |
+
+**符号类型**：
+| 符号 | 用途 | 说明 |
+|------|------|------|
+| `tick` | 二十四节气、度数标记 | 径向短线，从外圆向内占 25% 环厚 |
+| `circle` | 行星、标记 | 实心圆在点半径上 |
+| `diamond` | 特殊点（二分二至） | 菱形在点半径上 |
+
+#### 示例（`src/data/rings/twentyFourSolarTerms.ts` 节选）
+
+```typescript
+import type { PointRingData } from './types'
+
+export const twentyFourSolarTerms: PointRingData = {
+  radius: 460,
+  innerRadius: 440,
+  pointSymbol: 'tick',
+  labelOffset: -15,
+  labelAngleOffset: 2.5,
+  items: [
+    { label: '春分', angle: 0, pointColor: '#00ff88', highlightLevel: 3 },
+    { label: '清明', angle: 15, pointColor: '#88ddaa' },
+    // …其余节气
+  ]
+}
+```
+
+现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`earthlyBranches`、`eightGates`、`siXiang`、`seventyTwoHou`、`twelveShichen`，统一从 `src/data/rings/index.ts` 导出。
 
 ---
 
@@ -109,9 +196,9 @@ export const earthlyBranches: RingData = {
 
 ---
 
-### CircleRing 通用圆环渲染器
+### CircleRing 通用段导向圆环渲染器
 
-真正负责绘制一个圆环的组件（扇形、刻度线、标签、高亮呼吸动画），构建于 `PolarCanvas` 之上。通常不直接使用，而是经由 `DataRing` 驱动。
+真正负责绘制一个段导向圆环（扇形、刻度线、标签、高亮呼吸动画），构建于 `PolarCanvas` 之上。通常不直接使用，而是经由 `DataRing` 驱动。
 
 #### Props（节选）
 
@@ -137,9 +224,49 @@ export const earthlyBranches: RingData = {
 
 ---
 
+### PointRing 通用点导向圆环渲染器
+
+负责绘制一个点导向圆环（点标记、标签、高亮呼吸动画），构建于 `PolarCanvas` 之上。通常不直接使用，而是经由 `DataPointRing` 驱动。
+
+点导向适用于：**二十四节气（精确黄经点）**、**二十八宿距星（精确赤经点）**、**七曜（日月五星）** 等本质是点而非区间的数据。
+
+#### Props
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `radius` | number | — | 点所在半径（必填） |
+| `innerRadius` | number | 0 | 内半径（用于画内边界圆，0=不画） |
+| `items` | PointItem[] | — | 点数据 |
+| `showLabels` | boolean | true | 显示标签文字 |
+| `labelColor` | string | 'white' | 标签默认色 |
+| `labelOffset` | number | 15 | 标签径向偏移：+向外 / -向内 |
+| `labelAngleOffset` | number | 0 | 标签角度偏移（度），避免与刻度重叠 |
+| `showPoints` | boolean | true | 显示点标记 |
+| `pointSize` | number | 4 | 默认点大小 |
+| `pointColor` | string | '#ffffff' | 默认点颜色 |
+| `pointSymbol` | 'circle' \| 'diamond' \| 'tick' | 'circle' | 默认点符号 |
+| `showCircle` | boolean | true | 显示圆环边线 |
+| `circleWidth` | number | 1 | 圆环边线宽 |
+| `circleColor` | string | '#888888' | 圆环边线颜色 |
+| `rotation` | number | 0 | 整体旋转角度 |
+| `enableAnimation` | boolean | false | 自动旋转动画 |
+| `animationSpeed` | number | 0.5 | 动画速度 |
+| `startDegree` | number | 0 | 起始度数偏移 |
+| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向 |
+
+#### 高亮
+
+分级高亮对应不同呼吸动画强度：
+- `highlightLevel >= 2` → 呼吸动画
+- `highlightLevel >= 3` → 更快更强的呼吸动画
+
+---
+
 ### RingStack 同心圆环自动布局
 
 解决「半径手动写死、叠加易重叠」的问题。声明 `outerRadius` 和每个环的径向厚度 `thickness`，容器从外向内自动累加分配 `radius` / `innerRadius`，并统一注入旋转方向。本组件输出一个 `<g>`，沿用项目约定由父级 `<g transform>` 定位。
+
+支持**段导向**和**点导向**两种圆环。
 
 #### Props
 
@@ -165,17 +292,17 @@ export const earthlyBranches: RingData = {
 <script setup lang="ts">
 import { markRaw } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
-import DataRing from '@/components/rings/DataRing.vue'
-import DegreeScale from '@/components/rings/DegreeScale.vue'
+import DataRing from '@/components/rings/DataRing'
+import DataPointRing from '@/components/rings/DataPointRing'
+import DegreeScale from '@/components/rings/DegreeScale'
 import { twentyFourSolarTerms, sixtyJiazi, sixtyJiaziNayin } from '@/data/rings'
 
-const DataRingComp = markRaw(DataRing)
 const rings = [
   { component: markRaw(DegreeScale), thickness: 20, props: { scaleInterval: 6, showSectors: true } },
-  { component: DataRingComp, thickness: 24, props: { data: twentyFourSolarTerms } },
-  { component: DataRingComp, thickness: 30, props: { data: sixtyJiazi } },
+  { component: markRaw(DataPointRing), thickness: 20, props: { data: twentyFourSolarTerms } },
+  { component: markRaw(DataRing), thickness: 30, props: { data: sixtyJiazi } },
   // 纳音紧贴六十甲子内侧
-  { component: DataRingComp, thickness: 26, gapBefore: 0, props: { data: sixtyJiaziNayin } },
+  { component: markRaw(DataRing), thickness: 26, gapBefore: 0, props: { data: sixtyJiaziNayin } },
 ]
 </script>
 
@@ -192,7 +319,7 @@ const rings = [
 
 ## 圆环组件
 
-### DataRing 数据驱动圆环
+### DataRing 数据驱动段圆环
 
 接收一个 `RingData`，通过 `CircleRing` 渲染。取代了过去十余个近乎重复的传统圆环组件。布局参数由 `RingStack` 注入并覆盖数据中的默认值。
 
@@ -208,6 +335,26 @@ const rings = [
 
 ```vue
 <DataRing :data="earthlyBranches" :radius="280" :inner-radius="252" />
+```
+
+---
+
+### DataPointRing 数据驱动点圆环
+
+接收一个 `PointRingData`，通过 `PointRing` 渲染。使用 `useRingBase` 与 `DataRing` 共享基础逻辑，消除重复代码。
+
+#### Props
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `data` | PointRingData | — | 点圆环数据（必填） |
+| `radius` | number? | `data.radius ?? 200` | 外半径（`RingStack` 注入） |
+| `innerRadius` | number? | `data.innerRadius ?? 0` | 内半径（`RingStack` 注入） |
+| `startDegree` | number? | `data.startDegree ?? 0` | 起始度数 |
+| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向（`RingStack` 注入） |
+
+```vue
+<DataPointRing :data="twentyFourSolarTerms" :radius="460" :inner-radius="440" />
 ```
 
 ---
@@ -250,7 +397,7 @@ const rings = [
 | 90 | 4 | 四象 |
 | 45 | 8 | 八卦 |
 | 36 | 10 | 十天干 |
-| 30 | 12 | 十二地支 / 时辰 |
+| 30 | 12 | 十二地支 / 十二时辰 |
 | 15 | 24 | 二十四节气 |
 | 6 | 60 | 六十甲子 |
 | 5 | 72 | 七十二候 |
@@ -330,13 +477,21 @@ const rings = [
 
 集成时间、缩放、平移、旋转控制，提供键盘快捷键。所有状态通过 `v-model` 与视图双向绑定。
 
+**最近更新**（commit 9e53e8f / c33f550）：
+- 新增**三条时间线显示**：公历日期 → 朝代信息 → 干支年月日时
+- 支持显示农历和节气
+- 支持公元前年份输入
+- 可折叠模块，状态持久化到 localStorage
+- 面板可拖拽，位置记忆
+- 核心逻辑抽取为三个可复用 composable
+
 #### Props（均通过 v-model 绑定）
 
 | 属性 | 类型 | 说明 |
 |------|------|------|
 | `modelValue` | Date | 当前时间（`v-model`） |
 | `zoom` | number | 缩放级别（`v-model:zoom`） |
-| `offsetX` / `offsetY` | number | 平移偏移（`v-model:offsetX` / `offsetY`） |
+| `offsetX` / `offsetY` | number | 平移偏移（`v-model:offsetX` / `v-model:offsetY`） |
 | `rotationDirection` | 'clockwise' \| 'counterclockwise' | 旋转方向（`v-model:rotation-direction`） |
 | `rotationAngle` | number | 旋转角度（`v-model:rotation-angle`） |
 
@@ -350,13 +505,19 @@ const rings = [
 |--------|------|
 | `空格` | 播放 / 暂停 |
 | `R` | 重置到当前时间 |
-| `H` / `⇧H` | +1 / -1 小时 |
-| `D` / `⇧D` | +1 / -1 天 |
-| `M` / `⇧M` | +1 / -1 月 |
 | `Y` / `⇧Y` | +1 / -1 年 |
+| `M` / `⇧M` | +1 / -1 月 |
+| `D` / `⇧D` | +1 / -1 天 |
+| `H` / `⇧H` | +1 / -1 小时 |
+| `N` / `⇧N` | +1 / -1 分 |
+| `S` / `⇧S` | +1 / -1 秒 |
 | `+` / `-` / `0` | 放大 / 缩小 / 重置缩放 |
+| `5`/`6`/`7`/`8`/`9` | 缩放到 50%/75%/100%/125%/150% |
 | `方向键` | 平移视图 |
-| `Delete` | 重置平移 |
+| `Delete` / `Backspace` | 重置平移 |
+| `C` | 切换旋转方向 |
+| `Q` / `E` | 左转 90° / 右转 90° |
+| `W` | 重置旋转角度 |
 
 #### 使用示例
 
@@ -389,6 +550,82 @@ const rotationAngle = ref(0)
     v-model:rotation-angle="rotationAngle"
   />
 </template>
+```
+
+---
+
+## 可复用 Composable
+
+### useTimePlayback 时间播放控制
+
+从 `Control.vue` 抽出的可复用时间播放逻辑：当前时间状态、播放/暂停、倍速推进、步进、重置到现在。
+
+```typescript
+import { useTimePlayback } from '@/composables/useTimePlayback'
+
+const {
+  currentTime,       // 当前时间 ref
+  isPlaying,         // 是否播放 ref
+  playSpeed,         // 播放速度 ref
+  updateTime,        // 更新时间函数
+  play,              // 开始播放
+  pause,             // 暂停
+  togglePlayPause,   // 切换播放/暂停
+  resetToNow,        // 重置到当前时间
+  updatePlaySpeed,   // 更新播放速度（重启动画）
+  stepTime,          // 步进指定秒数
+  stepMonth,         // 步进指定月份
+  stepYear           // 步进指定年份
+} = useTimePlayback((t: Date) => {
+  // 时间变化回调
+  console.log('Time changed:', t)
+})
+```
+
+### usePanelDrag 面板拖拽
+
+从 `Control.vue` 抽出的面板拖拽逻辑：支持标题栏拖拽、边界约束（面板保持在视口内）、位置持久化到 localStorage。
+
+```typescript
+import { usePanelDrag } from '@/composables/usePanelDrag'
+
+const {
+  isDragging,        // 是否正在拖拽
+  panelPositionX,    // 面板 X 偏移（right = 20 - X）
+  panelPositionY,    // 面板 Y 偏移（top = 20 + Y）
+  handleMouseDown,   // mousedown 事件处理
+  handleResize,      // 窗口 resize 处理
+  clampPanelPosition // 重新约束面板位置到视口内
+} = usePanelDrag()
+```
+
+### useKeyboardShortcuts 键盘快捷键
+
+从 `Control.vue` 抽出的全局键盘快捷键绑定：自动忽略输入框聚焦时的按键。
+
+```typescript
+import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+
+useKeyboardShortcuts({
+  togglePlayPause,
+  resetToNow,
+  stepYear,
+  stepMonth,
+  stepTime,
+  zoomIn,
+  zoomOut,
+  resetZoom,
+  setZoom,
+  moveUp,
+  moveDown,
+  moveLeft,
+  moveRight,
+  resetOffset,
+  toggleRotationDirection,
+  rotateLeft,
+  rotateRight,
+  resetRotationAngle
+})
 ```
 
 ---
@@ -428,11 +665,17 @@ export const compasses: CompassMeta[] = [
 
 ## 开发指南
 
-### 新增一个数据驱动圆环
+### 新增一个段导向数据驱动圆环
 
 1. 在 `src/data/rings/myRing.ts` 导出 `RingData`（必填 `items`，样式字段可选）。
 2. 在 `src/data/rings/index.ts` 重新导出。
 3. 在视图的 `RingStack` 配置加一项：`{ component: markRaw(DataRing), thickness: N, props: { data: myRing } }`。
+
+### 新增一个点导向数据驱动圆环
+
+1. 在 `src/data/rings/myRing.ts` 导出 `PointRingData`（必填 `items`，每个点指定 `angle`，样式字段可选）。
+2. 在 `src/data/rings/index.ts` 重新导出。
+3. 在视图的 `RingStack` 配置加一项：`{ component: markRaw(DataPointRing), thickness: N, props: { data: myRing } }`。
 
 ### 新增一个罗盘页面
 
