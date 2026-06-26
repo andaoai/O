@@ -9,14 +9,14 @@
 一张完整的天文盘面，由外到内叠加多层同心圆环：
 
 - **📏 360 度刻度尺** — 可配置间隔的角度刻度（DegreeScale）
-- **🌱 二十四节气** — 二十四节气分布
+- **🌱 二十四节气** — 二十四节气分布（时间驱动高亮）
 - **⭐ 二十八星宿** — 四象七宿：东方青龙、北方玄武、西方白虎、南方朱雀
-- **🀄 六十甲子** — 干支纪元
+- **🀄 六十甲子** — 干支纪元（时间驱动年柱高亮 + 五行配色）
 - **🌊 五行纳音** — 与六十甲子同源同转，紧贴其内侧
 - **🌿 十天干** — 甲乙丙丁戊己庚辛壬癸
 - **🕳️ 天干空亡** — 旬空标记
 - **♻️ 十二长生** — 长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养
-- **🐲 十二地支** — 子丑寅卯辰巳午未申酉戌亥
+- **🐲 十二地支** — 子丑寅卯辰巳午未申酉戌亥（时间驱动年支高亮）
 - **🚪 八门** — 奇门八门
 - **🐉 四象** — 青龙、朱雀、白虎、玄武
 - **☀️ 太阳黄道** — 基于 astronomy-engine 的精确太阳位置（中心区）
@@ -32,9 +32,10 @@
 
 - **🌞 太阳**沿黄道运行，**🌝 月亮**沿白道运行
 - **⭐ 五星**（金木水火土）各自按轨道运行
-- **🌱 二十四节气**外环（点导向圆环，精确黄经点）
+- **🌱 二十四节气**外环（点导向圆环，精确黄经→赤经动态转换）
 - **📏 360° 赤经刻度**
-- **四象动态合并**按二十八宿赤经范围自动合并定位（commit 2ce7ff1）
+- **四象动态合并**按二十八宿赤经范围自动合并定位
+- **七曜入宿度标记**实时显示每曜所在宿及度数
 - 所有天体跟随时间动态更新位置，实时显示当前入宿
 
 ### 🔯 先天六十四卦盘（sixty-four-gua）
@@ -46,58 +47,115 @@
 - 显示**卦符**、**卦名**与**六爻爻象**三层信息
 - 64 卦分六段圆环由外到内层层排列
 
-## 🏗️ 架构
+---
 
-本项目从早期「每个圆环一个 .vue 组件」的写法，重构为 **数据驱动 + 多页面路由** 架构，再演进为**段导向 + 点导向**双类型基础。理解这几个关键支点：
+## 🏗️ 五层架构设计
 
-### 1. 罗盘注册表 → 路由（多页面）
+### 核心设计原则：单一数据源 + 单向数据流 + 关注点分离
 
-`src/compasses/index.ts` 是唯一的注册表。首页网格和路由都从这个数组读取：
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Layer 1: State Layer (状态层)                                │
+│  └─ controlledTime = ref<Date>() — 整个系统唯一真理源         │
+└────────────────────────────────────┬────────────────────────┘
+                                     │
+┌────────────────────────────────────┴────────────────────────┐
+│  Layer 2: Composition Layer (组合层)                          │
+│  └─ Views: 持有状态，编排组件，通过 RingStack 布局             │
+│     AstronomyView, LiushiJiaziView, PlanetMansionView        │
+└────────────────────────────────────┬────────────────────────┘
+                                     │
+┌────────────────────────────────────┴────────────────────────┐
+│  Layer 3: Domain Component Layer (领域组件层)                 │
+│  └─ 时间驱动专用环：SixtyJiaziRing, ConstellationsRing,      │
+│     SolarTermsSkyRing, SevenLuminariesRing, 共 9 个组件       │
+└────────────────────────────────────┬────────────────────────┘
+                                     │
+┌────────────────────────────────────┴────────────────────────┐
+│  Layer 4: Base Render Layer (基础渲染层)                      │
+│  ├─ Data Wrappers: DataRing, DataPointRing, DataBodyRing    │
+│  ├─ Base Renderers: CircleRing, PointRing                    │
+│  └─ Layout Container: RingStack, PolarCanvas                 │
+└────────────────────────────────────┬────────────────────────┘
+                                     │
+┌────────────────────────────────────┴────────────────────────┐
+│  Layer 5: Utility Layer (工具层)                              │
+│  └─ Pure Functions: liushiJiazi, celestial, geometry,        │
+│     planetMansion, skyProjection, skyEvents, eraCalendar     │
+└──────────────────────────────────────────────────────────────┘
+```
 
-- `src/views/HomeView.vue` 为每个注册项渲染一张卡片。
-- `src/router/index.ts` 据此生成 `/compass/:id` 路由，`/` 为首页，并有兜底重定向。
+---
 
-> **新增一个罗盘 = 新建 `src/views/XxxView.vue` + 在 `compasses` 数组加一项。** 无需改动路由。
+### Layer 1: State Layer (状态层)
+**核心原则：唯一真理源 (Single Source of Truth)**
 
-### 2. 两种圆环类型：段导向（CircleRing）vs 点导向（PointRing）
+整个系统只有一个 `controlledTime = ref<Date>()` 作为时间状态，所有时间驱动组件均派生自此。无全局状态管理（Pinia 已安装但未使用），状态在视图内局部持有，`Control` 面板通过 `v-model` 双向绑定修改。
 
-有两种根本不同的圆环类型，各有数据模型和渲染器：
+### Layer 2: Composition Layer (组合层)
+**核心原则：纯组合编排，无业务逻辑**
 
-| 类型 | 用途 | 数据模型 | 组件 |
-|------|------|----------|------|
-| **段导向** | 每个条目占角度区间（如六十甲子、十二地支） | `RingData` → `RingItem[]` | `CircleRing` |
-| **点导向** | 每个条目在精确角度上（如二十四节气、七曜） | `PointRingData` → `PointItem[]` | `PointRing` |
+View 层只负责：
+- 持有状态（controlledTime, zoom, offset, rotation）
+- 通过 RingStack 进行同心环自动布局
+- 将 `time` ref 向下传递给所有子组件
+- 不进行任何数据转换或计算
 
-两种类型共享 `useRingBase` composable 的基础逻辑。
+**架构正确性：**
+- ✅ View 层没有任何 `ringData` computed
+- ✅ View 层只传 `time: controlledTime`，不解构 `.value`
+- ✅ 所有计算逻辑下沉到 Layer 3 或 Layer 5
 
-### 3. 数据驱动圆环（DataRing + DataPointRing）
+### Layer 3: Domain Component Layer (领域组件层)
+**核心原则：时间驱动统一范式**
 
-传统圆环不再是各自独立的组件：
+所有时间驱动环严格遵循以下三行代码范式：
 
-- `src/data/rings/*.ts` — 每个文件导出对应数据对象（`items` + 样式默认值）。
-- `src/components/rings/DataRing.vue` — 通用段导向组件，接收 `RingData` 后通过 `CircleRing` 渲染。
-- `src/components/rings/DataPointRing.vue` — 通用点导向组件，接收 `PointRingData` 后通过 `PointRing` 渲染。
-- `src/components/base/CircleRing.vue` / `PointRing.vue` — 真正的 SVG 圆环渲染器。
+```typescript
+// 1. Props 声明 MaybeRef<Date>，支持 ref 和 plain value
+interface Props { time?: MaybeRef<Date>, /* ... */ }
 
-这套机制取代了过去的 `EarthlyBranches.vue`、`SiXiang.vue`、`SixtyJiazi.vue` 等组件——这些组件文件已不存在，其内容现在以数据形式存放在 `src/data/rings/`。
+// 2. 统一转换为 computed timeRef，保证响应式链完整
+const timeRef = computed(() => unref(props.time) ?? new Date())
 
-### 4. 同心圆环自动布局（RingStack）
+// 3. 所有业务逻辑 100% 派生自 timeRef
+const ringData = computed(() => transform(timeRef.value))
+```
 
-`src/components/base/RingStack.vue` 让调用方只声明 `outerRadius` 和每个环的「径向厚度」`thickness`，容器从外向内自动累加分配各环的 `radius` / `innerRadius`，叠加时永不重叠，并统一注入旋转方向。支持两种类型的圆环。
+**范式设计意图：**
+- ✅ **响应式链完整**：无论父组件传 ref 还是 plain value，子组件始终响应式
+- ✅ **单向数据流**：数据自上而下流动，无 emit 回传
+- ✅ **依赖追踪自动化**：computed 自动追踪依赖，无需 watch
+- ✅ **可测试性**：组件纯函数式，输入 time → 输出 ringData
 
-### 5. 控制面板重构（三个可复用 composable）
+### Layer 4: Base Render Layer (基础渲染层)
+**核心原则：纯渲染，无业务逻辑**
 
-`Control.vue` 已拆分为三个可复用 composable（commit c33f550）：
+**四层渲染管道：**
+```
+RingData ──► DataRing ──► CircleRing ──► PolarCanvas
+PointRingData ──► DataPointRing ──► PointRing ──► PolarCanvas
+BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
+```
 
-- `useTimePlayback` — 时间播放控制：播放/暂停、倍速、步进、重置到现在
-- `usePanelDrag` — 面板拖拽 + localStorage 位置记忆
-- `useKeyboardShortcuts` — 全局键盘快捷键，输入框聚焦时自动忽略
+### Layer 5: Utility Layer (工具层)
+**核心原则：纯函数，无副作用，独立可测试**
 
-控制面板新增功能：
-- 可折叠模块，折叠状态持久化
-- **三条时间线**：公历 → 朝代 → 干支，完整展示时间信息
-- 农历日期和节气显示
-- 支持公元前年份输入
+所有工具函数满足：相同输入始终产生相同输出，不依赖外部状态，不修改输入参数，可独立单元测试。
+
+---
+
+## 三态圆环分类系统
+
+| 维度 | 段环 (Segment) | 点环 (Point) | 体环 (Body) |
+|------|---------------|-------------|------------|
+| 数据特征 | 角度范围 `[start, end]` | 精确角度 `angle` | 动态天体属性 |
+| 渲染方式 | 扇形填充 + 边界刻度 | 点符号 + 径向短线 | 光晕 + 符号 + 标记 |
+| 典型用例 | 六十甲子、十二地支、二十八宿 | 二十四节气、赤经刻度 | 日月五星、恒星 |
+| 数据模型 | `RingItem[]` | `PointItem[]` | `BodyItem[]` |
+| 高亮体系 | 三级呼吸高亮 | 三级高亮 | 事件驱动高亮 |
+
+---
 
 ## 🎮 盘面层次结构
 
@@ -106,14 +164,14 @@
 
 ┌────────────────────────────────────────────┐
 │ 📏 360 度刻度尺           DegreeScale         │
-│ 🌱 二十四节气             DataPointRing      │
+│ 🌱 二十四节气             SolarTermsRing      │
 │ ⭐ 二十八星宿             DataRing            │
-│ 🀄 六十甲子               DataRing            │
+│ 🀄 六十甲子               SixtyJiaziRing      │
 │ 🌊 五行纳音               DataRing（紧贴甲子）│
 │ 🌿 十天干                 DataRing            │
 │ 🕳️ 天干空亡               DataRing            │
 │ ♻️ 十二长生               DataRing            │
-│ 🐲 十二地支               DataRing            │
+│ 🐲 十二地支               BranchesRing        │
 │ 🚪 八门                   DataRing            │
 │ 🐉 四象                   DataRing            │
 │ ☀️ 太阳黄道（中心区）     SolarEcliptic       │
@@ -132,6 +190,8 @@
 
 > 注：`SolarEcliptic` 与 `TaiChi` 的位置由 `time` 驱动（天文/时钟），天文盘面刻意不对它们施加整体旋转动画——否则按时间定位的天体会绕中心乱转。
 
+---
+
 ## 🛠️ 技术栈
 
 - **Vue 3.5** — Composition API（`<script setup>`）
@@ -142,6 +202,8 @@
 - **astronomy-engine 2.1** — 高精度天文计算
 - **tyme4ts 1.3** — 中华传统历法 / 干支计算
 - **SVG + CSS3** — 矢量绘制与动画
+
+---
 
 ## 🚀 快速开始
 
@@ -158,47 +220,58 @@ npm run build    # 生产构建（含类型检查）
 npm run preview  # 预览构建产物
 ```
 
+---
+
 ## 📦 项目结构
 
 ```
 src/
 ├── compasses/index.ts             # 罗盘注册表（驱动首页 + 路由）
-├── views/
+├── views/                         # Layer 2: Composition Layer
 │   ├── HomeView.vue               # 首页：罗盘卡片网格
 │   ├── AstronomyView.vue          # 中华天文圆环
 │   ├── LiushiJiaziView.vue        # 六十甲子六环
 │   ├── PlanetMansionView.vue      # 七曜入宿天象盘
 │   └── SixtyFourGuaView.vue       # 先天六十四卦盘
 ├── components/
-│   ├── base/
+│   ├── base/                       # Layer 4: Base Render Layer
 │   │   ├── PolarCanvas.vue         # 极坐标画布基础组件
 │   │   ├── CircleRing.vue          # 通用段导向 SVG 圆环渲染器
 │   │   ├── PointRing.vue           # 通用点导向 SVG 圆环渲染器
 │   │   └── RingStack.vue           # 同心圆环自动布局容器
-│   ├── rings/
-│   │   ├── DataRing.vue            # 数据驱动段圆环（RingData → CircleRing）
-│   │   ├── DataPointRing.vue       # 数据驱动点圆环（PointRingData → PointRing）
+│   ├── rings/                       # Layer 3: Domain Component Layer
+│   │   ├── DataRing.vue            # Data Wrapper: RingData → CircleRing
+│   │   ├── DataPointRing.vue       # Data Wrapper: PointRingData → PointRing
+│   │   ├── DataBodyRing.vue        # Data Wrapper: BodyRingData → BodyMarker
 │   │   ├── DegreeScale.vue         # 度数刻度环（按间隔生成）
 │   │   ├── GuaRing.vue             # 六十四卦特殊圆环
-│   │   └── PlanetDegreeRing.vue   # 七曜度数环
+│   │   ├── MansionDegreeRing.vue   # 七曜入宿度标记环
+│   │   ├── SixtyJiaziRing.vue      # 六十甲子时间驱动
+│   │   ├── BranchesRing.vue        # 十二地支时间驱动
+│   │   ├── StemsRing.vue           # 天干空亡时间驱动
+│   │   ├── ConstellationsRing.vue  # 二十八宿动态赤经
+│   │   ├── SiXiangRing.vue         # 四象动态赤经合并
+│   │   ├── SolarTermsRing.vue      # 二十四节气传统罗盘版
+│   │   ├── SolarTermsSkyRing.vue   # 二十四节气天星赤经版
+│   │   └── SevenLuminariesRing.vue # 七曜天体位置计算
 │   ├── celestial/                  # 天体可视化组件
-│   │   ├── BodyMarker.vue          # 天体标记
+│   │   ├── BodyMarker.vue          # 天体标记（光晕 + 符号 + 逆行指示）
 │   │   ├── CelestialBody.vue       # 天体容器
 │   │   ├── EclipticCircle.vue      # 黄道圈
 │   │   └── LunarOrbit.vue          # 白道轨道
-│   ├── HelioOrbits.vue             # 日行轨道
-│   ├── SkyChart.vue                # 全天投影图
-│   ├── SolarEcliptic.vue          # 太阳黄道（astronomy-engine）
-│   ├── TaiChi.vue                 # 时间驱动的太极图
+│   ├── HelioOrbits.vue             # 日行轨道（日心视角）
+│   ├── SkyChart.vue                # 全天投影图（赤道+黄道+白道+七曜）
+│   ├── SolarEcliptic.vue          # 太阳黄道位置
+│   ├── TaiChi.vue                 # 时间驱动的太极阴阳鱼
 │   └── Control.vue                # 统一控制面板
-├── data/rings/                    # 圆环数据（每个文件一个环）
+├── data/rings/                    # 静态圆环数据
 │   ├── types.ts                   # 类型系统：
 │   │                              #  RingItemBase → RingItem / PointItem
 │   │                              #  RingDataBase → RingData / PointRingData
 │   ├── index.ts                   # 统一导出
 │   ├── twentyFourSolarTerms.ts    # 二十四节气（点导向）
-│   ├── twentyEightConstellations.ts # 二十八星宿
-│   ├── sixtyJiazi.ts              # 六十甲子
+│   ├── twentyEightConstellations.ts # 二十八星宿数据
+│   ├── sixtyJiazi.ts              # 六十甲子基础数据
 │   ├── sixtyJiaziNayin.ts         # 五行纳音
 │   ├── heavenlyStems.ts           # 十天干
 │   ├── tianganKongwang.ts         # 天干空亡
@@ -209,24 +282,27 @@ src/
 │   ├── seventyTwoHou.ts          # 七十二候
 │   └── twelveShichen.ts           # 十二时辰
 ├── composables/
-│   ├── useAnimation.ts            # 动画控制 composable
-│   ├── useRingBase.ts             # 所有圆环共享基础逻辑
-│   ├── useTimePlayback.ts         # 时间播放（从 Control 抽出）
+│   ├── useAnimation.ts            # 动画控制
+│   ├── useRingBase.ts             # Layer 4 基础：所有圆环共享逻辑
+│   ├── useSevenLuminaries.ts      # 七曜统一计算
+│   ├── useTimePlayback.ts         # 时间播放控制（从 Control 抽出）
 │   ├── usePanelDrag.ts            # 面板拖拽（从 Control 抽出）
 │   └── useKeyboardShortcuts.ts    # 键盘快捷键（从 Control 抽出）
-├── utils/
+├── utils/                          # Layer 5: Utility Layer（纯函数）
 │   ├── chineseCalendar.ts         # 农历工具（tyme4ts）
-│   ├── liushiJiazi.ts             # 六柱六十甲子序号计算（tyme4ts）
+│   ├── liushiJiazi.ts             # 六柱六十甲子序号计算
 │   ├── celestial.ts               # 天体坐标计算
 │   ├── eraCalendar.ts             # 朝代纪年转换 + 跨全时域干支
 │   ├── geometry.ts               # 极坐标几何工具
 │   ├── planetMansion.ts           # 七曜入宿计算
-│   ├── skyEvents.ts              # 天体会合事件计算
+│   ├── skyEvents.ts              # 天体会合事件分级计算
 │   └── skyProjection.ts          # 天球坐标投影
 ├── router/index.ts                # 由注册表生成的路由
 ├── App.vue                        # 外壳：仅 <RouterView />
 └── main.ts                        # 入口（Vue + Pinia + Router）
 ```
+
+---
 
 ## 🧩 如何扩展
 
@@ -236,17 +312,60 @@ src/
 2. 在 `src/compasses/index.ts` 的 `compasses` 数组追加一项（唯一 `id`、`name`、`description`、`category`、懒加载 `component`）。
 3. 首页卡片与 `/compass/:id` 路由自动出现。
 
-### 新增一个段导向数据驱动圆环
+### 新增一个时间驱动环（推荐用 `/generate-ring` 技能）
 
-1. 新建 `src/data/rings/myRing.ts` 导出 `RingData`（必填 `items`，样式字段可选），并在 `src/data/rings/index.ts` 中重新导出。
-2. 在视图的 `RingStack` 配置里加一项：`{ component: markRaw(DataRing), thickness: N, props: { data: myRing } }`。
+1. **选择类型**: Segment / Point / Body
+2. **创建组件**: `src/components/rings/XxxRing.vue`，遵循「三行范式」
+3. **提取工具逻辑**: 复杂计算下沉到 `utils/xxx.ts` 纯函数
+4. **集成到视图**: 在 RingStack 配置中加入，只传 `time: controlledTime`
 
-### 新增一个点导向数据驱动圆环
+**标准骨架：**
+```typescript
+<script setup lang="ts">
+import { computed, unref, type MaybeRef } from 'vue'
+import DataRing from './DataRing.vue'
 
-1. 新建 `src/data/rings/myRing.ts` 导出 `PointRingData`（必填 `items`，每个点要有 `angle`，样式字段可选），并在 `src/data/rings/index.ts` 中重新导出。
-2. 在视图的 `RingStack` 配置里加一项：`{ component: markRaw(DataPointRing), thickness: N, props: { data: myRing } }`。
+interface Props {
+  time?: MaybeRef<Date>
+  radius?: number
+  innerRadius?: number
+  startDegree?: number
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  radius: 200, innerRadius: 180, startDegree: 0, rotationDirection: 'clockwise'
+})
+
+// ⚠️ 范式：统一转换为响应式 timeRef
+const timeRef = computed(() => unref(props.time) ?? new Date())
+
+// ⚠️ 范式：所有逻辑派生自 timeRef
+const ringData = computed(() => {
+  const time = timeRef.value
+  // ... 你的计算逻辑
+  return { items: [] }
+})
+</script>
+```
+
+### 新增一个静态数据驱动环
+
+```typescript
+// src/data/rings/myRing.ts
+export const myRing: RingData = {
+  radius: 400,
+  innerRadius: 380,
+  items: [{ label: 'Item 1', startAngle: 0, endAngle: 30 }]
+}
+
+// 在视图中集成
+{ component: markRaw(DataRing), thickness: 20, props: { data: myRing } }
+```
 
 详细组件 API 见 [COMPONENT_DOCUMENTATION.md](COMPONENT_DOCUMENTATION.md)。
+
+---
 
 ## 🧪 测试与质量
 
@@ -258,14 +377,7 @@ npm run test:unit    # Vitest 单元测试
 npm run test:e2e     # Playwright 端到端测试
 ```
 
-E2E 相关：
-
-```sh
-npx playwright install                       # 首次安装浏览器
-npm run test:e2e -- --project=chromium       # 指定浏览器
-npm run test:e2e -- tests/example.spec.ts    # 指定文件
-npm run test:e2e -- --debug                  # 调试模式
-```
+---
 
 ## 🚢 部署
 
@@ -275,7 +387,9 @@ GitHub Pages：
 npm run deploy   # 构建并发布 dist/ 到 gh-pages 分支
 ```
 
-该命令执行生产构建，再将 `dist/` 推送到 `gh-pages` 分支，由 GitHub Actions（`.github/workflows/`）自动部署。
+该命令执行生产构建，再将 `dist/` 推送到 `gh-pages` 分支，由 GitHub Actions 自动部署。
+
+---
 
 ## 🌍 浏览器支持
 
@@ -283,9 +397,13 @@ npm run deploy   # 构建并发布 dist/ 到 gh-pages 分支
 - Firefox ≥ 85
 - Safari ≥ 14
 
+---
+
 ## 🤝 贡献
 
 欢迎提交 Issue 和 Pull Request。
+
+---
 
 ## 📄 许可证
 
