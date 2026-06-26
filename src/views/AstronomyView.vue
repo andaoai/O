@@ -5,10 +5,11 @@ import BranchesRing from '../components/rings/BranchesRing.vue'
 import SolarTermsRing from '../components/rings/SolarTermsRing.vue'
 import DataRing from '../components/rings/DataRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
-import SolarEcliptic from '../components/SolarEcliptic.vue'
-import TaiChi from '../components/TaiChi.vue'
+import SolarEcliptic from '../components/centers/SolarEcliptic.vue'
+import TaiChi from '../components/centers/TaiChi.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
+import BaseCenter from '../components/base/BaseCenter.vue'
 import {
   twentyEightConstellations,
   sixtyJiaziNayin,
@@ -115,30 +116,60 @@ const rings = [
       viewBox="0 0 1200 1200"
     >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+        <!-- ═══════════════════════════════════════════════════════════════
+             🔑 五层架构 · 圆环 + 圆心 二分规范 【范例】
+             ──────────────────────────────────────────────────────────────
+             【圆环区】rings 数组：12 个同心环，RingStack 自动布局
+             【圆心区】#center slot：自动暴露 innerRadius，零手动配置
 
-        <!-- 同心圆环带：由外到内自动布局，不重叠 -->
+             架构分层：
+               1. 外环：DegreeScale (360° 刻度)
+               2. 中环：SolarTermsRing → ConstellationsRing → SixtyJiaziRing
+                         NayinRing → HeavenlyStemsRing → ...
+               3. 内环：SiXiangRing (四象)
+               4. 圆心：#center slot (SolarEcliptic + TaiChi 自动嵌套)
+
+             设计亮点：
+               ✅ 所有圆环半径 100% 自动计算，永不重叠
+               ✅ 圆心组件自动接收 innerRadius 并自适应缩放
+               ✅ 单一时间源 controlledTime 贯穿全链路
+               ✅ 圆心可多层嵌套（黄道环包裹太极）
+             ═══════════════════════════════════════════════════════════════ -->
         <RingStack
           :outer-radius="480"
           :gap="2"
           :rings="rings"
           :rotation-direction="rotationDirection"
-        />
-
-        <!-- 太阳黄道圆环（中心区 · ✅ 时间驱动） -->
-        <SolarEcliptic
-          :radius="150"
-          :time="controlledTime"
-          :enable-animation="false"
-          :show-sun-label="true"
-          :rotation-direction="rotationDirection"
-        />
-
-        <!-- 太极图（中心 · ✅ 时间驱动） -->
-        <TaiChi
-          :radius="80"
-          :time="controlledTime"
-          :rotation-direction="rotationDirection"
-        />
+        >
+          <!-- 🔹 圆心区：自动接收最内环的 innerRadius
+               使用 BaseCenter 统一管理：安全边距 + 自动缩放 + 插槽分发 -->
+          <template #center="{ innerRadius }">
+            <BaseCenter
+              :radius="innerRadius"
+              :scale="0.85"
+              :time="controlledTime"
+              :rotation-direction="rotationDirection"
+            >
+              <!-- 插槽内容接收 actualRadius 自动适配 -->
+              <template #default="{ actualRadius, time }">
+                <!-- 太阳黄道圆环（圆心外层 · 占满整个圆心区） -->
+                <SolarEcliptic
+                  :radius="actualRadius"
+                  :time="time"
+                  :enable-animation="false"
+                  :show-sun-label="true"
+                  :rotation-direction="rotationDirection"
+                />
+                <!-- 太极图（圆心内层 · 占圆心区的 50%） -->
+                <TaiChi
+                  :radius="actualRadius * 0.53"
+                  :time="time"
+                  :rotation-direction="rotationDirection"
+                />
+              </template>
+            </BaseCenter>
+          </template>
+        </RingStack>
       </g>
     </svg>
 

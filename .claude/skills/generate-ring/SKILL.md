@@ -1,6 +1,6 @@
 ---
 name: generate-ring
-description: 按照罗盘平台统一时间驱动架构规范，智能生成新环组件（段环/点环/体环/静态环），包含架构分析、代码模板化生成、25项架构合规检查
+description: 按照罗盘平台统一时间驱动架构规范，智能生成新组件（段环/点环/体环/静态环/圆心组件），包含架构分析、代码模板化生成、30项架构合规检查
 allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 ---
 
@@ -16,14 +16,16 @@ allowed-tools: Read, Write, Edit, Grep, Glob, Bash
 - 添加干支/五行/纳音相关环
 - 添加其他时间驱动的可视化环
 
-## 🔹 环类型判定矩阵
+## 🔹 组件类型判定矩阵
 
-| 特征 | 段环 (Segment) | 点环 (Point) | 体环 (Body) | 静态环 (Static) |
-|-----|---------------|-------------|------------|-----------------|
-| 数据形式 | 角度范围 `[start, end]` | 精确角度 `angle` | 动态天体标记 | 固定角度数据 |
-| 渲染器 | DataRing → CircleRing | DataPointRing → PointRing | BodyMarker | DataRing 直连 |
-| 典型用例 | 十二地支、六十甲子、二十八宿 | 二十四节气、星点标记 | 七曜、行星、恒星 | 五行纳音、八门、长生 |
-| 时间依赖 | ✅ 动态计算 | ✅ 动态计算 | ✅ 实时位置 | ❌ 固定不变 |
+| 特征 | 段环 (Segment) | 点环 (Point) | 体环 (Body) | 静态环 (Static) | 圆心组件 (Center) |
+|-----|---------------|-------------|------------|-----------------|-------------------|
+| 数据形式 | 角度范围 `[start, end]` | 精确角度 `angle` | 动态天体标记 | 固定角度数据 | 中心区域内容 |
+| 渲染器 | DataRing → CircleRing | DataPointRing → PointRing | BodyMarker | DataRing 直连 | BaseCenter |
+| 典型用例 | 十二地支、六十甲子、二十八宿 | 二十四节气、星点标记 | 七曜、行星、恒星 | 五行纳音、八门、长生 | 太极、日心轨道盘、星图中心 |
+| 时间依赖 | ✅ 动态计算 | ✅ 动态计算 | ✅ 实时位置 | ❌ 固定不变 | ✅/❌ 可选 |
+| 所在位置 | outerRings 数组 | outerRings 数组 | outerRings 数组 | outerRings 数组 | #center slot |
+| 半径来源 | RingStack 自动注入 | RingStack 自动注入 | RingStack 自动注入 | RingStack 自动注入 | innerRadius × scale |
 
 ## 🔹 代码模板规范
 
@@ -260,7 +262,81 @@ const markers = computed(() => {
 </style>
 ```
 
-### 模板四：静态数据环
+### 模板四：圆心组件 · 时间驱动版
+
+```typescript
+<script setup lang="ts">
+import { computed, unref, type MaybeRef } from 'vue'
+import BaseCenter from '@/components/base/BaseCenter.vue'
+
+/**
+ * {{组件名称}}（圆心组件 · 时间驱动）
+ *
+ * ⚠️ 五层架构规范：标准圆心组件接口
+ *
+ * {{组件功能说明}}
+ *
+ * 设计原则：
+ *   1. 自动适配：接收 RingStack #center slot 提供的 innerRadius
+ *   2. 安全边距：通过 BaseCenter 自动计算缩放系数
+ *   3. 统一接口：与所有圆心组件共享相同的 Props 规范
+ *
+ * 使用方式：
+ *   <template #center="{ innerRadius }">
+ *     <{{组件名称}} :radius="innerRadius" :time="controlledTime" />
+ *   </template>
+ */
+interface Props {
+  /** 圆心区最大可用半径（由 RingStack #center slot 注入） */
+  radius?: number
+  /** 缩放系数 (0.1 ~ 1.0)，自动留出安全边距 */
+  scale?: number
+  /** 统一旋转方向控制（由父组件注入） */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+  /** 时间源（支持 ref 或 plain value） */
+  time?: MaybeRef<Date>
+  // 业务属性
+}
+
+const props = withDefaults(defineProps<Props>(), {
+  radius: 100,
+  scale: 0.8,
+  rotationDirection: 'clockwise'
+  // 默认值
+})
+
+/** ⚠️ 五层架构范式：确保 time 始终是响应式的 */
+const timeRef = computed(() => unref(props.time) ?? new Date())
+
+/** 实际渲染半径 = 最大可用半径 × 缩放系数（自动留出安全边距） */
+const actualRadius = computed(() => props.radius * Math.max(0.1, Math.min(1.0, props.scale)))
+</script>
+
+<template>
+  <BaseCenter
+    :radius="radius"
+    :scale="scale"
+    :time="timeRef"
+    :rotation-direction="rotationDirection"
+  >
+    <!-- 你的内容渲染逻辑 -->
+    <circle
+      cx="0"
+      cy="0"
+      :r="actualRadius"
+      fill="none"
+      stroke="#666"
+      stroke-width="1"
+    />
+  </BaseCenter>
+</template>
+
+<style scoped>
+/* 你的局部样式 */
+</style>
+```
+
+### 模板五：静态数据环
 
 ```typescript
 // src/data/rings/{{你的环数据文件名}}.ts
@@ -287,35 +363,40 @@ export const {{你的环常量名}}: RingData = {
 }
 ```
 
-## 🔹 架构合规检查清单（25 项）
+## 🔹 架构合规检查清单（30 项）
 
-| # | 检查项 | 段环 | 点环 | 体环 | 静态环 |
-|---|-------|-----|-----|------|-------|
-| 1 | 组件命名以 `Ring` 结尾 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 2 | 必须有中文 JSDoc 说明用途 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 3 | Props 声明完整 radius/innerRadius/rotationDirection | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 4 | 时间驱动必须声明 `time?: MaybeRef<Date>` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 |
-| 5 | 必须有 `timeRef = computed(() => unref(props.time) ?? new Date())` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 |
-| 6 | 所有业务计算均在内部 computed 中完成 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 |
-| 7 | 不使用 `props.time?.value` 直接解包 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 8 | 不向父组件 emit 任何数据（单向数据流） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 9 | 不使用全局状态（唯一真理源原则） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 10 | 纯函数逻辑优先抽取到 utils/ 层 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 11 | 所有 computed 均派生自 timeRef | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 12 | 不使用 watch 监听 time（直接用 computed 派生） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 13 | 必须支持 rotationDirection 属性并透传给渲染器 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 14 | TypeScript 严格模式下无类型错误 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 15 | 不使用 any 类型（必要时用 unknown + 类型守卫） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 16 | 高亮逻辑必须使用 highlightLevel 三级体系 | ✅ 必选 | ✅ 必选 | ➖ 可选 | ➖ 可选 |
-| 17 | 颜色体系必须与全盘五行配色保持一致 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 18 | 角度计算必须使用 utils/geometry 的统一函数 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
-| 19 | 天星版赤经约定：`angle = 360 - ra` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A |
-| 20 | 段环必须使用 DataRing 渲染器 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
-| 21 | 点环必须使用 DataPointRing 渲染器 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 |
-| 22 | 点环必须明确指定 pointSymbol 类型 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 |
-| 23 | 体环必须使用 polarToCartesian 坐标转换 | ➖ 可选 | ➖ 可选 | ✅ 必选 | ❌ 禁止 |
-| 24 | 静态数据必须放在 src/data/rings/ 目录下 | ➖ 可选 | ➖ 可选 | ❌ 禁止 | ✅ 必选 |
-| 25 | 静态数据必须导出 RingData / PointRingData 类型 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
+| # | 检查项 | 段环 | 点环 | 体环 | 静态环 | 圆心组件 |
+|---|-------|-----|-----|------|-------|---------|
+| 1 | 组件命名规范：Ring 结尾 / Center 结尾 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 2 | 必须有中文 JSDoc 说明用途 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 3 | Props 声明完整 radius/innerRadius/rotationDirection | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ➖ N/A |
+| 4 | 时间驱动必须声明 `time?: MaybeRef<Date>` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 | ➖ 可选 |
+| 5 | 必须有 `timeRef = computed(() => unref(props.time) ?? new Date())` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 | ✅ 必选 |
+| 6 | 所有业务计算均在内部 computed 中完成 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ❌ 禁止 | ✅ 必选 |
+| 7 | 不使用 `props.time?.value` 直接解包 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ✅ 必选 |
+| 8 | 不向父组件 emit 任何数据（单向数据流） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ✅ 必选 |
+| 9 | 不使用全局状态（唯一真理源原则） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 10 | 纯函数逻辑优先抽取到 utils/ 层 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 11 | 所有 computed 均派生自 timeRef | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ✅ 必选 |
+| 12 | 不使用 watch 监听 time（直接用 computed 派生） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ✅ 必选 |
+| 13 | 必须支持 rotationDirection 属性并透传给渲染器 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ✅ 必选 |
+| 14 | TypeScript 严格模式下无类型错误 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 15 | 不使用 any 类型（必要时用 unknown + 类型守卫） | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 16 | 高亮逻辑必须使用 highlightLevel 三级体系 | ✅ 必选 | ✅ 必选 | ➖ 可选 | ➖ 可选 | ➖ 可选 |
+| 17 | 颜色体系必须与全盘五行配色保持一致 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 |
+| 18 | 角度计算必须使用 utils/geometry 的统一函数 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ 可选 |
+| 19 | 天星版赤经约定：`angle = 360 - ra` | ✅ 必选 | ✅ 必选 | ✅ 必选 | ➖ N/A | ➖ N/A |
+| 20 | 段环必须使用 DataRing 渲染器 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 |
+| 21 | 点环必须使用 DataPointRing 渲染器 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 |
+| 22 | 点环必须明确指定 pointSymbol 类型 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 |
+| 23 | 体环必须使用 polarToCartesian 坐标转换 | ➖ 可选 | ➖ 可选 | ✅ 必选 | ❌ 禁止 | ❌ 禁止 |
+| 24 | 静态数据必须放在 src/data/rings/ 目录下 | ➖ 可选 | ➖ 可选 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 |
+| 25 | 静态数据必须导出 RingData / PointRingData 类型 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 | ❌ 禁止 |
+| 26 | 圆心组件必须使用 BaseCenter 作为基础容器 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
+| 27 | 圆心组件必须声明 scale 属性 (0.1 ~ 1.0) | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
+| 28 | 圆心组件必须计算 actualRadius 自动适配 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
+| 29 | 圆心组件只能放在 #center slot 中使用 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ✅ 必选 |
+| 30 | 圆心组件支持多层嵌套（如黄道环包裹太极） | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ❌ 禁止 | ➖ 推荐 |
 
 ## 🔹 执行流程
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import EclipticCircle from './celestial/EclipticCircle.vue'
-import CelestialBody from './celestial/CelestialBody.vue'
-import LunarOrbit from './celestial/LunarOrbit.vue'
+import EclipticCircle from '../celestial/EclipticCircle.vue'
+import CelestialBody from '../celestial/CelestialBody.vue'
+import LunarOrbit from '../celestial/LunarOrbit.vue'
 import {
   PLANETS_CONFIG,
   sunLongitude,

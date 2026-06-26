@@ -17,7 +17,7 @@ Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for
 
 ## Architecture
 
-The project evolved from a "one .vue component per ring" design → **data-driven multi-page** architecture → **hybrid static data + time-driven dedicated components** architecture → **finalized 5-layer unified time-driven architecture**.
+The project evolved from a "one .vue component per ring" design → **data-driven multi-page** architecture → **hybrid static data + time-driven dedicated components** architecture → **"Center → Rings" unified layered 5-layer time-driven architecture**.
 
 ---
 
@@ -33,22 +33,32 @@ The project evolved from a "one .vue component per ring" design → **data-drive
                                      │
 ┌────────────────────────────────────┴────────────────────────┐
 │  Layer 2: Composition Layer (组合层)                          │
-│  └─ Views: 持有状态，编排组件，通过 RingStack 布局             │
+│  └─ Views: 持有状态，编排组件，通过 RingStack 统一布局         │
 │     AstronomyView, LiushiJiaziView, PlanetMansionView        │
+│     🔹 RingStack: 「圆心 → 圆环」统一分层布局容器              │
 └────────────────────────────────────┬────────────────────────┘
                                      │
 ┌────────────────────────────────────┴────────────────────────┐
 │  Layer 3: Domain Component Layer (领域组件层)                 │
-│  └─ 时间驱动专用环：SixtyJiaziRing, BranchesRing,             │
-│     ConstellationsRing, SolarTermsSkyRing, SiXiangRing,      │
-│     SevenLuminariesRing, MansionDegreeRing, SinglePlanetRing │
+│  ┌─────────────────────────────────────────────────────────┐│
+│  │  ⚫ 圆心区 (centers/)：3 个圆心组件                       ││
+│  │     TaiChi, HelioOrbits, SolarEcliptic                   ││
+│  └───────────────────────────┬─────────────────────────────┘│
+│                              │ 自动注入 innerRadius          │
+│  ┌───────────────────────────▼─────────────────────────────┐│
+│  │  🔵 圆环区 (rings/)：16 个同心环组件                      ││
+│  │     SixtyJiaziRing, BranchesRing, ConstellationsRing,    ││
+│  │     SolarTermsSkyRing, SiXiangRing, SevenLuminariesRing, ││
+│  │     MansionDegreeRing, SinglePlanetRing, SkyChart, ...   ││
+│  └─────────────────────────────────────────────────────────┘│
 └────────────────────────────────────┬────────────────────────┘
                                      │
 ┌────────────────────────────────────┴────────────────────────┐
 │  Layer 4: Base Render Layer (基础渲染层)                      │
 │  ├─ Data Wrappers: DataRing, DataPointRing, DataBodyRing    │
 │  ├─ Base Renderers: CircleRing, PointRing                    │
-│  └─ Layout Container: RingStack, PolarCanvas                 │
+│  ├─ Layout Container: RingStack, PolarCanvas                 │
+│  └─ Base Center: BaseCenter — 圆心组件统一容器                │
 └────────────────────────────────────┬────────────────────────┘
                                      │
 ┌────────────────────────────────────┴────────────────────────┐
@@ -95,9 +105,10 @@ const rotationAngle = ref(0)
 
 **关键特性：**
 1. **RingStack 自动布局**: 从外向内自动分配 `radius`/`innerRadius`，永不重叠
-2. **统一注入**: `rotationDirection` 统一注入所有子环
-3. **实时时钟**: `LiushiJiaziView` / `PlanetMansionView` 内置 1Hz 实时时钟
-4. **无计算**: 所有 `computed` 仅用于布局参数，不涉及领域逻辑
+2. **🔹 #center slot 机制**: 最内环渲染完成后，自动暴露 `innerRadius` 给圆心组件
+3. **统一注入**: `rotationDirection` 统一注入所有子环和圆心组件
+4. **实时时钟**: `LiushiJiaziView` / `PlanetMansionView` 内置 1Hz 实时时钟
+5. **无计算**: 所有 `computed` 仅用于布局参数，不涉及领域逻辑
 
 **架构正确性检查：**
 - ✅ View 层没有任何 `ringData` computed
@@ -203,7 +214,33 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 
 ---
 
-## 三态圆环分类系统
+## 🏗️ 「圆心 → 圆环」统一分层规划
+
+### 设计哲学：从内到外的完整布局体系
+
+整个罗盘盘面是一个从内到外的完整分层布局，由 RingStack 进行统一管理。圆心是最内层的实心圆区域，圆环是向外层层叠加的环形区域，两者共享同一套时间状态和旋转方向。
+
+---
+
+### 🔵 圆环层 (Ring Layer) - `src/components/rings/`
+
+**统一 Props 接口：**
+```typescript
+interface RingProps {
+  radius: number          // 外半径（必填或可选）
+  innerRadius?: number   // 内半径（必有！）
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+  time?: MaybeRef<Date>  // 时间驱动环必选
+}
+```
+
+**核心特征：**
+- ✅ **内外双径**：所有圆环同时具有 radius 和 innerRadius
+- ✅ **径向厚度**：由 RingStack 根据 thickness 自动计算
+- ✅ **同心布局**：所有圆环共享同一圆心，永不重叠
+- ✅ **完整包围**：360° 完整的环形区域
+
+**圆环三态分类：**
 
 | 维度 | 段环 (Segment) | 点环 (Point) | 体环 (Body) |
 |------|---------------|-------------|------------|
@@ -212,6 +249,63 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 | 典型用例 | 六十甲子、十二地支、二十八宿 | 二十四节气、赤经刻度 | 日月五星、恒星 |
 | 数据模型 | `RingItem[]` | `PointItem[]` | `BodyItem[]` |
 | 高亮体系 | 三级呼吸高亮 | 三级高亮 | 事件驱动高亮 |
+
+---
+
+### ⚫ 圆心层 (Center Layer) - `src/components/centers/`
+
+**统一 Props 接口：**
+```typescript
+interface CenterProps {
+  radius?: number        // 仅需 radius（无 innerRadius！）
+  rotationDirection?: 'clockwise' | 'counterclockwise'
+  time?: MaybeRef<Date> // 时间驱动圆心组件必选
+}
+```
+
+**核心特征：**
+- ✅ **单径原则**：仅有 radius，无 innerRadius（实心圆区域）
+- ✅ **自动适配**：通过 RingStack #center slot 接收 `innerRadius` 自动缩放
+- ✅ **安全边距**：自动计算内外留白，不与外环碰撞
+- ✅ **多层嵌套**：支持多个圆心组件叠加（如 SolarEcliptic 包裹 TaiChi）
+
+**现有圆心组件：**
+
+| 组件 | 领域 | 典型使用场景 |
+|------|------|------------|
+| `TaiChi.vue` | 太极阴阳 | AstronomyView 盘心 |
+| `HelioOrbits.vue` | 日心轨道 | SkyChart 内嵌的日心行星轨道 |
+| `SolarEcliptic.vue` | 黄道编排 | AstronomyView 中心黄道环 |
+
+**BaseCenter 基础容器：**
+- 可选的辅助容器，用于复杂插槽分发
+- 自动计算 `actualRadius = radius × scale`
+- 统一透传 timeRef 和 rotationDirection
+
+---
+
+### 🔗 统一布局流程
+
+```
+「圆心 → 圆环」统一渲染流程：
+
+┌───────────────────────────────────────────────────────────┐
+│  🔵 最外环 (thickness: 22)                                 │
+│  🔵 外环 2 (thickness: 28)                                 │
+│  ...                                                       │
+│  🔵 最内环 (thickness: 自动填充剩余空间)                   │
+└───────────────────────────────────────┬───────────────────┘
+                                        │
+                                        ▼
+                              #center slot 暴露 innerRadius
+                                        │
+                                        ▼
+                              ┌───────────────────────┐
+                              │  ⚫ 圆心区             │
+                              │  TaiChi / HelioOrbits │
+                              │  SolarEcliptic        │
+                              └───────────────────────┘
+```
 
 ---
 
@@ -321,8 +415,9 @@ src/
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
 │   │   ├── CircleRing.vue          # Segment-oriented ring renderer
 │   │   ├── PointRing.vue           # Point-oriented ring renderer (3 symbol types)
-│   │   └── RingStack.vue           # Concentric auto-layout container
-│   ├── rings/                       # Layer 3: Domain Component Layer + Data Wrappers
+│   │   ├── RingStack.vue           # Concentric auto-layout container
+│   │   └── BaseCenter.vue          # Center component base container
+│   ├── rings/                       # Layer 3: Ring Domain Components + Data Wrappers
 │   │   ├── DataRing.vue            # Data Wrapper: RingData → CircleRing
 │   │   ├── DataPointRing.vue       # Data Wrapper: PointRingData → PointRing
 │   │   ├── DataBodyRing.vue        # Data Wrapper: BodyRingData → BodyMarker
@@ -337,16 +432,17 @@ src/
 │   │   ├── SolarTermsRing.vue      # Domain: 24 solar terms (traditional)
 │   │   ├── SolarTermsSkyRing.vue   # Domain: 24 solar terms (sky chart)
 │   │   ├── SevenLuminariesRing.vue # Domain: 7 planets positioning
-│   │   └── SinglePlanetRing.vue    # Domain: single planet deep study
+│   │   ├── SinglePlanetRing.vue    # Domain: single planet deep study
+│   │   └── SkyChart.vue            # Sky chart projection ring (most inner)
+│   ├── centers/                     # Layer 3: Center Domain Components
+│   │   ├── TaiChi.vue              # Time-driven Taiji disk
+│   │   ├── HelioOrbits.vue         # Heliocentric orbits (planet-mansion)
+│   │   └── SolarEcliptic.vue       # Solar ecliptic center component
 │   ├── celestial/                   # Celestial visualization
 │   │   ├── BodyMarker.vue          # Celestial body with halos + symbol
 │   │   ├── CelestialBody.vue       # Celestial body container
 │   │   ├── EclipticCircle.vue      # Ecliptic circle rendering
 │   │   └── LunarOrbit.vue          # Lunar orbit rendering
-│   ├── HelioOrbits.vue             # Heliocentric orbits (planet-mansion)
-│   ├── SkyChart.vue                # Complete sky chart projection
-│   ├── SolarEcliptic.vue           # Solar ecliptic via astronomy-engine
-│   ├── TaiChi.vue                  # Time-driven Taiji disk
 │   └── Control.vue                 # Unified time / zoom / pan / rotation panel
 ├── data/rings/                     # Static ring DATA
 │   ├── types.ts                    # Type hierarchy (RingItem/PointItem/BodyItem)
@@ -399,39 +495,54 @@ npm run test:e2e     # Playwright e2e tests
 npm run deploy       # Build + publish dist/ to gh-pages
 ```
 
-## Architecture Compliance Checklist (25 Items)
+## Architecture Compliance Checklist (30 Items)
 
-开发新环时请确认：
+开发新组件时请确认：
+
+### 所有组件通用
 
 | # | 检查项 | 必须通过 |
 |---|--------|---------|
-| 1 | 组件命名以 `Ring` 结尾 | ✅ |
+| 1 | 命名规范：圆环以 `Ring` 结尾，圆心以语义化命名 | ✅ |
 | 2 | 必须有中文 JSDoc 说明用途 | ✅ |
-| 3 | Props 声明完整 radius/innerRadius/rotationDirection | ✅ |
-| 4 | 时间驱动必须声明 `time?: MaybeRef<Date>` | ✅ |
-| 5 | 必须有 `timeRef = computed(() => unref(props.time) ?? new Date())` | ✅ |
-| 6 | 所有业务计算均在内部 computed 中完成 | ✅ |
-| 7 | 不使用 `props.time?.value` 直接解包（破坏响应式链） | ✅ |
-| 8 | 不向父组件 emit 任何数据（单向数据流） | ✅ |
-| 9 | 不使用全局状态 | ✅ |
-| 10 | 纯函数逻辑优先抽取到 utils/ 层 | ✅ |
-| 11 | 所有 computed 均派生自 timeRef | ✅ |
-| 12 | 不使用 watch 监听 time（直接用 computed 派生） | ✅ |
-| 13 | 必须支持 rotationDirection 属性并透传给渲染器 | ✅ |
-| 14 | TypeScript 严格模式下无类型错误 | ✅ |
-| 15 | 不使用 any 类型（必要时用 unknown + 类型守卫） | ✅ |
-| 16 | 高亮逻辑必须使用 highlightLevel 三级体系 | ✅ |
-| 17 | 颜色体系必须与全盘五行配色保持一致 | ✅ |
+| 3 | 时间驱动必须声明 `time?: MaybeRef<Date>` | ✅ |
+| 4 | 必须有 `timeRef = computed(() => unref(props.time) ?? new Date())` | ✅ |
+| 5 | 所有业务计算均在内部 computed 中完成 | ✅ |
+| 6 | 不使用 `props.time?.value` 直接解包（破坏响应式链） | ✅ |
+| 7 | 不向父组件 emit 任何数据（单向数据流） | ✅ |
+| 8 | 不使用全局状态 | ✅ |
+| 9 | 纯函数逻辑优先抽取到 utils/ 层 | ✅ |
+| 10 | 所有 computed 均派生自 timeRef | ✅ |
+| 11 | 不使用 watch 监听 time（直接用 computed 派生） | ✅ |
+| 12 | TypeScript 严格模式下无类型错误 | ✅ |
+| 13 | 不使用 any 类型（必要时用 unknown + 类型守卫） | ✅ |
+| 14 | 颜色体系必须与全盘五行配色保持一致 | ✅ |
+
+### 🔵 圆环组件专用
+
+| # | 检查项 | 必须通过 |
+|---|--------|---------|
+| 15 | Props 声明完整 radius/innerRadius/rotationDirection | ✅ |
+| 16 | 必须支持 rotationDirection 属性并透传给渲染器 | ✅ |
+| 17 | 高亮逻辑必须使用 highlightLevel 三级体系 | ✅ |
 | 18 | 角度计算必须使用 utils/geometry 的统一函数 | ✅ |
-|
-19 |天星版赤经约定：赤经 angle = 360 - ra | ✅ | ✅ |
+| 19 | 天星版赤经约定：赤经 angle = 360 - ra | ✅ |
 | 20 | 段环必须使用 DataRing 渲染器 | ✅ |
 | 21 | 点环必须使用 DataPointRing 渲染器 | ✅ |
 | 22 | 点环必须明确指定 pointSymbol 类型 | ✅ |
-|
-23 | 体环必须使用 polarToCartesian 坐标转换 | ✅ |
-| 24 |静态数据必须放在 src/data/rings/ 目录下 | ✅ |
-| 25 |静态数据必须导出 RingData / PointRingData 类型 | ✅ |
+| 23 | 体环必须使用 polarToCartesian 坐标转换 | ✅ |
+| 24 | 静态数据必须放在 src/data/rings/ 目录下 | ✅ |
+| 25 | 静态数据必须导出 RingData / PointRingData 类型 | ✅ |
+
+### ⚫ 圆心组件专用
+
+| # | 检查项 | 必须通过 |
+|---|--------|---------|
+| 26 | **禁止声明 innerRadius**（圆心只有 radius） | ✅ |
+| 27 | 必须声明 radius 和 rotationDirection 属性 | ✅ |
+| 28 | 必须放在 `src/components/centers/` 目录下 | ✅ |
+| 29 | 只能通过 RingStack #center slot 注入使用 | ✅ |
+| 30 | 多层嵌套时需正确计算各自的缩放系数 | ✅ |
 
 ---
 

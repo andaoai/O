@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, markRaw, onMounted, onUnmounted } from 'vue'
-import SkyChart from '../components/SkyChart.vue'
+import SkyChart from '../components/rings/SkyChart.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
@@ -177,17 +177,41 @@ const outerRings = [
     <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <!-- ═══════════════════════════════════════════════════════════════
-             🔑 五层架构 · 全自动化布局
+             🔑 五层架构 · 圆环 + 圆心 二分规范
              ──────────────────────────────────────────────────────────────
-             唯一配置：DISK_OUTER_RADIUS = 580
-             全部 7 个环 + 中心星图 + 日心轨道盘，半径 100% 自动计算
-             零手动配置 · 永不重叠 · 时间驱动
+             【圆环区】outerRings 数组：7 个同心环，RingStack 自动布局
+             【圆心区】#center slot：自动暴露 innerRadius，圆心组件自动适配
+
+             架构分层：
+               1. 外环：DegreeScale (赤经刻度)
+               2. 中环：MansionDegreeRing → ConstellationsRing → SevenLuminariesRing
+                         SolarTermsSkyRing → SiXiangRing
+               3. 内环：SkyChart (自动填充剩余空间)
+               4. 圆心：#center slot (HelioOrbits / TaiChi 等)
+
+             设计原则：
+               - 所有圆环 → outerRings 数组，永不手动计算半径
+               - 所有圆心 → #center slot，自动适配剩余空间
+               - 单向数据流：controlledTime 唯一真理源
              ═══════════════════════════════════════════════════════════════ -->
         <RingStack
           :outer-radius="DISK_OUTER_RADIUS"
           :rings="outerRings"
           rotation-direction="clockwise"
-        />
+        >
+          <!-- 🔹 圆心区：自动接收最内环的 innerRadius -->
+          <template #center="{ innerRadius }">
+            <!--
+              圆心组件使用规范：
+              1. radius = innerRadius * 缩放系数 (0.7 ~ 0.9 推荐)
+              2. 只传 time ref，不手动解包
+              3. 自动适配，永不与外层环碰撞
+
+              当前示例：HelioOrbits 已内置于 SkyChart
+              如需替换为太极：<TaiChi :radius="innerRadius * 0.75" :time="controlledTime" />
+            -->
+          </template>
+        </RingStack>
       </g>
     </svg>
 

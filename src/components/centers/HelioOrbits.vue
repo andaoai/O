@@ -8,16 +8,19 @@ import {
   formatAspect,
   PLANET_SEMI_MAJOR_AU
 } from '@/utils/celestial'
-import BodyMarker from './celestial/BodyMarker.vue'
+import BodyMarker from '../celestial/BodyMarker.vue'
 import { useSevenLuminaries, useEarthHeliocentric, getLuminarySize, getLuminaryHalos } from '@/composables/useSevenLuminaries'
 import type { LuminaryKey } from '@/data/rings/types'
 
 /**
- * 日心轨道盘（最里层）
+ * 🔴 日心轨道盘（标准圆心组件 · 时间驱动）
  *
- * ⚠️ 使用统一架构：内部调用 useSevenLuminaries composable
+ * ⚠️ 五层架构规范：圆心组件统一接口
+ *   - 仅需 radius 参数（由 RingStack #center slot 或 SkyChart 内嵌注入）
+ *   - 支持 MaybeRef<Date> 时间驱动
+ *   - 支持 rotationDirection 统一控制
  *
- * 以太阳为中心，按真实轨道内外顺序（水→金→地→火→木→土）等间距画 6 个同心圆。
+ * 以太阳为中心，按真实轨道内外顺序（水→金→地→火→木→土）等间距画同心圆。
  * 等间距而非真实 AU：土星轨道是水星的 24 倍，真实比例下中心区放不下五星。
  *
  * 每个天体按其「日心黄经」摆到自己的轨道圈上。画出「地球—太阳」基准线，
@@ -28,10 +31,10 @@ import type { LuminaryKey } from '@/data/rings/types'
  */
 interface Props {
   time?: MaybeRef<Date>
-  /** 最外轨道（土星）半径（像素） */
+  /** 日心盘最外轨道半径（通常由父组件自动注入） */
   radius?: number
-  /** 最内圈与中心（太阳）之间的预留半径（像素） */
-  innerRadius?: number
+  /** 统一旋转方向控制 */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
   showLabels?: boolean
   /** 显示七曜合/冲相位连线 */
   showAspects?: boolean
@@ -39,10 +42,13 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 180,
-  innerRadius: 28,
+  rotationDirection: 'clockwise',
   showLabels: true,
   showAspects: true
 })
+
+/** 最内圈与中心（太阳）之间的预留半径：自动按半径比例计算，约 15% */
+const innerRadius = computed(() => Math.max(20, props.radius * 0.155))
 
 /** 确保时间参数是响应式的（默认值用 computed 包裹） */
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -72,7 +78,7 @@ const ORBIT_ORDER = computed<OrbitKey[]>(() => {
 const orbitRadius = (index: number) => {
   const n = ORBIT_ORDER.value.length
   // 最内圈留出太阳本体空间（innerRadius），最外圈到 props.radius
-  const inner = props.innerRadius
+  const inner = innerRadius.value
   return inner + ((props.radius - inner) * (index + 1)) / n
 }
 
@@ -97,7 +103,7 @@ const earthLine = computed(() => {
 })
 
 /** 相邻轨道圈的径向间距（等间距布局） */
-const orbitSpacing = computed(() => (props.radius - props.innerRadius) / ORBIT_ORDER.value.length)
+const orbitSpacing = computed(() => (props.radius - innerRadius.value) / ORBIT_ORDER.value.length)
 
 /**
  * 月亮：绕地球的小卫星圈（真实月地距离仅 0.0026 AU，必须放大才可见）。

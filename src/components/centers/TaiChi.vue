@@ -2,21 +2,25 @@
 import { computed, unref, type MaybeRef } from 'vue'
 
 /**
- * 太极图组件
+ * ⚫ 太极图组件（标准圆心组件 · 时间驱动）
  *
- * ⚠️ 时间驱动架构：接受 time ref，内部统一使用 unref()
+ * ⚠️ 五层架构规范：圆心组件统一接口
+ *   - 仅需 radius 参数（由 RingStack #center slot 自动注入）
+ *   - 支持 MaybeRef<Date> 时间驱动
+ *   - 支持 rotationDirection 统一控制
  *
- * 显示传统的太极图（阴阳鱼）：
- * 1. 根据时间旋转（24小时转一圈）
- * 2. 支持旋转方向控制
- * 3. 可配置颜色和大小
- */
-
-/**
- * 组件属性接口定义
+ * 设计原则：
+ *   - 自动适配：接收 RingStack 提供的 innerRadius 自动计算大小
+ *   - 时间驱动：24小时旋转一圈，白色阳鱼始终指向太阳
+ *   - 视觉协调：自动留出安全边距，不与外层环碰撞
+ *
+ * 使用方式：
+ *   <template #center="{ innerRadius }">
+ *     <TaiChi :radius="innerRadius * 0.75" :time="controlledTime" />
+ *   </template>
  */
 interface Props {
-  /** 太极图半径（像素） */
+  /** 太极图半径（通常为 RingStack innerRadius * 0.75） */
   radius?: number
   /** 阴色（黑色） */
   yinColor?: string
@@ -30,27 +34,24 @@ interface Props {
   strokeColor?: string
   /** 边框宽度 */
   strokeWidth?: number
-  /** 旋转方向 */
+  /** 统一旋转方向控制（由 RingStack 注入） */
   rotationDirection?: 'clockwise' | 'counterclockwise'
-  /** 观测时间（用于计算旋转角度，支持 ref 或 plain value） */
+  /** 时间源（支持 ref 或 plain value） */
   time?: MaybeRef<Date>
 }
 
-/**
- * 组件默认属性值
- */
 const props = withDefaults(defineProps<Props>(), {
-  radius: 80,                 // 默认半径 80px
-  yinColor: '#000000',        // 标准黑色
-  yangColor: '#FFFFFF',       // 标准白色
-  yinEyeColor: '#FFFFFF',     // 阴眼白色
-  yangEyeColor: '#000000',    // 阳眼黑色
-  strokeColor: '#666666',     // 灰色边框
-  strokeWidth: 2,             // 边框宽度
-  rotationDirection: 'clockwise'  // 默认顺时针
+  radius: 80,
+  yinColor: '#000000',
+  yangColor: '#FFFFFF',
+  yinEyeColor: '#FFFFFF',
+  yangEyeColor: '#000000',
+  strokeColor: '#666666',
+  strokeWidth: 2,
+  rotationDirection: 'clockwise'
 })
 
-/** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
+/** ⚠️ 五层架构范式：确保 time 始终是响应式的 */
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
 /**

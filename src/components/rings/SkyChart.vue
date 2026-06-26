@@ -10,10 +10,10 @@ import {
 } from '@/utils/skyProjection'
 import { lunarOrbit } from '@/utils/celestial'
 import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
-import BodyMarker from './celestial/BodyMarker.vue'
+import BodyMarker from '../celestial/BodyMarker.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
-import HelioOrbits from './HelioOrbits.vue'
+import HelioOrbits from '../centers/HelioOrbits.vue'
 
 /** 环与星图之间的默认间隙 */
 const RING_GAP = 8

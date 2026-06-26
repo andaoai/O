@@ -1,22 +1,41 @@
 <script setup lang="ts">
 /**
- * RingStack - 同心圆环自动布局容器
+ * 🏛 RingStack - 五层架构 · 同心圆环自动布局容器
  *
- * 解决的问题：
- *   过去每个圆环组件的半径都要在 App.vue 里手动写死，叠加时极易重叠。
+ * ═══════════════════════════════════════════════════════════════
+ *  完整架构体系：【圆环区 + 圆心区】二分法
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * 解决的核心问题：
+ *   过去每个圆环组件的半径都要在父组件里手动写死，叠加时极易重叠。
  *   RingStack 让调用方只声明每个环的"径向厚度"，容器从外向内自动累加分配
  *   radius / innerRadius，叠加时永不重叠。
  *
- * 🔹 扩展：中心填充环 + Slot 暴露内缘半径
- *   - 所有环渲染完成后，通过 default slot 暴露 innerRadius（最内圈的内缘半径）
- *   - 父组件可在 slot 中放置 SkyChart / HelioOrbits 等中心组件，自动适配半径
- *   - 实现：单一来源 → 全圆盘半径自动计算，零手动配置
+ * ┌─────────────────────────────────────────────────────────────┐
+ *  │  架构分层（从外到内）                                        │
+ *  ├─────────────────────────────────────────────────────────────┤
+ *  │  【圆环区】outerRings 数组                                   │
+ *  │    ↳ 段环：SixtyJiaziRing / BranchesRing / ...             │
+ *  │    ↳ 点环：SolarTermsRing / DegreeScale / ...              │
+ *  │    ↳ 体环：SevenLuminariesRing / MansionDegreeRing / ...   │
+ *  │    ↳ 复合环：SkyChart (自动填充剩余空间)                    │
+ *  │                                                             │
+ *  │  【圆心区】#center slot (BaseCenter 统一管理)               │
+ *  │    ↳ 圆心组件：TaiChi / HelioOrbits / ...                  │
+ *  │    ↳ 支持多层嵌套：SolarEcliptic 包裹 TaiChi               │
+ *  └─────────────────────────────────────────────────────────────┘
  *
- * 约定：
- *   - rings 数组按"由外到内"的顺序声明。
+ * 🔹 核心特性：
+ *   1. 自动计算：所有圆环 radius / innerRadius 100% 自动分配，永不重叠
+ *   2. 自动填充：最内环省略 thickness 时，自动填满剩余到圆心的全部空间
+ *   3. 内缘暴露：通过 #center slot 暴露 innerRadius 给圆心组件自动适配
+ *   4. 统一注入：rotationDirection 自动注入所有子环
+ *
+ * 📐 使用约定：
+ *   - rings 数组按"由外到内"的顺序声明
  *   - 每个环组件需支持 radius / innerRadius / rotationDirection props
- *     （本项目所有分格圆环组件已统一此接口）。
- *   - 本组件不输出 <svg>/<g>，沿用项目约定由父级 <g transform> 定位。
+ *   - 圆心组件使用 BaseCenter 包裹，自动计算安全边距与缩放
+ *   - 本组件不输出 <svg>/<g>，沿用项目约定由父级 <g transform> 定位
  */
 import { computed, type Component } from 'vue'
 
@@ -99,7 +118,18 @@ const innerRadius = computed(() => {
       :rotation-direction="rotationDirection"
       v-bind="ring.extraProps"
     />
-    <!-- 🔹 中心填充区 Slot：暴露内缘半径，供 SkyChart 等中心组件自动适配 -->
+    <!-- 🔹 圆心组件区 Slot：自动暴露核心半径
+         ══════════════════════════════════════════
+         使用方式：
+         <template #center="{ innerRadius }">
+           <TaiChi :radius="innerRadius * 0.8" />
+         </template>
+
+         设计原则：
+         1. 圆环 → outerRings 数组（RingStack 自动布局）
+         2. 圆心 → #center slot（自动填充剩余空间）
+         3. 圆心组件只接收 radius 参数，自动适配大小
+         ══════════════════════════════════════════ -->
     <slot name="center" :inner-radius="innerRadius" />
   </g>
 </template>
