@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import BodyMarker from './BodyMarker.vue'
+import PlanetSvg from './PlanetSvg.vue'
 import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
+import type { LuminaryKey } from '@/data/rings/types'
 
 /**
  * 通用单天体组件
@@ -20,6 +22,8 @@ interface Props {
   latitude?: number
   /** 黄道基准半径 */
   radius?: number
+  /** 天体类型（提供后启用 SVG 渲染） */
+  kind?: LuminaryKey
   /** 单字符号（日/月/水/金/火/木/土） */
   symbol?: string
   /** 颜色 */
@@ -128,8 +132,33 @@ const symbolRot = computed(() => radialTextRotation(props.longitude, props.rotat
           stroke-dasharray="2,2"
         />
 
-        <!-- 光晕 + 本体 + 符号（统一走 BodyMarker） -->
+        <!-- 光晕 + 本体 + 符号：优先使用 PlanetSvg 渲染 -->
+        <template v-if="kind">
+          <PlanetSvg
+            :x="slotProps.centerX + bodyCoordinates.x"
+            :y="slotProps.centerY + bodyCoordinates.y"
+            :kind="kind"
+            :scale="size / 22"
+            :halos="[
+              { radius: size + 10, opacity: 0.2 },
+              { radius: size + 5, opacity: 0.4 }
+            ]"
+            :halo-color="color"
+          />
+          <text
+            v-if="symbol"
+            :x="slotProps.centerX + bodyCoordinates.x"
+            :y="slotProps.centerY + bodyCoordinates.y"
+            :fill="symbolColor"
+            :font-size="symbolFontSize || Math.max(10, size * 0.8)"
+            font-weight="bold"
+            text-anchor="middle"
+            dominant-baseline="middle"
+            :transform="symbolRot ? `rotate(${symbolRot} ${slotProps.centerX + bodyCoordinates.x} ${slotProps.centerY + bodyCoordinates.y})` : undefined"
+          >{{ symbol }}</text>
+        </template>
         <BodyMarker
+          v-else
           :x="slotProps.centerX + bodyCoordinates.x"
           :y="slotProps.centerY + bodyCoordinates.y"
           :radius="size"

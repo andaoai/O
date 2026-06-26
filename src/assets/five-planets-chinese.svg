@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 110" width="560" height="110">
+  <defs>
+    <!-- 光晕效果 -->
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <radialGradient id="sun-gradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#fff5d0"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#ff8c00"/>
+    </radialGradient>
+    <radialGradient id="moon-gradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#f8f8ff"/>
+      <stop offset="50%" stop-color="#e8e8f0"/>
+      <stop offset="100%" stop-color="#a0a0b0"/>
+    </radialGradient>
+  </defs>
+  <style>
+    .planet-name { font-family: "SimSun", "STSong", serif; font-size: 12px; text-anchor: middle; }
+  </style>
+
+  <!-- 太阳 - 日 - 色赤黄 -->
+  <g transform="translate(50, 45)">
+    <!-- 太阳外层光芒 -->
+    <circle cx="0" cy="0" r="32" fill="#ffd700" opacity="0.15"/>
+    <circle cx="0" cy="0" r="28" fill="#ffd700" opacity="0.2"/>
+    <!-- 太阳本体 -->
+    <circle cx="0" cy="0" r="24" fill="url(#sun-gradient)" filter="url(#glow)"/>
+    <!-- 表面纹理 -->
+    <ellipse cx="-6" cy="-8" rx="4" ry="3" fill="#fff" opacity="0.3"/>
+    <ellipse cx="5" cy="4" rx="3" ry="2" fill="#fff5d0" opacity="0.4"/>
+    <circle cx="-3" cy="6" r="2" fill="#ffb800" opacity="0.3"/>
+    <text x="0" y="40" class="planet-name" fill="#ff8c00">太阳·日</text>
+  </g>
+
+  <!-- 月亮 - 太阴 - 色白 -->
+  <g transform="translate(130, 45)">
+    <circle cx="0" cy="0" r="22" fill="url(#moon-gradient)" filter="url(#glow)"/>
+    <!-- 月海 - 暗色区域 -->
+    <ellipse cx="-6" cy="-4" rx="5" ry="4" fill="#9090a0" opacity="0.4"/>
+    <ellipse cx="5" cy="6" rx="4" ry="3" fill="#888898" opacity="0.35"/>
+    <ellipse cx="-4" cy="8" rx="3" ry="2.5" fill="#9090a0" opacity="0.3"/>
+    <circle cx="6" cy="-6" r="2.5" fill="#a0a0b0" opacity="0.3"/>
+    <!-- 高光 -->
+    <ellipse cx="-7" cy="-9" rx="3.5" ry="2.5" fill="#fff" opacity="0.25"/>
+    <text x="0" y="40" class="planet-name" fill="#888899">太阴·月</text>
+  </g>
+
+  <!-- 水星 - 辰星 - 水 -->
+  <g transform="translate(210, 45)">
+    <circle cx="0" cy="0" r="22" fill="#0a1628" stroke="#3498db" stroke-width="2" filter="url(#glow)"/>
+    <circle cx="-8" cy="-6" r="2" fill="#3498db" opacity="0.5"/>
+    <circle cx="6" cy="8" r="1.5" fill="#5dade2" opacity="0.4"/>
+    <text x="0" y="40" class="planet-name" fill="#3498db">辰星·水</text>
+  </g>
+
+  <!-- 金星 - 太白 - 金 -->
+  <g transform="translate(290, 45)">
+    <circle cx="0" cy="0" r="24" fill="#f4e4c1" stroke="#f5b041" stroke-width="2" filter="url(#glow)"/>
+    <circle cx="-7" cy="-8" r="3" fill="#fff" opacity="0.6"/>
+    <circle cx="8" cy="5" r="2" fill="#fad7a0" opacity="0.5"/>
+    <text x="0" y="40" class="planet-name" fill="#f5b041">太白·金</text>
+  </g>
+
+  <!-- 火星 - 荧惑 - 火 -->
+  <g transform="translate(370, 45)">
+    <circle cx="0" cy="0" r="23" fill="#641e16" stroke="#e74c3c" stroke-width="2" filter="url(#glow)"/>
+    <circle cx="-6" cy="-7" r="3" fill="#f1948a" opacity="0.5"/>
+    <circle cx="7" cy="4" r="2" fill="#c0392b" opacity="0.4"/>
+    <text x="0" y="40" class="planet-name" fill="#e74c3c">荧惑·火</text>
+  </g>
+
+  <!-- 木星 - 岁星 - 木 - 色苍青 -->
+  <g transform="translate(450, 45)">
+    <circle cx="0" cy="0" r="25" fill="#2a6a52" stroke="#4aaa7a" stroke-width="2" filter="url(#glow)"/>
+    <!-- 木星条纹：亮带暗带交替 -->
+    <ellipse cx="0" cy="-16" rx="22" ry="2" fill="#5ab88a" opacity="0.5"/>
+    <ellipse cx="0" cy="-10" rx="23" ry="2.5" fill="#3a7a62" opacity="0.55"/>
+    <ellipse cx="0" cy="-3" rx="22" ry="2.5" fill="#4a9a72" opacity="0.5"/>
+    <ellipse cx="0" cy="4" rx="23" ry="2.5" fill="#2a6a52" opacity="0.55"/>
+    <ellipse cx="0" cy="11" rx="22" ry="2.5" fill="#4a8a6a" opacity="0.5"/>
+    <ellipse cx="0" cy="17" rx="20" ry="2" fill="#3a7a62" opacity="0.45"/>
+    <!-- 大红斑 -->
+    <ellipse cx="10" cy="2" rx="4.5" ry="2.8" fill="#b05040" opacity="0.7"/>
+    <ellipse cx="10" cy="1.5" rx="3" ry="1.8" fill="#d07060" opacity="0.5"/>
+    <text x="0" y="42" class="planet-name" fill="#4aaa7a">岁星·木</text>
+  </g>
+
+  <!-- 土星 - 镇星 - 土 -->
+  <g transform="translate(530, 45)">
+    <circle cx="0" cy="0" r="22" fill="#5d4e37" stroke="#f39c12" stroke-width="2" filter="url(#glow)"/>
+    <ellipse cx="0" cy="0" rx="32" ry="7" fill="none" stroke="#f39c12" stroke-width="2" opacity="0.6"/>
+    <ellipse cx="0" cy="0" rx="29" ry="5" fill="none" stroke="#e67e22" stroke-width="1" opacity="0.4"/>
+    <text x="0" y="40" class="planet-name" fill="#f39c12">镇星·土</text>
+  </g>
+</svg>

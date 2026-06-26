@@ -2,9 +2,10 @@
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import BodyMarker from '../celestial/BodyMarker.vue'
+import PlanetSvg from '../celestial/PlanetSvg.vue'
 import { radialTextRotation, polarToCartesian, normalizeAngle } from '@/utils/geometry'
 import { MOTION_VISUAL_CONFIG, type PlanetMotion, type MotionState } from '@/utils/celestial'
-import type { BodyRingData, Halo, BodyState } from '@/data/rings/types'
+import type { BodyRingData, Halo, BodyState, LuminaryKey } from '@/data/rings/types'
 
 /**
  * 数据驱动天体圆环（BodyRing）
@@ -404,18 +405,30 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
               :transform="`translate(${-(item.size ?? 14) - 12}, 0)`"
             >{{ item.state.motion.character }}</text>
 
-            <!-- 天体本体（光晕 + 圆 + 符号） -->
-            <BodyMarker
-              :x="slotProps.centerX + coord.actual.x"
-              :y="slotProps.centerY + coord.actual.y"
-              :radius="item.size"
-              :color="item.color"
-              :halos="item.halos"
-              :symbol="item.symbol"
-              :symbol-color="item.symbolColor"
-              :symbol-font-size="item.fontSize || data.fontSize || Math.max(10, item.size * 0.8)"
-              :symbol-rotation="radialTextRotation(item.angle, rotationDirection)"
-            />
+            <!-- 天体本体：使用 SVG 渲染七曜，回退到基础渲染 -->
+            <template v-if="item.kind && ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter', 'saturn'].includes(item.kind)">
+              <PlanetSvg
+                :x="slotProps.centerX + coord.actual.x"
+                :y="slotProps.centerY + coord.actual.y"
+                :kind="item.kind as LuminaryKey"
+                :scale="(item.size ?? 14) / 22"
+                :halos="item.halos"
+                :halo-color="item.color"
+              />
+            </template>
+            <template v-else>
+              <BodyMarker
+                :x="slotProps.centerX + coord.actual.x"
+                :y="slotProps.centerY + coord.actual.y"
+                :radius="item.size"
+                :color="item.color"
+                :halos="item.halos"
+                :symbol="item.symbol"
+                :symbol-color="item.symbolColor"
+                :symbol-font-size="item.fontSize || data.fontSize || Math.max(10, item.size * 0.8)"
+                :symbol-rotation="radialTextRotation(item.angle, rotationDirection)"
+              />
+            </template>
 
             <!-- 标签（可选，通常用于标注入宿度等） -->
             <text

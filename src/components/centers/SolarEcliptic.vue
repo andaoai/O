@@ -124,6 +124,7 @@ const moon = computed(() => moonPosition(currentTime.value))
     <CelestialBody
       :longitude="sunLon"
       :radius="radius"
+      kind="sun"
       symbol="日"
       color="#ffdd00"
       :size="20"
@@ -139,6 +140,7 @@ const moon = computed(() => moonPosition(currentTime.value))
       :longitude="moon.longitude"
       :latitude="moon.latitude"
       :radius="radius"
+      kind="moon"
       symbol="月"
       color="#c0c0c0"
       :size="12"
@@ -157,6 +159,7 @@ const moon = computed(() => moonPosition(currentTime.value))
         :longitude="planet.longitude"
         :latitude="planet.latitude"
         :radius="radius"
+        :kind="planet.key"
         :symbol="planet.symbol"
         :color="planet.color"
         :size="planet.size"

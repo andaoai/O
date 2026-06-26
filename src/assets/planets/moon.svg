@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <radialGradient id="moon-gradient" cx="30%" cy="30%">
+      <stop offset="0%" stop-color="#f8f8ff"/>
+      <stop offset="50%" stop-color="#e8e8f0"/>
+      <stop offset="100%" stop-color="#a0a0b0"/>
+    </radialGradient>
+  </defs>
+  <g transform="translate(30, 30)">
+    <circle cx="0" cy="0" r="22" fill="url(#moon-gradient)" filter="url(#glow)"/>
+    <ellipse cx="-6" cy="-4" rx="5" ry="4" fill="#9090a0" opacity="0.4"/>
+    <ellipse cx="5" cy="6" rx="4" ry="3" fill="#888898" opacity="0.35"/>
+    <ellipse cx="-4" cy="8" rx="3" ry="2.5" fill="#9090a0" opacity="0.3"/>
+    <circle cx="6" cy="-6" r="2.5" fill="#a0a0b0" opacity="0.3"/>
+    <ellipse cx="-7" cy="-9" rx="3.5" ry="2.5" fill="#fff" opacity="0.25"/>
+  </g>
+</svg>

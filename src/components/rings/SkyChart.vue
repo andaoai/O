@@ -11,6 +11,7 @@ import {
 import { lunarOrbit } from '@/utils/celestial'
 import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
 import BodyMarker from '../celestial/BodyMarker.vue'
+import PlanetSvg from '../celestial/PlanetSvg.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
 import HelioOrbits from '../centers/HelioOrbits.vue'
@@ -292,44 +293,67 @@ const planetPos = computed(() => planets.value.map((p) => ({
     </g>
 
     <!-- 太阳（黄道圈） -->
-    <BodyMarker
-      v-if="showSun"
-      :x="sunPos.x"
-      :y="sunPos.y"
-      :radius="getLuminarySize('sun', 1.0)"
-      color="#ffdd00"
-      :halos="getLuminaryHalos('sun', 1.0, 0.25)"
-      symbol="日"
-      symbol-color="#333"
-      :symbol-font-size="12"
-    />
+    <g v-if="showSun">
+      <PlanetSvg
+        :x="sunPos.x"
+        :y="sunPos.y"
+        kind="sun"
+        :scale="getLuminarySize('sun', 1.0) / 22"
+        :halos="getLuminaryHalos('sun', 1.0, 0.25)"
+        halo-color="#ffdd00"
+      />
+      <text
+        :x="sunPos.x"
+        :y="sunPos.y"
+        fill="#333"
+        font-size="12"
+        font-weight="bold"
+        text-anchor="middle"
+        dominant-baseline="middle"
+      >日</text>
+    </g>
 
     <!-- 月球（白道圈） -->
-    <BodyMarker
-      v-if="showMoon"
-      :x="moonPos.x"
-      :y="moonPos.y"
-      :radius="getLuminarySize('moon', 1.0)"
-      color="#c0c0c0"
-      :halos="getLuminaryHalos('moon', 1.0, 0.25)"
-      symbol="月"
-      symbol-color="#333"
-      :symbol-font-size="11"
-    />
+    <g v-if="showMoon">
+      <PlanetSvg
+        :x="moonPos.x"
+        :y="moonPos.y"
+        kind="moon"
+        :scale="getLuminarySize('moon', 1.0) / 22"
+        :halos="getLuminaryHalos('moon', 1.0, 0.25)"
+        halo-color="#c0c0c0"
+      />
+      <text
+        :x="moonPos.x"
+        :y="moonPos.y"
+        fill="#333"
+        font-size="11"
+        font-weight="bold"
+        text-anchor="middle"
+        dominant-baseline="middle"
+      >月</text>
+    </g>
 
     <!-- 五星（黄道圈；逆行加红色虚线环 + 「逆」角标） -->
     <g v-if="showPlanets" class="planets">
       <g v-for="p in planetPos" :key="p.key">
-        <BodyMarker
+        <PlanetSvg
           :x="p.x"
           :y="p.y"
-          :radius="p.size"
-          :color="p.color"
+          :kind="p.key"
+          :scale="p.size / 22"
           :halos="getLuminaryHalos(p.key, 1.0, 0.25)"
-          :symbol="p.symbol"
-          symbol-color="#fff"
-          :symbol-font-size="11"
+          :halo-color="p.color"
         />
+        <text
+          :x="p.x"
+          :y="p.y"
+          fill="#fff"
+          font-size="11"
+          font-weight="bold"
+          text-anchor="middle"
+          dominant-baseline="middle"
+        >{{ p.symbol }}</text>
         <!-- 逆行标记（SkyChart 特有装饰） -->
         <template v-if="p.retrograde">
           <circle

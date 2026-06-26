@@ -9,6 +9,7 @@ import {
   PLANET_SEMI_MAJOR_AU
 } from '@/utils/celestial'
 import BodyMarker from '../celestial/BodyMarker.vue'
+import PlanetSvg from '../celestial/PlanetSvg.vue'
 import { useSevenLuminaries, useEarthHeliocentric, getLuminarySize, getLuminaryHalos } from '@/composables/useSevenLuminaries'
 import type { LuminaryKey } from '@/data/rings/types'
 
@@ -240,52 +241,82 @@ const aspectLines = computed(() =>
     </g>
 
     <!-- 太阳（中心） -->
-    <BodyMarker
+    <PlanetSvg
       :x="0"
       :y="0"
-      :radius="getLuminarySize('sun', 0.7)"
-      color="#ffcc00"
-      :halos="getLuminaryHalos('sun', 0.7, 0.25)"
-      :symbol="showLabels ? '日' : ''"
-      symbol-color="#663300"
-      :symbol-font-size="10"
+      kind="sun"
+      :scale="getLuminarySize('sun', 0.7) / 22"
+      :halos="showLabels ? [] : getLuminaryHalos('sun', 0.7, 0.25)"
+      halo-color="#ffcc00"
     />
+    <text
+      v-if="showLabels"
+      x="0"
+      y="0"
+      fill="#663300"
+      font-size="10"
+      font-weight="bold"
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >日</text>
 
     <!-- 地球 -->
-    <BodyMarker
+    <PlanetSvg
       :x="earth.x"
       :y="earth.y"
-      :radius="getLuminarySize('mercury', 0.9)"
-      color="#4a90d9"
-      :symbol="showLabels ? '地' : ''"
-      symbol-color="#fff"
-      :symbol-font-size="9"
+      kind="earth"
+      :scale="getLuminarySize('mercury', 0.9) / 22"
     />
+    <text
+      v-if="showLabels"
+      :x="earth.x"
+      :y="earth.y"
+      fill="#fff"
+      font-size="9"
+      font-weight="bold"
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >地</text>
 
     <!-- 月亮：绕地球的小卫星圈（放大显示，朔=朝太阳侧/望=背侧） -->
     <circle :cx="earth.x" :cy="earth.y" :r="moonHelio.orbitR" fill="none" stroke="#c0c0c0" stroke-width="0.6" stroke-dasharray="2,2" opacity="0.4" />
-    <BodyMarker
+    <PlanetSvg
       :x="moonHelio.x"
       :y="moonHelio.y"
-      :radius="getLuminarySize('moon', 0.6)"
-      color="#c0c0c0"
-      :symbol="showLabels ? '月' : ''"
-      symbol-color="#333"
-      :symbol-font-size="7"
+      kind="moon"
+      :scale="getLuminarySize('moon', 0.6) / 22"
     />
+    <text
+      v-if="showLabels"
+      :x="moonHelio.x"
+      :y="moonHelio.y"
+      fill="#333"
+      font-size="7"
+      font-weight="bold"
+      text-anchor="middle"
+      dominant-baseline="middle"
+    >月</text>
 
     <!-- 五星 -->
     <g v-for="p in planetsWithOrbit" :key="p.key">
-      <BodyMarker
+      <PlanetSvg
         :x="p.x"
         :y="p.y"
-        :radius="Math.max(6, Math.round(p.size * 0.7))"
-        :color="p.color"
-        :halos="getLuminaryHalos(p.key, 0.7, 0.25)"
-        :symbol="showLabels ? p.symbol : ''"
-        symbol-color="#fff"
-        :symbol-font-size="9"
+        :kind="p.key"
+        :scale="Math.max(6, Math.round(p.size * 0.7)) / 22"
+        :halos="showLabels ? [] : getLuminaryHalos(p.key, 0.7, 0.25)"
+        :halo-color="p.color"
       />
+      <text
+        v-if="showLabels"
+        :x="p.x"
+        :y="p.y"
+        fill="#fff"
+        font-size="9"
+        font-weight="bold"
+        text-anchor="middle"
+        dominant-baseline="middle"
+      >{{ p.symbol }}</text>
       <!-- 上合/下合标注（仅内行星合日时出现） -->
       <text
         v-if="showLabels && p.conj"
