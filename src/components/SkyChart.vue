@@ -31,10 +31,16 @@ const RING_GAP = 8
  *   - 春秋分点 / 升降交点标记
  *   - 内嵌日心轨道盘（中心区域自动布局）
  *
- * ⚠️ 天体标记已移至 RingStack 的 SevenLuminariesRing
- *   - 行星/太阳/月球的 BodyMarker 统一走 Body 环渲染器
- *   - 保持架构一致：所有同心环均通过 RingStack 管理
- *   - 避免两套天体渲染逻辑造成冗余
+ * 🔑 双重视锥架构设计：两套行星视角并存，互为补充
+ *
+ *   【视角一：SkyChart 内置 · 天极投影视角】
+ *     - 太阳 + 五星 → 黄道圈（偏心椭圆轨道）
+ *     - 月球 → 白道圈（另一个偏心椭圆，与黄道相交于升降交点）
+ *     - 视觉特色：轨道偏心、黄赤交角、月球纬度摆动
+ *
+ *   【视角二：SevenLuminariesRing · 赤道环带视角】
+ *     - 所有天体按赤经投影到赤道环带上
+ *     - 视觉特色：与二十八宿精确对齐，直观显示"入宿度"
  *
  * 每个天体待在自己的圈上：
  *   - 二十八宿距星 → 赤道圈（按赤经）
@@ -71,11 +77,12 @@ const props = withDefaults(defineProps<Props>(), {
   showEcliptic: true,
   showWhiteWay: true,
   showMansions: true,
-  // ⚠️ 架构优化：行星标记统一走 RingStack 的 SevenLuminariesRing
-  // SkyChart 仅负责轨道背景渲染，避免天体标记冗余
-  showPlanets: false,
-  showSun: false,
-  showMoon: false,
+  // ⚠️ 架构说明：两套行星视角并存，不冲突
+  //   - SkyChart 内置行星：天极投影视角，黄道/白道偏心轨道
+  //   - SevenLuminariesRing：赤道环带视角，突出二十八宿位置
+  showPlanets: true,
+  showSun: true,
+  showMoon: true,
   showNodes: true,
   showCenters: true,
   showHelioOrbits: true
