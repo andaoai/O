@@ -116,23 +116,162 @@ export const planetPosition = (time: Date, key: PlanetKey): PlanetEclipticPositi
 }
 
 /**
+ * 行星运动状态枚举（源自《史记·天官书》五星运动分类）
+ *
+ * 古代天文术语与现代天文对应关系：
+ * - fast     疾：快速顺行（日运动 > 1.2°）
+ * - normal   顺：正常顺行（日运动 0.5°~1.2°）
+ * - slow     迟：慢速顺行（日运动 0°~0.5°）
+ * - stationary 守/留：静止（日运动 |v| < 0.05°，顺逆转换点）
+ * - retrograde 逆/退：向西退行（日运动 < 0°）
+ *
+ * 五星平均日运动参考：水星~1.5°、金星~1.2°、火星~0.5°、木星~0.08°、土星~0.03°
+ */
+export type MotionState = 'fast' | 'normal' | 'slow' | 'stationary' | 'retrograde'
+
+/**
+ * 行星运动完整信息结构
+ *
+ * 包含运动分类、速度、渲染样式三部分信息，
+ * 供 DataBodyRing / MansionDegreeRing 渲染运动状态标记使用。
+ */
+export interface PlanetMotion {
+  /** 运动状态分类（疾/顺/迟/守/逆） */
+  state: MotionState
+  /** 地心黄经日变化率（度/天，正值=顺行向东） */
+  speed: number
+  /** 是否处于逆行状态 */
+  isRetrograde: boolean
+  /** 是否处于留守静止状态 */
+  isStationary: boolean
+  /** 刻线渲染样式：实线/虚线/淡线 */
+  lineStyle: 'solid' | 'dashed' | 'faint'
+  /** 运动方向箭头指示：顺行沿盘面逆时针，逆行沿顺时针 */
+  arrowDirection: 'clockwise' | 'counterclockwise' | 'none'
+  /** 古代天文术语单字（用于标签显示：疾/顺/迟/守/逆） */
+  character: string
+}
+
+/**
+ * 运动状态视觉配置常量
+ *
+ * 统一定义五种运动状态的颜色、虚线样式、透明度等视觉属性，
+ * 确保 DataBodyRing（天体标记环）和 MansionDegreeRing（入宿度刻线）
+ * 在视觉表现上保持一致。
+ */
+export const MOTION_VISUAL_CONFIG: Record<MotionState, {
+  color: string
+  dashArray: string
+  opacity: number
+  label: string
+}> = {
+  fast: {
+    color: '#4488FF',      // 疾行：动态蓝
+    dashArray: 'none',
+    opacity: 0.85,
+    label: '疾'
+  },
+  normal: {
+    color: '#FFFFFF',      // 正常：白色（天体本色）
+    dashArray: 'none',
+    opacity: 0.85,
+    label: '顺'
+  },
+  slow: {
+    color: '#888888',      // 迟行：中性灰
+    dashArray: '4,2',
+    opacity: 0.6,
+    label: '迟'
+  },
+  stationary: {
+    color: '#00CCFF',      // 留守：信息青
+    dashArray: '4,2',
+    opacity: 0.85,
+    label: '守'
+  },
+  retrograde: {
+    color: '#FF4444',      // 逆行：警示红
+    dashArray: '4,2',
+    opacity: 0.85,
+    label: '逆'
+  }
+} as const
+
+/**
+ * 计算行星当前运动状态与日速度
+ *
+ * 基于中心差分法计算地心黄经瞬时变化率，按古代天文五态分类。
+ * 算法：
+ *   1. 取前后各 halfSpanDays 时刻的黄经位置
+ *   2. 计算黄经差并归一化到 (-180, 180]，避免 360° 跨越误判
+ *   3. 转换为日速度并按阈值分类
+ *
+ * @param time 观测时刻
+ * @param key 行星键名（水金火木土）
+ * @param halfSpanDays 中心差分半步长（天，默认 0.5 天）
+ * @returns 完整运动状态信息
+ */
+export const planetMotion = (
+  time: Date,
+  key: PlanetKey,
+  halfSpanDays = 0.5
+): PlanetMotion => {
+  const ms = halfSpanDays * 24 * 60 * 60 * 1000
+  const before = planetPosition(new Date(time.getTime() - ms), key).longitude
+  const after = planetPosition(new Date(time.getTime() + ms), key).longitude
+
+  // 黄经差归一化到 (-180, 180]，避免 360°→0° 跨越误判
+  const delta = ((after - before) % 360 + 540) % 360 - 180
+  const speed = delta / (2 * halfSpanDays) // 度/天
+
+  const isStationary = Math.abs(speed) < 0.05
+  const isRetrograde = speed < 0
+
+  let state: MotionState
+  if (isStationary) {
+    state = 'stationary'
+  } else if (isRetrograde) {
+    state = 'retrograde'
+  } else if (speed > 1.2) {
+    state = 'fast'
+  } else if (speed < 0.5) {
+    state = 'slow'
+  } else {
+    state = 'normal'
+  }
+
+  const characterMap: Record<MotionState, string> = {
+    fast: '疾',
+    normal: '顺',
+    slow: '迟',
+    stationary: '守',
+    retrograde: '逆'
+  }
+
+  return {
+    state,
+    speed,
+    isRetrograde,
+    isStationary,
+    lineStyle: state === 'stationary' ? 'dashed' : state === 'slow' ? 'faint' : 'solid',
+    arrowDirection: state === 'stationary' ? 'none' : isRetrograde ? 'counterclockwise' : 'clockwise',
+    character: characterMap[state]
+  }
+}
+
+/**
  * 判断行星此刻是否逆行（地心黄经向西退行）
  *
- * 逆行 = 地心黄经随时间减小。用中心差分取瞬时黄经变化率：
- * 比较 time±halfSpan 两时刻的黄经，归一化到 (-180, 180]，
- * 负值即逆行。日月不会逆行，故只对五星调用。
+ * 便捷函数，内部调用 planetMotion 后提取 isRetrograde 字段。
+ * 日月不会逆行，故仅对五星调用此函数。
  *
  * @param time 观测时刻
  * @param key 行星键名
  * @param halfSpanDays 中心差分半步长（天，默认 0.5 天）
+ * @returns true 表示逆行，false 表示顺行
  */
 export const planetRetrograde = (time: Date, key: PlanetKey, halfSpanDays = 0.5): boolean => {
-  const ms = halfSpanDays * 24 * 60 * 60 * 1000
-  const before = planetPosition(new Date(time.getTime() - ms), key).longitude
-  const after = planetPosition(new Date(time.getTime() + ms), key).longitude
-  // 黄经差归一化到 (-180, 180]，避免 360°→0° 跨越误判
-  const delta = ((after - before) % 360 + 540) % 360 - 180
-  return delta < 0
+  return planetMotion(time, key, halfSpanDays).isRetrograde
 }
 
 /* ────────────────────────────────────────────────────────────

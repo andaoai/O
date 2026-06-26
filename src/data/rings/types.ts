@@ -145,18 +145,30 @@ export type LuminaryKey = 'sun' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupit
 /** 天体类型：日月五星 + 通用恒星 */
 export type BodyKind = LuminaryKey | 'star'
 
-/** 天体特殊状态 */
+import type { PlanetMotion } from '@/utils/celestial'
+
+/**
+ * 天体特殊状态集合
+ *
+ * 包含七曜（日月五星）的各类动态状态，
+ * 供 DataBodyRing 渲染不同视觉效果使用。
+ * 所有字段均为可选，不存在的状态不渲染。
+ */
 export interface BodyState {
-  /** 是否逆行 */
+  /** 是否逆行（仅五星，日月恒为 false） */
   retrograde?: boolean
-  /** 黄纬（度），用于径向偏移 */
+  /** 黄道纬度（度），用于天体径向偏移渲染 */
   latitude?: number
-  /** 相位事件：合 / 冲 */
+  /** 相位事件类型：合 / 冲 */
   aspect?: 'conjunction' | 'opposition'
-  /** 入宿信息 */
+  /** 入宿信息：宿名 + 度数 */
   mansion?: { label: string; degree: number }
-  /** 上下合类型（仅内行星） */
+  /** 上下合类型（仅内行星：水星、金星） */
   conjunctionKind?: 'inferior' | 'superior'
+  /** 五星运动状态（疾/顺/迟/守/逆），日月无此字段 */
+  motion?: PlanetMotion
+  /** 守宿事件信息（预留字段，暂未实现自动检测） */
+  mansionEvent?: { label: string; type: 'stationing' | 'conjunction' }
 }
 
 /** 光晕配置 */

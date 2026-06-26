@@ -34,11 +34,13 @@ import {
   sunLongitude,
   planetPosition,
   planetRetrograde,
+  planetMotion,
   moonPosition,
   planetHeliocentric,
   earthHeliocentric,
   inferiorConjunctionKind,
-  type PlanetEclipticPosition
+  type PlanetEclipticPosition,
+  type PlanetMotion
 } from '@/utils/celestial'
 import { eclipticToEquatorial } from '@/utils/skyProjection'
 import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
@@ -57,6 +59,8 @@ export interface LuminaryData extends LuminaryVisualConfig {
   heliocentric?: { longitude: number; latitude: number; distance: number }
   /** 是否逆行（日月恒为 false） */
   retrograde: boolean
+  /** 行星运动状态（仅五星有效，日月恒为正常顺行） */
+  motion?: PlanetMotion
   /** 入宿信息 */
   mansion?: MansionHit
   /** 上下合类型（仅内行星有效） */
@@ -99,6 +103,11 @@ export function useSevenLuminaries(time: MaybeRef<Date>) {
         ? planetRetrograde(t.value, key)
         : false
 
+      // 行星运动状态（仅五星计算，日月无此字段，恒为正常顺行）
+      const motion = key !== 'sun' && key !== 'moon'
+        ? planetMotion(t.value, key)
+        : undefined
+
       // 入宿信息
       const mansionHit = findMansion(eq.ra, spans)
       const mansion = mansionHit || undefined
@@ -122,6 +131,7 @@ export function useSevenLuminaries(time: MaybeRef<Date>) {
         equatorial: eq,
         heliocentric,
         retrograde,
+        motion,
         mansion,
         conjunctionKind
       }

@@ -118,27 +118,28 @@ const outerRings = [
       circleColor: '#555555'
     }
   },
-  // 2. 七曜入宿度标记环（时间驱动 · Body）
+  // 2. 七曜入宿度标记环（时间驱动 · Body · 径向刻线反映运动状态）
   {
     component: markRaw(MansionDegreeRing),
     thickness: 28,
     gapBefore: 6,
     props: { time: controlledTime }
   },
-  // 3. 二十八宿环（时间驱动 · Segment · 动态赤经区间 + 天象事件高亮）
-  {
-    component: markRaw(ConstellationsRing),
-    thickness: 40,
-    gapBefore: 6,
-    props: { time: controlledTime }
-  },
-  // 4. 七曜天体标记环（时间驱动 · Body · 统一 Body 环渲染器）
+  // 3. 七曜天体标记环（时间驱动 · Body · 统一 Body 环渲染器）
   {
     component: markRaw(SevenLuminariesRing),
     thickness: 30,
     gapBefore: 2,
     props: { time: controlledTime }
   },
+  // 4. 二十八宿环（时间驱动 · Segment · 动态赤经区间 + 天象事件高亮）
+  {
+    component: markRaw(ConstellationsRing),
+    thickness: 40,
+    gapBefore: 6,
+    props: { time: controlledTime }
+  },
+
   // 5. 二十四节气环（时间驱动 · Point · 赤经动态对齐）
   {
     component: markRaw(SolarTermsSkyRing),

@@ -67,8 +67,19 @@ const bodyRingData = computed<BodyRingData>(() => {
           ? raToScreenAngle(luminary.equatorial.ra)
           : luminary.ecliptic.longitude
 
-        // 高亮等级：逆行 = 3，普通 = 2
-        const hl: 0 | 1 | 2 | 3 = luminary.retrograde ? 3 : 2
+        // 高亮等级按运动状态分级，提供更细腻的视觉反馈
+        // 逆行/留守 = 3，疾行/迟行 = 2，正常顺行 = 1
+        const getHighlightLevel = (): 0 | 1 | 2 | 3 => {
+          if (luminary.motion?.isRetrograde || luminary.motion?.isStationary) {
+            return 3
+          }
+          if (luminary.motion?.state === 'fast' || luminary.motion?.state === 'slow') {
+            return 2
+          }
+          return 1
+        }
+
+        const hl = getHighlightLevel()
 
         return {
           label: luminary.mansion
@@ -86,7 +97,9 @@ const bodyRingData = computed<BodyRingData>(() => {
             latitude: luminary.ecliptic.latitude,
             mansion: luminary.mansion
               ? { label: luminary.mansion.label, degree: luminary.mansion.degreeInMansion }
-              : undefined
+              : undefined,
+            // 五星运动状态（疾/顺/迟/守/逆），日月恒为正常顺行故不传
+            motion: luminary.motion
           }
         }
       })

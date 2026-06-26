@@ -2,6 +2,7 @@
 import { computed, unref, type MaybeRef } from 'vue'
 import { polarToCartesian, radialTextRotation } from '@/utils/geometry'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
+import { MOTION_VISUAL_CONFIG } from '@/utils/celestial'
 import type { LuminaryKey } from '@/data/rings/types'
 
 /**
@@ -56,17 +57,25 @@ const markers = computed(() => {
       const textRadius = props.innerRadius + (props.radius - props.innerRadius) * 0.5
       const textPos = polarToCartesian(angle, textRadius, props.rotationDirection)
 
+      // 使用统一的运动状态视觉配置，确保与 DataBodyRing 表现一致
+      const motion = luminary.motion
+      const motionConfig = motion ? MOTION_VISUAL_CONFIG[motion.state] : MOTION_VISUAL_CONFIG.normal
+
       return {
         key: luminary.key,
         symbol: luminary.symbol,
         color: luminary.color,
+        lineColor: motion ? motionConfig.color : luminary.color,
+        dashArray: motionConfig.dashArray,
+        opacity: motionConfig.opacity,
         angle,
         degreeInMansion: luminary.mansion?.degreeInMansion ?? 0,
         mansionLabel: luminary.mansion?.label ?? '',
         inner,
         outer,
         textPos,
-        textRotation: radialTextRotation(angle, props.rotationDirection)
+        textRotation: radialTextRotation(angle, props.rotationDirection),
+        motion
       }
     })
 })
@@ -78,21 +87,23 @@ const markers = computed(() => {
     <circle cx="0" cy="0" :r="innerRadius" fill="none" stroke="#555555" stroke-width="1" opacity="0.6" />
     <circle cx="0" cy="0" :r="radius" fill="none" stroke="#555555" stroke-width="1" opacity="0.6" />
 
-    <!-- 七曜标记：径向刻线 + 符号度数 -->
+    <!-- 七曜标记：径向刻线（样式反映运动状态） + 符号度数 -->
     <g v-for="m in markers" :key="m.key">
+      <!-- 径向刻线（颜色和虚线样式与 SevenLuminariesRing 标记环保持一致） -->
       <line
         :x1="m.inner.x"
         :y1="m.inner.y"
         :x2="m.outer.x"
         :y2="m.outer.y"
-        :stroke="m.color"
+        :stroke="m.lineColor"
         :stroke-width="lineWidth"
-        opacity="0.85"
+        :stroke-dasharray="m.dashArray !== 'none' ? m.dashArray : undefined"
+        :opacity="m.opacity"
       />
       <text
         :x="m.textPos.x"
         :y="m.textPos.y"
-        :fill="m.color"
+        :fill="m.lineColor"
         :font-size="fontSize"
         font-weight="bold"
         text-anchor="middle"
