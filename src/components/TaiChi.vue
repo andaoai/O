@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, unref, type MaybeRef } from 'vue'
 
 /**
  * 太极图组件
+ *
+ * ⚠️ 时间驱动架构：接受 time ref，内部统一使用 unref()
  *
  * 显示传统的太极图（阴阳鱼）：
  * 1. 根据时间旋转（24小时转一圈）
@@ -30,8 +32,8 @@ interface Props {
   strokeWidth?: number
   /** 旋转方向 */
   rotationDirection?: 'clockwise' | 'counterclockwise'
-  /** 观测时间（用于计算旋转角度） */
-  time?: Date
+  /** 观测时间（用于计算旋转角度，支持 ref 或 plain value） */
+  time?: MaybeRef<Date>
 }
 
 /**
@@ -45,9 +47,11 @@ const props = withDefaults(defineProps<Props>(), {
   yangEyeColor: '#000000',    // 阳眼黑色
   strokeColor: '#666666',     // 灰色边框
   strokeWidth: 2,             // 边框宽度
-  rotationDirection: 'clockwise',  // 默认顺时针
-  time: () => new Date()      // 默认使用当前时间
+  rotationDirection: 'clockwise'  // 默认顺时针
 })
+
+/** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
+const timeRef = computed(() => unref(props.time) ?? new Date())
 
 /**
  * 根据时间计算太极旋转角度
@@ -58,7 +62,7 @@ const props = withDefaults(defineProps<Props>(), {
  * 角度连续累加，不会每日重置，避免反转问题
  */
 const timeRotation = computed(() => {
-  const time = props.time || new Date()
+  const time = timeRef.value
 
   /**
    * 计算从公元1年1月1日到指定日期的总天数

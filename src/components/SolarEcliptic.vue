@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, unref, type MaybeRef } from 'vue'
 import EclipticCircle from './celestial/EclipticCircle.vue'
 import CelestialBody from './celestial/CelestialBody.vue'
 import LunarOrbit from './celestial/LunarOrbit.vue'
@@ -14,6 +14,8 @@ import {
 /**
  * 太阳黄道编排层
  *
+ * ⚠️ 时间驱动架构：接受 time ref，内部统一使用 unref()
+ *
  * 把黄道圆、太阳、五星、月亮、白道编排在一起。位置计算全部走 utils/celestial，
  * 渲染交给 celestial/ 下职责单一的子组件。本组件只负责"放什么、放哪"。
  *
@@ -22,8 +24,8 @@ import {
 interface Props {
   /** 黄道半径 */
   radius?: number
-  /** 观测时间（缺省取此刻） */
-  time?: Date
+  /** 观测时间（支持 ref 或 plain value） */
+  time?: MaybeRef<Date>
   /** 整体旋转角度（透传，当前未使用动画） */
   rotation?: number
   /** 是否启用动画（保留以兼容旧调用，子组件均不开动画） */
@@ -66,11 +68,14 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
+/** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
+const timeRef = computed(() => unref(props.time) ?? new Date())
+
 /** 是否启用环带约束（内外边界都提供时） */
 const hasBand = computed(() => props.bandInner > 0 && props.bandOuter > 0)
 
 /** 当前时间 */
-const currentTime = computed(() => props.time ?? new Date())
+const currentTime = timeRef
 
 /** 太阳黄经 */
 const sunLon = computed(() => sunLongitude(currentTime.value))

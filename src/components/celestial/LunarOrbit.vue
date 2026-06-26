@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, unref, type MaybeRef } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import { lunarOrbit, moonOrbitPath } from '@/utils/celestial'
 import { polarToCartesian } from '@/utils/geometry'
@@ -7,14 +7,16 @@ import { polarToCartesian } from '@/utils/geometry'
 /**
  * 白道（月球轨道）组件
  *
+ * ⚠️ 时间驱动架构：接受 time ref，内部统一使用 unref()
+ *
  * 画白道轨迹（基于月亮一个完整轨道周期的采样点）+ 升/降交点 + 黄道圆心标记。
  * 位置数据全部来自 utils/celestial。自带 PolarCanvas，可单独使用。
  */
 interface Props {
   /** 黄道基准半径 */
   radius?: number
-  /** 观测时间 */
-  time?: Date
+  /** 观测时间（支持 ref 或 plain value） */
+  time?: MaybeRef<Date>
   /** 是否显示轨道交点 */
   showOrbitalNodes?: boolean
   /** 月亮黄纬偏移缩放因子（与月亮本体保持一致） */
@@ -30,8 +32,10 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
+/** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
+const timeRef = computed(() => unref(props.time) ?? new Date())
 /** 当前时间（缺省取此刻） */
-const currentTime = computed(() => props.time ?? new Date())
+const currentTime = timeRef
 
 /** 白道轨道参数（升/降交点黄经） */
 const orbit = computed(() => lunarOrbit(currentTime.value))
