@@ -1,60 +1,50 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import PolarCanvas from '../base/PolarCanvas.vue'
-import { normalizeAngle, radialTextRotation, polarToCartesian, getMidAngle, arcPath } from '@/utils/geometry'
+import DataPointRing from './DataPointRing.vue'
+import type { PointRingData } from '@/data/rings/types'
 
 /**
  * 通用度数刻度环组件
  *
- * 这是一个高度灵活的极坐标刻度环组件，专门用于显示度数刻度系统。
- * 组件继承自 PolarCanvas，支持自定义刻度间隔，可适应不同的传统文化体系需求。
+ * 这是一个 **点环的专用业务包装组件**，底层完全复用 DataPointRing → PointRing 渲染能力。
+ * 负责将 scaleInterval / labelInterval 配置转换为 PointItem 数据。
+ *
+ * ⚠️ 架构设计：DegreeScale 不做任何渲染，只负责生成数据！
  *
  * 组件特点：
  * - 支持任意度数间隔（1-360度）
- * - 自动生成完整的刻度线（包括所有边界线）
- * - 智能文字定位和旋转
- * - 扇形区域可视化
- * - 动画支持
+ * - 支持主副刻度区分：主刻度长+粗+亮，副刻度短+细+暗
+ * - 标签对齐到主刻度线上（而非刻度中间）
  *
  * @author Generated with Claude Code
  * @since 2025-10-15
  *
  * @example
  * ```vue
- * <!-- 基础用法：5度间隔（72个刻度） -->
+ * <!-- 高精度：每一度有刻度，每隔五度显示数字（360个刻度，72个标签） -->
+ * <DegreeScale
+ *   :radius="200"
+ *   :scale-interval="1"
+ *   :label-interval="5"
+ * />
+ *
+ * <!-- 高精度：每一度有刻度，每隔十度显示数字（360个刻度，36个标签） -->
+ * <DegreeScale
+ *   :radius="200"
+ *   :scale-interval="1"
+ *   :label-interval="10"
+ *   :inner-radius="180"
+ * />
+ *
+ * <!-- 基础用法：5度间隔（72个刻度，72个标签） -->
  * <DegreeScale :radius="200" :scale-interval="5" />
  *
- * <!-- 六十甲子体系：6度间隔（60个刻度） -->
+ * <!-- 六十甲子体系：6度间隔（60个刻度，60个标签） -->
  * <DegreeScale
  *   :radius="200"
  *   :scale-interval="6"
  *   :inner-radius="180"
  *   label-color="#gold"
- * />
- *
- * <!-- 十二地支体系：12度间隔（30个刻度） -->
- * <DegreeScale
- *   :radius="200"
- *   :scale-interval="12"
- *   show-sectors="true"
- *   sector-color="rgba(255,255,255,0.2)"
- * />
- *
- * <!-- 二十四节气体系：15度间隔（24个刻度） -->
- * <DegreeScale
- *   :radius="200"
- *   :scale-interval="15"
- *   :show-labels="true"
- *   label-position="0.8"
- * />
- *
- * <!-- 带动画的刻度环 -->
- * <DegreeScale
- *   :radius="200"
- *   :scale-interval="10"
- *   :enable-animation="true"
- *   :animation-speed="0.1"
- *   :rotation="45"
  * />
  * ```
  */
@@ -65,355 +55,254 @@ import { normalizeAngle, radialTextRotation, polarToCartesian, getMidAngle, arcP
 interface Props {
   /**
    * 圆环外半径（像素）
-   * 必填参数，决定刻度环的整体大小
    */
   radius: number
 
   /**
    * 圆环内半径（像素）
-   * 可选，默认为0（实心圆）
-   * 设置值大于0时创建环形效果，内圆到外圆之间的区域用于显示刻度
    */
   innerRadius?: number
 
   /**
    * 起始度数偏移（0-360度）
-   * 默认0度从正右方（3点钟方向）开始
-   * 用于调整整个刻度环的起始位置
-   *
-   * 示例：
-   * - 0: 从正右方开始
-   * - 90: 从正下方开始
-   * - 180: 从正左方开始
-   * - 270: 从正上方开始
    */
   startDegree?: number
 
   /**
-   * 整体旋转角度（度数）
-   * 用于旋转整个刻度环
-   * 正值为顺时针旋转，负值为逆时针旋转
+   * 刻度间隔（度数）
+   * 核心参数，决定刻度线的密度和数量
    */
-  rotation?: number
+  scaleInterval?: number
 
   /**
-   * 是否启用自动旋转动画
-   * 开启后刻度环会按照 animationSpeed 持续旋转
+   * 标签显示间隔（度数）
+   * 控制每隔多少度显示一个数字标签
+   * 必须是 scaleInterval 的倍数
+   * 默认与 scaleInterval 相同
    */
-  enableAnimation?: boolean
-
-  /**
-   * 动画旋转速度（度/帧）
-   * 正数表示顺时针旋转，负数表示逆时针旋转
-   *
-   * 示例：
-   * - 0.1: 缓慢顺时针旋转
-   * - -0.5: 较快逆时针旋转
-   * - 1: 快速顺时针旋转
-   */
-  animationSpeed?: number
+  labelInterval?: number
 
   /**
    * 是否显示度数标签文字
-   * 控制是否在每个刻度中央显示度数
    */
   showLabels?: boolean
 
   /**
    * 标签文字颜色
-   * 支持任何有效的CSS颜色值
-   *
-   * 示例：
-   * - '#ffffff': 白色
-   * - 'gold': 金色
-   * - 'rgba(255,255,255,0.8)': 半透明白色
    */
   labelColor?: string
 
   /**
-   * 文字位置半径比例（0-1）
-   * 控制标签在内圆和外圆之间的位置
-   *
-   * 示例：
-   * - 0: 紧贴内圆边缘
-   * - 0.5: 内外圆正中间（默认）
-   * - 1: 紧贴外圆边缘
-   * - 0.7: 偏向外圆（常用于环形较宽的情况）
-   */
-  labelPosition?: number
-
-  /**
    * 是否显示圆环边线
-   * 控制是否绘制内圆和外圆的轮廓线
    */
   showCircle?: boolean
 
   /**
-   * 圆环边线宽度（像素）
-   * 边线的粗细程度
+   * 圆环边线宽度
    */
   circleWidth?: number
 
   /**
    * 圆环边线颜色
-   * 与 labelColor 参数格式相同
    */
   circleColor?: string
 
   /**
-   * 是否显示扇形区域
-   * 开启后每个刻度间隔会显示为一个扇形区域
-   * 用于增强视觉效果，便于区分不同的刻度区域
+   * 主刻度颜色（有标签的刻度）
    */
-  showSectors?: boolean
+  majorTickColor?: string
 
   /**
-   * 扇形区域的填充颜色
-   * 支持任何有效的CSS颜色值
+   * 副刻度颜色（无标签的刻度）
    */
-  sectorColor?: string
+  minorTickColor?: string
 
   /**
-   * 扇形区域透明度（0-1）
-   * 0为完全透明，1为完全不透明
-   *
-   * 示例：
-   * - 0.05: 极淡的背景（推荐）
-   * - 0.1: 淡淡的背景（默认）
-   * - 0.3: 较明显的背景
+   * 刻度线方向
+   * - 'outward': 从内圆向外画（刻度靠近内圆）
+   * - 'inward': 从外圆向内画（刻度靠近外圆）
    */
-  sectorOpacity?: number
-
-  /**
-   * 刻度间隔（度数）
-   * 核心参数，决定刻度的密度和数量
-   * 必须是360的约数，以确保均匀分布
-   *
-   * 常用值及其对应体系：
-   *
-   * 传统文化体系：
-   * - 6: 60个刻度（六十甲子、六十纳音）
-   * - 12: 30个刻度（十二地支、十二宫）
-   * - 15: 24个刻度（二十四节气）
-   * - 30: 12个刻度（十二时辰）
-   *
-   * 细分刻度：
-   * - 3: 120个刻度
-   * - 4: 90个刻度
-   * - 5: 72个刻度（常用）
-   * - 10: 36个刻度
-   *
-   * 粗略刻度：
-   * - 24: 15个刻度
-   * - 36: 10个刻度
-   * - 45: 8个刻度（八卦方位）
-   * - 60: 6个刻度（六爻）
-   * - 90: 4个刻度（四象方位）
-   * - 120: 3个刻度（三才）
-   * - 180: 2个刻度（阴阳）
-   * - 360: 1个刻度
-   */
-  scaleInterval?: number
+  tickDirection?: 'outward' | 'inward'
 
   /**
    * 旋转方向
-   * 控制整个刻度环的旋转方向
-   * 影响文字的旋转方向以确保文字始终指向圆心
    */
   rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
-/**
- * 组件默认属性值
- */
 const props = withDefaults(defineProps<Props>(), {
-  innerRadius: 0,          // 默认为实心圆
-  startDegree: 0,          // 从正右方开始
-  rotation: 0,             // 无额外旋转
-  enableAnimation: false,  // 默认不启用动画
-  animationSpeed: 0.5,     // 缓慢旋转速度
-  showLabels: true,        // 显示度数标签
-  labelColor: '#ffffff',   // 白色文字
-  labelPosition: 0.5,      // 文字居中
-  showCircle: true,        // 显示圆环边线
-  circleWidth: 1,          // 细边线
-  circleColor: '#ffffff',  // 白色边线
-  showSectors: true,       // 显示扇形区域
-  sectorColor: '#ffffff',  // 白色扇形
-  sectorOpacity: 0.1,      // 淡淡的扇形背景
-  scaleInterval: 5,        // 默认5度间隔（72个刻度）
-  rotationDirection: 'clockwise'  // 默认顺时针
+  innerRadius: 0,
+  startDegree: 0,
+  scaleInterval: 5,
+  labelInterval: undefined,
+  showLabels: true,
+  labelColor: '#ffffff',
+  showCircle: true,
+  circleWidth: 1,
+  circleColor: '#ffffff',
+  majorTickColor: '#ffffff',
+  minorTickColor: '#aaaaaa',
+  tickDirection: 'inward', // 默认从外圆向内画（标准罗盘）
+  rotationDirection: 'clockwise'
 })
 
 /**
- * 计算刻度总数
- * 根据360度总圆周和刻度间隔计算需要显示的刻度数量
- * 使用 Math.floor 确保整数结果
+ * 实际标签间隔（默认与刻度间隔相同）
  */
-const scaleCount = computed(() => Math.floor(360 / props.scaleInterval))
-
-/** 旋转方向（供 geometry 统一坐标/路径/文字朝向） */
-const dir = computed(() => props.rotationDirection)
+const effectiveLabelInterval = computed(() =>
+  props.labelInterval ?? props.scaleInterval
+)
 
 /**
- * 扇形区域数据（computed，直接走 geometry，不再依赖 PolarCanvas slot 函数）
+ * 标签字号（像素）
  */
-const sectors = computed(() => {
-  const out: { startAngle: number; endAngle: number; path: string }[] = []
-  for (let i = 0; i < scaleCount.value; i++) {
-    const degree = props.scaleInterval + i * props.scaleInterval
-    const startAngle = normalizeAngle(degree - props.scaleInterval + props.startDegree)
-    const endAngle = normalizeAngle(degree + props.startDegree)
-    out.push({
-      startAngle,
-      endAngle,
-      path: arcPath(props.radius, startAngle, endAngle, props.innerRadius, dir.value)
+const LABEL_FONT_SIZE = 11
+
+/**
+ * 标签径向偏移：根据字号自动计算安全间距
+ * ✅ 数学精确保证零重叠
+ *
+ * ⚠️ 支持两个方向：
+ *   tickDirection = 'outward'：从内圆向外画（刻度靠近内圆）
+ *   tickDirection = 'inward'：从外圆向内画（刻度靠近外圆，默认）
+ *
+ * PointRing 刻度线渲染公式：
+ *   x1（内侧端点，靠近圆心）= pt.x × (innerRadius + tickInnerRatio × ringWidth) / radius
+ *   x2（外侧端点，远离圆心）= pt.x × tickOuterRatio
+ *
+ * tickInnerRatio = 0 → x1 在 innerRadius（内圆）
+ * tickInnerRatio = 1 → x1 在 radius（外圆）
+ * tickOuterRatio = 1 → x2 在 radius（外圆）
+ */
+const labelPosition = computed(() => {
+  const ringWidth = props.radius - props.innerRadius
+
+  // 刻度线长度 = 1.5 × 字号，但不能超过环宽的 35%（留足够空间给标签）
+  const safeTickLength = Math.min(
+    ringWidth * 0.35,  // 占环宽 35%，留 65% 给标签
+    Math.max(LABEL_FONT_SIZE * 1.5, 16)
+  )
+
+  // 标签间距 = 字号，保证不重叠
+  const labelGap = LABEL_FONT_SIZE
+
+  if (props.tickDirection === 'outward') {
+    // ──────────────────────────────────────────────────
+    // 'outward' 方向：从内圆向外画（刻度靠近内圆）
+    // ──────────────────────────────────────────────────
+    // 内圆 → 刻度起点(0) → 主刻度末端(35%) → 标签(35% + 字号) → 外圆(100%)
+    //         ↑              ↑                     ↑
+    //         0           safeTickLength      safeTickLength + labelGap
+
+    const majorTickOuterRadius = props.innerRadius + safeTickLength
+    const minorTickOuterRadius = props.innerRadius + safeTickLength / 2
+    // 标签必须在 [innerRadius, radius] 范围内，永不超界
+    const labelRadius = Math.min(
+      props.radius - LABEL_FONT_SIZE,  // 距离外圆至少留一个字号宽度
+      majorTickOuterRadius + labelGap  // 距离刻度线至少一个字号
+    )
+
+    return {
+      labelOffset: labelRadius - props.radius,
+      tickInnerRatio: 0, // 所有刻度从内圆开始
+      majorTickOuterRatio: majorTickOuterRadius / props.radius,
+      minorTickOuterRatio: minorTickOuterRadius / props.radius
+    }
+  } else {
+    // ──────────────────────────────────────────────────
+    // 'inward' 方向：从外圆向内画（刻度靠近外圆，默认）
+    // ──────────────────────────────────────────────────
+    // 内圆 → 标签 → 主刻度起点 → 副刻度起点 → 外圆
+    //                ↑          ↑            ↑
+    //            safeTickLength + labelGap  safeTickLength  0
+
+    const majorTickInnerRadius = props.radius - safeTickLength
+    const minorTickInnerRadius = props.radius - safeTickLength / 2
+    // 标签必须在 [innerRadius, radius] 范围内，永不超界
+    const labelRadius = Math.max(
+      props.innerRadius + LABEL_FONT_SIZE,  // 距离内圆至少留一个字号宽度
+      majorTickInnerRadius - labelGap       // 距离刻度线至少一个字号
+    )
+
+    const majorTickInnerRatio = (majorTickInnerRadius - props.innerRadius) / ringWidth
+    const minorTickInnerRatio = (minorTickInnerRadius - props.innerRadius) / ringWidth
+
+    return {
+      labelOffset: labelRadius - props.radius,
+      tickOuterRatio: 1.0, // 所有刻度画到外圆
+      majorTickInnerRatio,
+      minorTickInnerRatio
+    }
+  }
+})
+
+/**
+ * 生成点环数据
+ * ⚠️ 核心：主副刻度混合，主刻度带标签，副刻度不带标签
+ */
+const ringData = computed((): PointRingData => {
+  const totalTicks = Math.floor(360 / props.scaleInterval)
+  const items: PointRingData['items'] = []
+
+  for (let i = 0; i <= totalTicks; i++) {
+    const degree = i * props.scaleInterval
+    if (degree > 360) continue
+
+    const isMajor = degree % effectiveLabelInterval.value === 0
+
+    const pos = labelPosition.value
+
+    items.push({
+      angle: degree,
+      label: isMajor && props.showLabels ? (degree % 360).toString() : '',
+      pointSymbol: 'tick',
+      pointColor: isMajor ? props.majorTickColor : props.minorTickColor,
+      fontSize: LABEL_FONT_SIZE,
+      // ✅ 双向支持：
+      //   tickDirection = 'outward': 从内圆向外画（刻度靠近内圆）
+      //   tickDirection = 'inward':  从外圆向内画（刻度靠近外圆，默认）
+      // 标签始终与刻度线保持 2px 安全间距，绝对零重叠
+      tickInnerRatio: props.tickDirection === 'outward'
+        ? pos.tickInnerRatio
+        : (isMajor ? pos.majorTickInnerRatio : pos.minorTickInnerRatio),
+      tickOuterRatio: props.tickDirection === 'outward'
+        ? (isMajor ? pos.majorTickOuterRatio : pos.minorTickOuterRatio)
+        : pos.tickOuterRatio,
+      tickWidth: isMajor ? 2 : 1,
+      opacity: isMajor ? 1 : 0.7,
+      highlightLevel: isMajor ? 1 : 0
     })
   }
-  return out
-})
 
-/**
- * 所有刻度线（含 360° 闭合线，故用 <= scaleCount）
- */
-const ticks = computed(() => {
-  const out: { x1: number; y1: number; x2: number; y2: number; angle: number }[] = []
-  for (let i = 0; i <= scaleCount.value; i++) {
-    const angle = normalizeAngle(i * props.scaleInterval + props.startDegree)
-    const inner = polarToCartesian(angle, props.innerRadius, dir.value)
-    const outer = polarToCartesian(angle, props.radius, dir.value)
-    out.push({ x1: inner.x, y1: inner.y, x2: outer.x, y2: outer.y, angle })
+  return {
+    radius: props.radius,
+    innerRadius: props.innerRadius,
+    startDegree: props.startDegree,
+    labelColor: props.labelColor,
+    circleColor: props.circleColor,
+    circleWidth: props.circleWidth,
+    labelOffset: labelPosition.value.labelOffset,
+    labelOffsetBase: 'outer', // ⚠️ 从外半径开始向内偏移
+    labelAngleOffset: 0, // 标签与刻度线对齐（不偏移）
+    pointSymbol: 'tick',
+    items
   }
-  return out
-})
-
-/**
- * 度数标签（位置 + 文字 + 径向旋转）
- */
-const labels = computed(() => {
-  const out: { x: number; y: number; text: string; textRotation: number }[] = []
-  for (let i = 0; i < scaleCount.value; i++) {
-    const degree = props.scaleInterval + i * props.scaleInterval
-    const startAngle = normalizeAngle(degree - props.scaleInterval + props.startDegree)
-    const endAngle = normalizeAngle(degree + props.startDegree)
-    const midAngle = getMidAngle(startAngle, endAngle)
-    const textRadius = props.innerRadius + (props.radius - props.innerRadius) * props.labelPosition
-    const position = polarToCartesian(midAngle, textRadius, dir.value)
-    out.push({
-      x: position.x,
-      y: position.y,
-      text: degree.toString(),
-      textRotation: radialTextRotation(midAngle, dir.value)
-    })
-  }
-  return out
 })
 </script>
 
 <template>
-  <!--
-    使用 PolarCanvas 作为基础画布
-    PolarCanvas 提供了极坐标系统、动画支持和其他基础功能
-  -->
-  <PolarCanvas
-    :enable-animation="enableAnimation"
-    :animation-speed="animationSpeed"
-    :rotation="rotation"
+  <!-- ⚠️ 架构纯净：所有渲染 100% 复用 DataPointRing，无一行自定义 SVG -->
+  <DataPointRing
+    :data="ringData"
+    :radius="radius"
+    :inner-radius="innerRadius"
+    :start-degree="startDegree"
     :rotation-direction="rotationDirection"
-    :center-x="0"
-    :center-y="0"
-  >
-    <template #default="slotProps">
-      <!--
-        根容器组
-        所有图形元素都放在这个组内，便于统一管理
-      -->
-      <g class="degree-scale">
-
-        <!-- 外圆边线 -->
-        <circle
-          v-if="showCircle"
-          :cx="slotProps.centerX"
-          :cy="slotProps.centerY"
-          :r="radius"
-          fill="none"
-          :stroke="circleColor"
-          :stroke-width="circleWidth"
-        />
-
-        <!-- 内圆边线（仅 innerRadius > 0 时） -->
-        <circle
-          v-if="innerRadius > 0"
-          :cx="slotProps.centerX"
-          :cy="slotProps.centerY"
-          :r="innerRadius"
-          fill="none"
-          :stroke="circleColor"
-          :stroke-width="circleWidth"
-        />
-
-        <!-- 扇形区域（背景） -->
-        <g v-if="showSectors">
-          <path
-            v-for="sector in sectors"
-            :key="sector.startAngle"
-            :d="sector.path"
-            :fill="sectorColor"
-            :opacity="sectorOpacity"
-          />
-        </g>
-
-        <!-- 刻度线（含 360° 闭合线） -->
-        <line
-          v-for="tick in ticks"
-          :key="tick.angle"
-          :x1="tick.x1"
-          :y1="tick.y1"
-          :x2="tick.x2"
-          :y2="tick.y2"
-          :stroke="circleColor"
-          :stroke-width="1"
-          opacity="0.6"
-        />
-
-        <!-- 度数标签 -->
-        <g v-if="showLabels">
-          <text
-            v-for="label in labels"
-            :key="label.text"
-            :x="label.x"
-            :y="label.y"
-            :fill="labelColor"
-            font-size="12"
-            text-anchor="middle"
-            dominant-baseline="central"
-            font-weight="bold"
-            :transform="`rotate(${label.textRotation} ${label.x} ${label.y})`"
-          >{{ label.text }}°</text>
-        </g>
-
-      </g>
-    </template>
-  </PolarCanvas>
+    :show-labels="showLabels"
+    :show-circle="showCircle"
+  />
 </template>
 
 <style scoped>
-.degree-scale {
-  /*
-    通用度数刻度环组件样式
-    组件主要依靠属性控制外观，此处保留样式定义以便后续扩展
-  */
-
-  /* 确保所有子元素继承transform */
-  transform-origin: center;
-
-  /* 优化渲染性能 */
-  will-change: transform;
-
-  /* 防止文字模糊 */
-  text-rendering: optimizeLegibility;
-
-  /* 确保线条清晰 */
-  shape-rendering: crispEdges;
-}
+/* ⚠️ 无自定义样式，全部复用底层能力 */
 </style>

@@ -20,7 +20,7 @@ import RingStack from '../components/base/RingStack.vue'
  *  ┌─ DISK_OUTER_RADIUS = 580（唯一配置常量）
  *  │
  *  ├── RingStack 自动分配：7 个同心环，永不重叠
- *  │   1. 360°赤经刻度    (22px)
+ *  │   1. 360°赤经刻度    (22px) · 每一度有刻度线，每隔五度显示数字
  *  │   2. 七曜入宿度标记  (28px + 6px gap)
  *  │   3. 二十八星宿      (40px + 6px gap)
  *  │   4. 七曜天体标记    (30px + 2px gap)
@@ -101,16 +101,20 @@ const DISK_OUTER_RADIUS = 580
  *  ────────────────────────────────────────────────────────────── */
 const outerRings = [
   // 1. 360°赤经刻度（静态间隔，不随时间）
+  //    每一度有刻度线，每隔五度显示数字
+  //    tickDirection = outward：刻度从内圆向外画（刻度靠近内圆）
   {
     component: markRaw(DegreeScale),
     thickness: 22,
     props: {
-      scaleInterval: 10,
+      scaleInterval: 1,        // 每一度一条刻度线
+      labelInterval: 5,        // 每隔五度显示一个数字
+      tickDirection: 'outward', // 刻度从内圆向外画
       startDegree: 0,
       rotationDirection: 'counterclockwise',
       showSectors: false,
       showLabels: true,
-      labelColor: '#888888',
+      labelColor: '#666666',  // 主要刻度文字暗一点
       circleColor: '#555555'
     }
   },

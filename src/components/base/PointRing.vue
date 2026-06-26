@@ -30,6 +30,11 @@ interface Props {
   labelColor?: string
   /** 标签径向偏移：正数向外，负数向内（相对于点的位置） */
   labelOffset?: number
+  /** 标签半径计算基准：
+   *  - 'outer'：相对于外半径 radius（默认，适合点符号）
+   *  - 'inner'：相对于内半径 innerRadius（适合 tick 刻度，标签放在刻度内侧）
+   */
+  labelOffsetBase?: 'outer' | 'inner'
   /** 标签角度偏移（度）：相对于点偏移一定角度，避免与刻度线重叠 */
   labelAngleOffset?: number
   /** 是否显示点标记 */
@@ -40,6 +45,16 @@ interface Props {
   pointColor?: string
   /** 点的符号形状 */
   pointSymbol?: 'circle' | 'diamond' | 'tick'
+  /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始）
+   *  支持主副刻度区分：主刻度 0, 副刻度 0.3
+   */
+  tickInnerRatio?: number
+  /** tick 刻度线外侧结束比例（0=从内圆开始，1=从外圆开始）
+   *  默认 1.0 = 画到外圆。标准罗盘刻度：从外圆向内画
+   */
+  tickOuterRatio?: number
+  /** tick 刻度线宽度 */
+  tickWidth?: number
   /** 是否显示圆环边线 */
   showCircle?: boolean
   /** 圆环边线宽度 */
@@ -63,11 +78,15 @@ const props = withDefaults(defineProps<Props>(), {
   showLabels: true,
   labelColor: 'white',
   labelOffset: 15,
+  labelOffsetBase: 'outer', // 默认：标签相对于外半径（适合点符号）
   labelAngleOffset: 0,
   showPoints: true,
   pointSize: 4,
   pointColor: '#ffffff',
   pointSymbol: 'circle',
+  tickInnerRatio: 0.75,  // 默认从 75% 位置开始画刻度
+  tickOuterRatio: 1.0,   // 默认画到外圆
+  tickWidth: 1,
   showCircle: true,
   circleWidth: 1,
   circleColor: '#888888',
@@ -86,6 +105,10 @@ const polarToCartesian = (angle: number, r: number) =>
  * 点位置计算
  * - 刻度线/点：使用原始角度
  * - 标签：使用 angle + labelAngleOffset（避免与刻度线重叠）
+ *
+ * 标签半径基准：
+ * - labelOffsetBase = 'outer'：labelRadius = radius + labelOffset（点符号默认）
+ * - labelOffsetBase = 'inner'：labelRadius = innerRadius + labelOffset（刻度线专用，标签放在内侧）
  */
 const points = computed(() =>
   props.items.map((item, index) => {
@@ -94,8 +117,9 @@ const points = computed(() =>
     // 标签角度：在点角度基础上偏移（默认 +2.5 度，落在两个刻度线之间）
     const labelAngle = (angle + props.labelAngleOffset) % 360
     const position = polarToCartesian(angle, props.radius)
-    // 标签位置：径向偏移 + 角度偏移
-    const labelRadius = props.radius + props.labelOffset
+    // 标签位置：根据基准选择不同的计算方式
+    const labelBaseRadius = props.labelOffsetBase === 'inner' ? props.innerRadius : props.radius
+    const labelRadius = labelBaseRadius + props.labelOffset
     const labelPosition = polarToCartesian(labelAngle, labelRadius)
     // 文字旋转：使用标签自己的角度
     const textRotation = radialTextRotation(labelAngle, props.rotationDirection)
@@ -179,16 +203,21 @@ const { highlightLevelOf } = useHighlight<PointItem>()
                 }"
               />
             </g>
-            <!-- 刻度线点（径向短线）：从外圆向内画短刻度（占环厚的 1/4）
-                 标准罗盘样式：细小刻度线，不干扰内部文字 -->
+            <!-- 刻度线点（径向短线）：从外圆向内画刻度
+                 支持自定义刻度内外端点：
+                   tickInnerRatio: 内侧端点 (0=内圆, 1=外圆)
+                   tickOuterRatio: 外侧端点 (0=内圆, 1=外圆)
+                 默认: 从 tickInnerRatio 画到外圆 (1.0)
+                 标准罗盘: 从外圆向内画，tickOuterRatio 控制外侧起点 -->
             <line
               v-else-if="(pt.item.pointSymbol || pointSymbol) === 'tick'"
-              :x1="pt.x * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * 0.75) / radius : 0.98)"
-              :y1="pt.y * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * 0.75) / radius : 0.98)"
-              :x2="pt.x * 1.0"
-              :y2="pt.y * 1.0"
+              :x1="pt.x * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * (pt.item.tickInnerRatio ?? tickInnerRatio)) / radius : 0.98)"
+              :y1="pt.y * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * (pt.item.tickInnerRatio ?? tickInnerRatio)) / radius : 0.98)"
+              :x2="pt.x * (pt.item.tickOuterRatio ?? 1.0)"
+              :y2="pt.y * (pt.item.tickOuterRatio ?? 1.0)"
               :stroke="pt.item.pointColor || pointColor"
-              :stroke-width="(pt.item.pointSize || pointSize) / 10"
+              :stroke-width="pt.item.tickWidth ?? tickWidth"
+              :opacity="pt.item.opacity ?? 1"
               stroke-linecap="butt"
               :class="{
                 'highlight-point': highlightLevelOf(pt.item) >= 2,

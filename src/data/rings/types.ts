@@ -96,6 +96,18 @@ export interface PointItem extends RingItemBase {
   pointColor?: string
   /** 点的符号形状 */
   pointSymbol?: 'circle' | 'diamond' | 'tick'
+  /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始）
+   *  用于主副刻度区分：主刻度 0, 副刻度 0.3
+   */
+  tickInnerRatio?: number
+  /** tick 刻度线外侧结束比例（0=从内圆开始，1=从外圆开始）
+   *  默认 1.0 = 画到外圆。标准罗盘刻度：从外圆向内画，tickOuterRatio 控制起始点
+   */
+  tickOuterRatio?: number
+  /** tick 刻度线宽度（像素） */
+  tickWidth?: number
+  /** 点/刻度的透明度（0-1） */
+  opacity?: number
 }
 
 /** 点导向圆环的数据与样式 */
@@ -104,6 +116,8 @@ export interface PointRingData extends RingDataBase {
   items: PointItem[]
   /** 标签径向偏移：正数向外，负数向内 */
   labelOffset?: number
+  /** 标签半径计算基准：'outer' 相对于外半径（点符号），'inner' 相对于内半径（刻度线） */
+  labelOffsetBase?: 'outer' | 'inner'
   /** 标签角度偏移（度）：相对于点偏移一定角度，避免与刻度线重叠 */
   labelAngleOffset?: number
   /** 默认点大小 */
@@ -112,6 +126,12 @@ export interface PointRingData extends RingDataBase {
   pointColor?: string
   /** 默认点符号 */
   pointSymbol?: 'circle' | 'diamond' | 'tick'
+  /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始） */
+  tickInnerRatio?: number
+  /** tick 刻度线外侧结束比例（0=从内圆开始，1=从外圆开始） */
+  tickOuterRatio?: number
+  /** tick 刻度线默认宽度 */
+  tickWidth?: number
 }
 
 /* ──────────────────────────────────────────────
