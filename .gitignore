@@ -35,3 +35,4 @@ playwright-report/
 # Playwright MCP screenshots
 .playwright-mcp/
 astronomy-engine-usage.md
+.claude/worktrees/

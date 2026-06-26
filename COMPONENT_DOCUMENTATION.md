@@ -164,7 +164,73 @@ export const twentyFourSolarTerms: PointRingData = {
 }
 ```
 
-现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`earthlyBranches`、`eightGates`、`siXiang`、`seventyTwoHou`、`twelveShichen`，统一从 `src/data/rings/index.ts` 导出。
+---
+
+### BodyRingData / BodyItem（天体导向圆环数据契约）*NEW!*
+
+天体导向：每个条目是一个在精确角度上的发光天体（太阳、月亮、五星、恒星等），带光晕、逆行标记、黄纬偏移等特殊状态。
+
+#### BodyState（天体特殊状态）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `retrograde` | boolean? | 是否逆行（触发逆行虚线环） |
+| `latitude` | number? | 黄纬（度），用于径向偏移 |
+| `aspect` | `'conjunction' \| 'opposition'`? | 相位事件：合 / 冲 |
+| `mansion` | `{ label: string; degree: number }`? | 入宿信息 |
+| `conjunctionKind` | `'inferior' \| 'superior'`? | 上下合类型（仅内行星） |
+
+#### BodyItem（单个天体）
+
+继承自 `RingItemBase`，所有基础字段（`label`、`color`、`fontSize`、`highlightLevel`）均可用。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `angle` | number | 天体精确角度（度，必填） |
+| `kind` | `BodyKind` | 天体类型：`'sun' \| 'moon' \| 'mercury' \| 'venus' \| 'mars' \| 'jupiter' \| 'saturn' \| 'star'` |
+| `haloLevel` | 0 \| 1 \| 2 \| 3? | 光晕层数（优先于 `highlightLevel`） |
+| `state` | BodyState? | 天体特殊状态 |
+| `symbol` | string | 单字符号（必填） |
+| `size` | number? | 本体半径（px，默认 14） |
+| `symbolColor` | string? | 符号颜色（默认白色） |
+
+#### BodyRingData（一个天体导向环）
+
+继承自 `RingDataBase`，所有基础字段均可用。
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `items` | BodyItem[] | 该环的天体数据（1~N 个，必填） |
+| `defaultHalos` | Halo[]? | 默认光晕配置（外→内，每个 Halo = `{ radius, opacity }`） |
+| `latScale` | number? | 黄纬偏移缩放因子（像素/sin纬） |
+| `showLatLine` | boolean? | 是否显示黄纬偏移指示线 |
+| `showRetrogradeRing` | boolean? | 是否显示逆行标记环 |
+| `labelOffset` | number? | 标签径向偏移：正数向外，负数向内 |
+
+#### 便捷构造函数（`src/data/rings/sevenLuminaries.ts`）
+
+| 函数 | 用途 |
+|------|------|
+| `singlePlanetBody(key, angle, options)` | 单行星研究盘（最常用） |
+| `twoPlanetsBody(key1, angle1, key2, angle2, options)` | 双行星合冲对照 |
+| `sevenLuminariesBody(angles, states)` | 七曜全图盘 |
+| `emptyBodyRing()` | 空天体环（用于动态添加） |
+
+#### 示例：单木星研究盘
+
+```typescript
+import { singlePlanetBody } from '@/data/rings/sevenLuminaries'
+
+// 木星在黄经 120 度，逆行，带 2.5 度黄纬偏移
+const jupiterRing = singlePlanetBody('jupiter', 120, {
+  retrograde: true,
+  latitude: 2.5,
+  highlightLevel: 3,
+  mansion: { label: '井', degree: 12.5 }
+})
+```
+
+现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`earthlyBranches`、`eightGates`、`siXiang`、`seventyTwoHou`、`twelveShichen`、`sevenLuminaries`，统一从 `src/data/rings/index.ts` 导出。
 
 ---
 
@@ -355,6 +421,83 @@ const rings = [
 
 ```vue
 <DataPointRing :data="twentyFourSolarTerms" :radius="460" :inner-radius="440" />
+```
+
+---
+
+### DataBodyRing 数据驱动天体圆环 *NEW!*
+
+接收一个 `BodyRingData`，通过复用 `BodyMarker` 渲染天体（光晕 + 本体 + 符号）。支持黄纬偏移、逆行标记、入宿标注等天文特性。与 `DataRing`、`DataPointRing` 平级，可任意混用堆叠。
+
+**典型场景**：
+- 单行星深度研究盘（多层信息叠加）
+- 双行星合冲对照盘（实时追踪距离变化）
+- 五星聚可视化（分级高亮聚合度）
+- 七曜全图盘
+
+#### Props
+
+| 属性 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `data` | BodyRingData | — | 天体环数据（必填） |
+| `radius` | number? | 200 | 外半径（`RingStack` 注入） |
+| `innerRadius` | number? | 140 | 内半径（`RingStack` 注入） |
+| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向（`RingStack` 注入） |
+| `bandOffset` | number? | 0 | 环带中线偏移（默认正中间，正值向外） |
+
+#### 使用示例（单行星研究）
+
+```vue
+<script setup lang="ts">
+import { markRaw, computed } from 'vue'
+import RingStack from '@/components/base/RingStack.vue'
+import DataBodyRing from '@/components/rings/DataBodyRing.vue'
+import { singlePlanetBody } from '@/data/rings/sevenLuminaries'
+
+const controlledTime = ref(new Date())
+
+// 单木星天体环（角度由天文计算而来）
+const jupiterRing = computed(() => 
+  singlePlanetBody('jupiter', jupiterLongitude.value, {
+    retrograde: isJupiterRetrograde.value,
+    latitude: jupiterLatitude.value,
+    highlightLevel: 3
+  })
+)
+
+const rings = [
+  // 其他外环...
+  { component: markRaw(DataBodyRing), thickness: 60, props: { data: jupiterRing } }
+]
+</script>
+```
+
+#### 使用示例（七曜全图）
+
+```vue
+<script setup lang="ts">
+import { sevenLuminariesBody } from '@/data/rings/sevenLuminaries'
+
+const allPlanetsRing = computed(() => 
+  sevenLuminariesBody(
+    // 七曜各自行星的角度（黄经或赤经）
+    {
+      sun: sunLongitude.value,
+      moon: moonLongitude.value,
+      mercury: mercuryLongitude.value,
+      venus: venusLongitude.value,
+      mars: marsLongitude.value,
+      jupiter: jupiterLongitude.value,
+      saturn: saturnLongitude.value
+    },
+    // 行星状态（逆行、黄纬）
+    {
+      mercury: { retrograde: mercuryRetro.value, latitude: mercuryLat.value },
+      // ...其他行星
+    }
+  )
+)
+</script>
 ```
 
 ---

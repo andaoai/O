@@ -2,7 +2,8 @@
 import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
 import HelioOrbits from '../components/HelioOrbits.vue'
-import PlanetDegreeRing from '../components/rings/PlanetDegreeRing.vue'
+import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
+import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import Control from '../components/Control.vue'
 import DataRing from '../components/rings/DataRing.vue'
 import DataPointRing from '../components/rings/DataPointRing.vue'
@@ -59,29 +60,17 @@ const rotationAngle = ref(0)
 // 当前七曜落宿（随时间重算，供右侧信息面板）
 const planetMansions = computed(() => getPlanetMansions(controlledTime.value))
 
-/** 七曜入宿度标记：按赤经定位、显示入宿度数（含太阳，getPlanetMansions 仅五星+月亮） */
-const planetDegreeMarkers = computed(() => {
-  const t = controlledTime.value
-  const markers: { angle: number; symbol: string; color: string; degree: number }[] = []
-  // 五星 + 月亮（已含 ra 与入宿度）
-  for (const pm of planetMansions.value) {
-    if (!pm.mansion) continue
-    markers.push({
-      angle: raToAngle(pm.ra),
-      symbol: pm.symbol,
-      color: pm.color,
-      degree: pm.mansion.degreeInMansion
-    })
-  }
-  // 补太阳
-  const spans = getMansionSpans(t)
-  const sunRa = sunEquatorial(t).ra
-  const sunHit = findMansion(sunRa, spans)
-  if (sunHit) {
-    markers.push({ angle: raToAngle(sunRa), symbol: '日', color: '#ffdd00', degree: sunHit.degreeInMansion })
-  }
-  return markers
-})
+/**
+ * 【架构升级说明】
+ *
+ * 原 planetDegreeMarkers + PlanetDegreeRing 已替换为：
+ *   - MansionDegreeRing.vue - 保持原有视觉风格（径向刻线+符号度数）
+ *   - SevenLuminariesRing.vue - 发光天体环（光晕+逆行+黄纬偏移）
+ *
+ * 两种组件可以分层叠加使用：
+ *   - 外层：MansionDegreeRing（刻线+入宿度数）
+ *   - 内层：SevenLuminariesRing（天体本体+状态标记）
+ */
 
 /* ──────────────────────────────────────────────────────────────
  * 外圈复用环（动态对齐星图）
@@ -266,12 +255,14 @@ const outerRings = computed(() => [
       circleColor: '#555555'
     }
   },
+  // 七曜入宿度标记环（使用新的统一架构，替代旧的 PlanetDegreeRing
   {
-    component: markRaw(PlanetDegreeRing),
+    component: markRaw(MansionDegreeRing),
     thickness: OUTER_RING_DEFS[1].thickness,
     gapBefore: OUTER_RING_DEFS[1].gapBefore,
-    props: { markers: planetDegreeMarkers.value }
+    props: { time: controlledTime.value }
   },
+  // 二十八宿环
   { component: markRaw(DataRing), thickness: OUTER_RING_DEFS[2].thickness, gapBefore: OUTER_RING_DEFS[2].gapBefore, props: { data: mansionRingData.value } },
   // 二十四节气：点导向（径向短线刻度）
   { component: markRaw(DataPointRing), thickness: OUTER_RING_DEFS[3].thickness, gapBefore: OUTER_RING_DEFS[3].gapBefore, props: { data: solarTermRingData.value } },

@@ -1,37 +1,31 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, unref, type MaybeRef } from 'vue'
 import {
   project,
   eclipticToEquatorial,
   moonPointToEquatorial,
   type PlanePoint
 } from '@/utils/skyProjection'
-import {
-  sunLongitude,
-  planetPosition,
-  planetRetrograde,
-  moonPosition,
-  lunarOrbit,
-  planetEquatorial,
-  moonEquatorial,
-  PLANETS_CONFIG,
-  type PlanetKey
-} from '@/utils/celestial'
-import { getMansionSpans, findMansion } from '@/utils/planetMansion'
+import { lunarOrbit } from '@/utils/celestial'
+import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
 import BodyMarker from './celestial/BodyMarker.vue'
+import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
+import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
 
 /**
  * 天极投影星图
  *
- * 每个天体待在自己的圈上：
- * - 二十八宿距星 → 赤道圈（按赤经）
- * - 太阳 + 五星 → 黄道圈（按黄道坐标）→ 可看其经过春分点/秋分点
- * - 月球 → 白道圈（按白道）→ 可看其经过升交点/降交点
+ * ⚠️ 使用统一架构：内部调用 useSevenLuminaries composable
  *
- * 黄道与赤道相交于春秋分点；白道与黄道相交于升降交点（圈的交点 = 真实天象的交点）。
+ * 每个天体待在自己的圈上：
+ *   - 二十八宿距星 → 赤道圈（按赤经）
+ *   - 太阳 + 五星 → 黄道圈（按黄道坐标）
+ *   - 月球 → 白道圈（按白道）
+ *
+ * 黄道与赤道相交于春秋分点；白道与黄道相交于升降交点。
  */
 interface Props {
-  time?: Date
+  time?: MaybeRef<Date>
   /** 赤道半径（像素，天极居中） */
   radius?: number
   showEquator?: boolean
@@ -59,8 +53,13 @@ const props = withDefaults(defineProps<Props>(), {
   showCenters: true
 })
 
-const currentTime = computed(() => props.time ?? new Date())
 const R = computed(() => props.radius)
+
+/** 确保时间参数是响应式的（默认值用 computed 包裹） */
+const timeRef = computed(() => unref(props.time) ?? new Date())
+
+/** 调用统一的七曜计算 composable */
+const { sun, moon, planets } = useSevenLuminaries(timeRef)
 
 /** 单位投影坐标 → 画布坐标（y 取反：北天极朝上、赤经逆时针） */
 const toCanvas = (p: PlanePoint) => ({ x: p.x * R.value, y: -p.y * R.value })
@@ -88,7 +87,7 @@ const equatorPath = computed(() => buildPath((ra) => ({ ra, dec: 0 })))
 /** 黄道圈（太阳五星落于此） */
 const eclipticPath = computed(() => buildPath((lon) => eclipticToEquatorial(lon)))
 /** 白道圈（月球落于此） */
-const node = computed(() => lunarOrbit(currentTime.value).ascendingNodeLongitude)
+const node = computed(() => lunarOrbit(timeRef.value).ascendingNodeLongitude)
 const whiteWayPath = computed(() => buildPath((u) => moonPointToEquatorial(u, node.value)))
 
 /* ── 交点标记 ── */
@@ -103,19 +102,8 @@ const descNode = computed(() => ecl2c(node.value + 180))
 /** 赤道圆心 = 天极（原点） */
 const equatorCenter = { x: 0, y: 0 }
 
-/* ── 落宿（28宿在赤道，七曜用赤经判断入宿）── */
-const spans = computed(() => getMansionSpans(currentTime.value))
-const hitLabels = computed(() => {
-  const s = new Set<string>()
-  const t = currentTime.value
-  for (const key of Object.keys(PLANETS_CONFIG) as PlanetKey[]) {
-    const m = findMansion(planetEquatorial(t, key).ra, spans.value)
-    if (m) s.add(m.label)
-  }
-  const moonHit = findMansion(moonEquatorial(t).ra, spans.value)
-  if (moonHit) s.add(moonHit.label)
-  return s
-})
+/* ── 二十八宿（赤道圈上的宿区间）─ */
+const spans = computed(() => getMansionSpans(timeRef.value))
 
 /** 沿赤道采样一段弧（startRa→endRa，含跨 360°）的折线路径 */
 const arcPath = (startRa: number, endRa: number): string => {
@@ -131,12 +119,17 @@ const arcPath = (startRa: number, endRa: number): string => {
   return pts.join(' ')
 }
 
-/**
- * 二十八宿（赤道圈上的「宿区间」）
- * 每宿 = [本宿距星赤经, 下一宿距星赤经) 的一段赤道弧，宿名标在弧段中点。
- * 距星点（区间起点）用径向短线分隔，命中宿高亮。
- */
+/** 二十八宿渲染数据 */
 const mansions = computed(() => {
+  // 获取当前行星落宿用于高亮
+  const hitLabels = new Set<string>()
+  for (const p of planets.value) {
+    const m = findMansion(p.equatorial.ra, spans.value)
+    if (m) hitLabels.add(m.label)
+  }
+  const moonMansion = findMansion(moon.value.equatorial.ra, spans.value)
+  if (moonMansion) hitLabels.add(moonMansion.label)
+
   return spans.value.map((s) => {
     const span = ((s.endRa - s.startRa) % 360 + 360) % 360
     const midRa = s.startRa + span / 2
@@ -145,7 +138,7 @@ const mansions = computed(() => {
     const bOut = toCanvas({ x: project(s.startRa, 0).x * 1.04, y: project(s.startRa, 0).y * 1.04 })
     // 宿名标在弧段中点、略偏圈外
     const labelPt = toCanvas({ x: project(midRa, 0).x * 1.1, y: project(midRa, 0).y * 1.1 })
-    const hit = hitLabels.value.has(s.label)
+    const hit = hitLabels.has(s.label)
     return {
       label: s.label,
       color: s.color,
@@ -158,23 +151,13 @@ const mansions = computed(() => {
   })
 })
 
-/* ── 天体位置 ── */
-/** 太阳（黄道圈） */
-const sun = computed(() => ecl2c(sunLongitude(currentTime.value)))
-/** 五星（黄道圈，带各自黄纬；retro 标记逆行） */
-const planets = computed(() =>
-  (Object.keys(PLANETS_CONFIG) as PlanetKey[]).map((key) => {
-    const cfg = PLANETS_CONFIG[key]
-    const pos = planetPosition(currentTime.value, key)
-    const retro = planetRetrograde(currentTime.value, key)
-    return { key, symbol: cfg.symbol, color: cfg.color, size: cfg.size, retro, ...ecl2c(pos.longitude, pos.latitude) }
-  })
-)
-/** 月球（白道圈） */
-const moon = computed(() => {
-  const pos = moonPosition(currentTime.value)
-  return ecl2c(pos.longitude, pos.latitude)
-})
+/* ── 天体位置画布坐标转换 ── */
+const sunPos = computed(() => ecl2c(sun.value.ecliptic.longitude))
+const moonPos = computed(() => ecl2c(moon.value.ecliptic.longitude, moon.value.ecliptic.latitude))
+const planetPos = computed(() => planets.value.map((p) => ({
+  ...p,
+  ...ecl2c(p.ecliptic.longitude, p.ecliptic.latitude)
+})))
 </script>
 
 <template>
@@ -189,7 +172,7 @@ const moon = computed(() => {
     <!-- 天极中心 -->
     <circle cx="0" cy="0" r="3" fill="#aaaaaa" opacity="0.7" />
 
-    <!-- 三圈圆心（几何中心）-->
+    <!-- 三圈圆心（几何中心） -->
     <g v-if="showCenters" class="centers">
       <!-- 赤道圆心（=天极）：十字标 -->
       <g stroke="#888888" stroke-width="1.5">
@@ -256,11 +239,11 @@ const moon = computed(() => {
     <!-- 太阳（黄道圈） -->
     <BodyMarker
       v-if="showSun"
-      :x="sun.x"
-      :y="sun.y"
-      :radius="13"
+      :x="sunPos.x"
+      :y="sunPos.y"
+      :radius="getLuminarySize('sun', 1.0)"
       color="#ffdd00"
-      :halos="[{ radius: 20, opacity: 0.25 }]"
+      :halos="getLuminaryHalos('sun', 1.0, 0.25)"
       symbol="日"
       symbol-color="#333"
       :symbol-font-size="12"
@@ -269,11 +252,11 @@ const moon = computed(() => {
     <!-- 月球（白道圈） -->
     <BodyMarker
       v-if="showMoon"
-      :x="moon.x"
-      :y="moon.y"
-      :radius="9"
+      :x="moonPos.x"
+      :y="moonPos.y"
+      :radius="getLuminarySize('moon', 1.0)"
       color="#c0c0c0"
-      :halos="[{ radius: 13, opacity: 0.3 }]"
+      :halos="getLuminaryHalos('moon', 1.0, 0.25)"
       symbol="月"
       symbol-color="#333"
       :symbol-font-size="11"
@@ -281,23 +264,23 @@ const moon = computed(() => {
 
     <!-- 五星（黄道圈；逆行加红色虚线环 + 「逆」角标） -->
     <g v-if="showPlanets" class="planets">
-      <g v-for="p in planets" :key="p.key">
+      <g v-for="p in planetPos" :key="p.key">
         <BodyMarker
           :x="p.x"
           :y="p.y"
-          :radius="p.size ?? 10"
+          :radius="p.size"
           :color="p.color"
-          :halos="[{ radius: (p.size ?? 10) + 4, opacity: 0.25 }]"
+          :halos="getLuminaryHalos(p.key, 1.0, 0.25)"
           :symbol="p.symbol"
           symbol-color="#fff"
           :symbol-font-size="11"
         />
         <!-- 逆行标记（SkyChart 特有装饰） -->
-        <template v-if="p.retro">
+        <template v-if="p.retrograde">
           <circle
             :cx="p.x"
             :cy="p.y"
-            :r="(p.size ?? 10) + 7"
+            :r="p.size + 7"
             fill="none"
             stroke="#ff3b30"
             stroke-width="1.5"
@@ -305,8 +288,8 @@ const moon = computed(() => {
             class="retro-ring"
           />
           <text
-            :x="p.x + (p.size ?? 10) + 6"
-            :y="p.y - (p.size ?? 10) - 4"
+            :x="p.x + p.size + 6"
+            :y="p.y - p.size - 4"
             fill="#ff3b30"
             font-size="11"
             font-weight="bold"

@@ -28,16 +28,17 @@ The project moved from a "one .vue component per ring" design to a **data-driven
 
 **Adding a new compass = create `src/views/XxxView.vue` + add one entry to the `compasses` array.** No router edits needed.
 
-### 2. Two ring types: Segment (CircleRing) vs Point (PointRing)
+### 2. Three ring types: Segment (CircleRing) + Point (PointRing) + Body (DataBodyRing)
 
-There are **two fundamentally different types of rings**, each with its own data model and renderer:
+There are **three fundamentally different types of rings**, each with its own data model and renderer:
 
 | Type | Use Case | Data Model | Component |
 |------|----------|------------|-----------|
 | **Segment (段)** | Items occupy angular *ranges* (60 jiazi, 12 branches, etc) | `RingData` → `RingItem[]` | `CircleRing` |
-| **Point (点)** | Items exist at *precise angles* (24 solar terms, 7 planets, etc) | `PointRingData` → `PointItem[]` | `PointRing` |
+| **Point (点)** | Items exist at *precise angles* (24 solar terms ticks, etc) | `PointRingData` → `PointItem[]` | `PointRing` |
+| **Body (体)** | Luminous celestial bodies at precise angles (sun, moon, 5 planets) | `BodyRingData` → `BodyItem[]` | `DataBodyRing` |
 
-Both share the same foundation via `useRingBase` composable.
+All three share the same type inheritance system (`RingItemBase` / `RingDataBase`), and all work with `RingStack` auto-layout.
 
 ### 3. Data-driven rings (DataRing + DataPointRing)
 
@@ -52,6 +53,13 @@ Traditional rings are no longer separate components. Instead:
 - `src/data/rings/*.ts` — exports a `PointRingData` object (e.g., `twentyFourSolarTerms`) with precise `angle` per item.
 - `src/components/rings/DataPointRing.vue` — generic wrapper for point-oriented data.
 - `src/components/base/PointRing.vue` — renders points/markers/ticks at precise angles (3 symbol types: `circle`/`diamond`/`tick`).
+
+#### Body-oriented (DataBodyRing) — *NEW!*:
+- `src/data/rings/*.ts` — exports a `BodyRingData` object with `angle`, `haloLevel`, and celestial `state` (retrograde, latitude, aspect, mansion).
+- `src/components/rings/DataBodyRing.vue` — generic wrapper for celestial bodies (sun, moon, 5 planets, stars).
+- Reuses `BodyMarker.vue` from `components/celestial/` for consistent rendering (halos + circle + symbol).
+- Features: latitude offset, retrograde rings, mansion degree labeling, aspect highlighting.
+- Helper functions in `src/data/rings/sevenLuminaries.ts`: `singlePlanetBody()`, `twoPlanetsBody()`, `sevenLuminariesBody()`.
 
 This replaced the old `EarthlyBranches.vue`, `SiXiang.vue`, `SixtyJiazi.vue`, etc. — **those component files no longer exist**; their content lives in `src/data/rings/`.
 
@@ -96,6 +104,9 @@ CircleRing (segment-oriented ring renderer)
 
 PointRing (point-oriented ring renderer: circle/diamond/tick)
 └── DataPointRing (data-driven wrapper: PointRingData → PointRing)
+
+BodyMarker (celestial body marker: halos + circle + symbol)
+└── DataBodyRing (data-driven celestial ring: BodyRingData → BodyMarker)
 
 DegreeScale (degree-tick ring, NOT data-driven — interval-based)
 

@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, unref, type MaybeRef } from 'vue'
 import {
-  planetHeliocentric,
   earthHeliocentric,
   inferiorConjunctionKind,
   moonPosition,
   detectAspects,
   formatAspect,
-  PLANET_SEMI_MAJOR_AU,
-  PLANETS_CONFIG,
-  type PlanetKey,
-  type LuminaryKey
+  PLANET_SEMI_MAJOR_AU
 } from '@/utils/celestial'
 import BodyMarker from './celestial/BodyMarker.vue'
+import { useSevenLuminaries, useEarthHeliocentric, getLuminarySize, getLuminaryHalos } from '@/composables/useSevenLuminaries'
+import type { LuminaryKey } from '@/data/rings/types'
 
 /**
  * 日心轨道盘（最里层）
+ *
+ * ⚠️ 使用统一架构：内部调用 useSevenLuminaries composable
  *
  * 以太阳为中心，按真实轨道内外顺序（水→金→地→火→木→土）等间距画 6 个同心圆。
  * 等间距而非真实 AU：土星轨道是水星的 24 倍，真实比例下中心区放不下五星。
@@ -27,7 +27,7 @@ import BodyMarker from './celestial/BodyMarker.vue'
  * 与外层黄道圈同向，便于和地心星图对照。
  */
 interface Props {
-  time?: Date
+  time?: MaybeRef<Date>
   /** 最外轨道（土星）半径（像素） */
   radius?: number
   /** 最内圈与中心（太阳）之间的预留半径（像素） */
@@ -44,19 +44,29 @@ const props = withDefaults(defineProps<Props>(), {
   showAspects: true
 })
 
-const currentTime = computed(() => props.time ?? new Date())
+/** 确保时间参数是响应式的（默认值用 computed 包裹） */
+const timeRef = computed(() => unref(props.time) ?? new Date())
+
+/** 调用统一的七曜计算 composable */
+const { sun, moon, planets } = useSevenLuminaries(timeRef)
+
+/** 地球日心位置（独立获取） */
+const earthHelio = useEarthHeliocentric(timeRef)
+
 const D2R = Math.PI / 180
 
 /** 轨道顺序（由内到外），地球插在金星与火星之间 */
-type OrbitKey = PlanetKey | 'earth'
+type OrbitKey = LuminaryKey | 'earth'
 const ORBIT_ORDER = computed<OrbitKey[]>(() => {
-  const planets = (Object.keys(PLANETS_CONFIG) as PlanetKey[])
-  const all: OrbitKey[] = [...planets, 'earth']
   // 按真实半长轴排序（地球=1.0）
-  return all.sort((a, b) => au(a) - au(b))
+  const allPlanets: OrbitKey[] = [...planets.value.map(p => p.key), 'earth']
+  const au = (k: OrbitKey) => {
+    if (k === 'earth') return 1.0
+    if (k === 'sun' || k === 'moon') return 0 // 不参与排序
+    return PLANET_SEMI_MAJOR_AU[k]
+  }
+  return allPlanets.sort((a, b) => au(a) - au(b))
 })
-
-const au = (k: OrbitKey) => (k === 'earth' ? 1.0 : PLANET_SEMI_MAJOR_AU[k])
 
 /** 第 i 圈（由内到外）的等间距半径 */
 const orbitRadius = (index: number) => {
@@ -76,7 +86,7 @@ const place = (lon: number, r: number) => ({
 const earth = computed(() => {
   const idx = ORBIT_ORDER.value.indexOf('earth')
   const r = orbitRadius(idx)
-  const pos = earthHeliocentric(currentTime.value)
+  const pos = earthHelio.value
   return { r, ...place(pos.longitude, r), lon: pos.longitude }
 })
 
@@ -100,8 +110,8 @@ const MOON_ORBIT_PX = computed(() => {
   const cap = orbitSpacing.value * 0.4
   return Math.max(10, Math.min(cap, 22))
 })
-const moon = computed(() => {
-  const lon = moonPosition(currentTime.value).longitude
+const moonHelio = computed(() => {
+  const lon = moon.value.ecliptic.longitude
   const local = place(lon, MOON_ORBIT_PX.value)
   return {
     orbitR: MOON_ORBIT_PX.value,
@@ -111,21 +121,19 @@ const moon = computed(() => {
 })
 
 /** 五星：位置 + 所在轨道半径 + 上下合标记 */
-const planets = computed(() =>
-  (Object.keys(PLANETS_CONFIG) as PlanetKey[]).map((key) => {
-    const cfg = PLANETS_CONFIG[key]
-    const idx = ORBIT_ORDER.value.indexOf(key)
+const planetsWithOrbit = computed(() =>
+  planets.value.map((p) => {
+    const idx = ORBIT_ORDER.value.indexOf(p.key)
     const r = orbitRadius(idx)
-    const pos = planetHeliocentric(currentTime.value, key)
-    const conj = inferiorConjunctionKind(currentTime.value, key)
+    // 仅内行星（水/金）需要计算上下合
+    const conj = (p.key === 'mercury' || p.key === 'venus')
+      ? inferiorConjunctionKind(timeRef.value, p.key)
+      : null
     return {
-      key,
-      symbol: cfg.symbol,
-      color: cfg.color,
-      size: Math.max(6, (cfg.size ?? 10) * 0.7),
+      ...p,
       r,
       conj,
-      ...place(pos.longitude, r)
+      ...place(p.heliocentric?.longitude ?? 0, r)
     }
   })
 )
@@ -141,14 +149,16 @@ const orbitCircles = computed(() => ORBIT_ORDER.value.map((k, i) => ({ key: k, r
 const luminaryPoint = computed<Record<LuminaryKey, { x: number; y: number }>>(() => {
   const map = {} as Record<LuminaryKey, { x: number; y: number }>
   map.sun = { x: 0, y: 0 }
-  map.moon = { x: moon.value.x, y: moon.value.y }
-  for (const p of planets.value) map[p.key] = { x: p.x, y: p.y }
+  map.moon = { x: moonHelio.value.x, y: moonHelio.value.y }
+  for (const p of planetsWithOrbit.value) {
+    map[p.key] = { x: p.x, y: p.y }
+  }
   return map
 })
 
 /** 当前合/冲相位连线（连接成相位的两天体，过地球点） */
 const aspectLines = computed(() =>
-  detectAspects(currentTime.value, 6).map((e) => {
+  detectAspects(timeRef.value, 6).map((e) => {
     const pa = luminaryPoint.value[e.a]
     const pb = luminaryPoint.value[e.b]
     return {
@@ -227,9 +237,9 @@ const aspectLines = computed(() =>
     <BodyMarker
       :x="0"
       :y="0"
-      :radius="9"
+      :radius="getLuminarySize('sun', 0.7)"
       color="#ffcc00"
-      :halos="[{ radius: 14, opacity: 0.25 }]"
+      :halos="getLuminaryHalos('sun', 0.7, 0.25)"
       :symbol="showLabels ? '日' : ''"
       symbol-color="#663300"
       :symbol-font-size="10"
@@ -239,7 +249,7 @@ const aspectLines = computed(() =>
     <BodyMarker
       :x="earth.x"
       :y="earth.y"
-      :radius="7"
+      :radius="getLuminarySize('mercury', 0.9)"
       color="#4a90d9"
       :symbol="showLabels ? '地' : ''"
       symbol-color="#fff"
@@ -247,11 +257,11 @@ const aspectLines = computed(() =>
     />
 
     <!-- 月亮：绕地球的小卫星圈（放大显示，朔=朝太阳侧/望=背侧） -->
-    <circle :cx="earth.x" :cy="earth.y" :r="moon.orbitR" fill="none" stroke="#c0c0c0" stroke-width="0.6" stroke-dasharray="2,2" opacity="0.4" />
+    <circle :cx="earth.x" :cy="earth.y" :r="moonHelio.orbitR" fill="none" stroke="#c0c0c0" stroke-width="0.6" stroke-dasharray="2,2" opacity="0.4" />
     <BodyMarker
-      :x="moon.x"
-      :y="moon.y"
-      :radius="4.5"
+      :x="moonHelio.x"
+      :y="moonHelio.y"
+      :radius="getLuminarySize('moon', 0.6)"
       color="#c0c0c0"
       :symbol="showLabels ? '月' : ''"
       symbol-color="#333"
@@ -259,13 +269,13 @@ const aspectLines = computed(() =>
     />
 
     <!-- 五星 -->
-    <g v-for="p in planets" :key="p.key">
+    <g v-for="p in planetsWithOrbit" :key="p.key">
       <BodyMarker
         :x="p.x"
         :y="p.y"
-        :radius="p.size"
+        :radius="Math.max(6, Math.round(p.size * 0.7))"
         :color="p.color"
-        :halos="[{ radius: p.size + 3, opacity: 0.25 }]"
+        :halos="getLuminaryHalos(p.key, 0.7, 0.25)"
         :symbol="showLabels ? p.symbol : ''"
         symbol-color="#fff"
         :symbol-font-size="9"

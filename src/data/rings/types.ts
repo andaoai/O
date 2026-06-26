@@ -5,12 +5,17 @@
  * 每个传统圆环（地支、天干、纳音……）只需提供一个 RingData 对象，
  * 不再各自编写近乎重复的 .vue 组件。
  *
- * 类型继承关系：
- *   RingItemBase          PointItemBase
- *        ↓                      ↓
- *    RingItem              PointItem
- *        ↓                      ↓
- *    RingData              PointRingData
+ * 类型继承关系（三级统一体系）：
+ *   RingItemBase          PointItemBase         BodyItemBase
+ *        ↓                      ↓                      ↓
+ *    RingItem              PointItem              BodyItem
+ *        ↓                      ↓                      ↓
+ *    RingData              PointRingData          BodyRingData
+ *
+ * 三种圆环类型：
+ *   - CircleRing (段导向)：扇形区间，如十二地支、六十甲子
+ *   - PointRing  (点导向)：精确角度点，如二十四节气刻度
+ *   - BodyRing   (体导向)：发光天体，如七曜、恒星（新增）
  */
 
 /* ──────────────────────────────────────────────
@@ -107,4 +112,73 @@ export interface PointRingData extends RingDataBase {
   pointColor?: string
   /** 默认点符号 */
   pointSymbol?: 'circle' | 'diamond' | 'tick'
+}
+
+/* ──────────────────────────────────────────────
+   BodyRing: 天体导向圆环（单角度发光体）
+   用于七曜、恒星等单个天体在圆环上的定位与可视化
+   ────────────────────────────────────────────── */
+
+/** 参与相位检测的天体键名（日月五星） */
+export type LuminaryKey = 'sun' | 'moon' | 'mercury' | 'venus' | 'mars' | 'jupiter' | 'saturn'
+
+/** 天体类型：日月五星 + 通用恒星 */
+export type BodyKind = LuminaryKey | 'star'
+
+/** 天体特殊状态 */
+export interface BodyState {
+  /** 是否逆行 */
+  retrograde?: boolean
+  /** 黄纬（度），用于径向偏移 */
+  latitude?: number
+  /** 相位事件：合 / 冲 */
+  aspect?: 'conjunction' | 'opposition'
+  /** 入宿信息 */
+  mansion?: { label: string; degree: number }
+  /** 上下合类型（仅内行星） */
+  conjunctionKind?: 'inferior' | 'superior'
+}
+
+/** 光晕配置 */
+export interface Halo {
+  /** 光晕半径（px，绝对值） */
+  radius: number
+  /** 透明度 */
+  opacity: number
+}
+
+/** 天体导向圆环：单个体的数据 */
+export interface BodyItem extends RingItemBase {
+  /** 天体精确角度（度） */
+  angle: number
+  /** 天体类型 */
+  kind: BodyKind
+  /** 光晕层数映射：0=无光晕，1=弱，2=中，3=强（优先于 highlightLevel） */
+  haloLevel?: 0 | 1 | 2 | 3
+  /** 天体特殊状态 */
+  state?: BodyState
+  /** 单字符号（复写基类，必选） */
+  symbol: string
+  /** 颜色（复写基类，必选） */
+  color: string
+  /** 本体半径（px） */
+  size?: number
+  /** 符号颜色 */
+  symbolColor?: string
+}
+
+/** 天体导向圆环的数据与样式 */
+export interface BodyRingData extends RingDataBase {
+  /** 该环的天体数据（1~N 个） */
+  items: BodyItem[]
+  /** 默认光晕配置（外→内） */
+  defaultHalos?: Halo[]
+  /** 黄纬偏移缩放因子（像素/sin纬） */
+  latScale?: number
+  /** 是否显示黄纬偏移指示线 */
+  showLatLine?: boolean
+  /** 是否显示逆行标记环 */
+  showRetrogradeRing?: boolean
+  /** 标签径向偏移：正数向外，负数向内 */
+  labelOffset?: number
 }
