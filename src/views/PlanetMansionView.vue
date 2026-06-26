@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
-import HelioOrbits from '../components/HelioOrbits.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
@@ -10,18 +9,36 @@ import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
 import Control from '../components/Control.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
-import { OUTER_BULGE_RATIO, INNER_GAP_RATIO } from '../utils/skyProjection'
 
 /**
- * 七曜入宿天象盘（时间驱动统一架构）
+ * 七曜入宿天象盘（五层架构 · 纯时间驱动）
  *
  * ═══════════════════════════════════════════════════════════════
- *  🔑 架构原则：唯一时间源 controlledTime
+ *  🔑 架构成就：零手动半径计算 · 全自动化布局
  *  ─────────────────────────────────────────────────────────────
- *  父组件不做任何数据计算，只传 time ref 给各子组件。
- *  所有计算逻辑都封装在各自的 Ring 组件内部。
- *  time 变化 → 所有子组件自动响应，重新计算并渲染。
- * ═══════════════════════════════════════════════════════════════
+ *
+ *  ┌─ DISK_OUTER_RADIUS = 580（唯一配置常量）
+ *  │
+ *  ├── RingStack 自动分配：7 个同心环，永不重叠
+ *  │   1. 360°赤经刻度    (22px)
+ *  │   2. 七曜入宿度标记  (28px + 6px gap)
+ *  │   3. 二十八星宿      (40px + 6px gap)
+ *  │   4. 七曜天体标记    (30px + 2px gap)
+ *  │   5. 二十四节气      (30px + 8px gap)
+ *  │   6. 四象           (34px + 4px gap)
+ *  │   7. SkyChart 星图  (剩余全部空间)
+ *  │
+ *  └── SkyChart 内部自动计算
+ *      ├── 赤道半径 = (内缘半径 - gap) / OUTER_BULGE_RATIO
+ *      ├── 日心盘半径 = skyRadius * INNER_GAP_RATIO - gap
+ *      └── 日心盘内半径 = max(20, helioRadius * 0.16)
+ *
+ *  ═══════════════════════════════════════════════════════════════
+ *  所有组件均为标准时间驱动环：
+ *    - 接受 MaybeRef<Date>
+ *    - 内部 computed 派生所有数据
+ *    - 父组件不做任何计算，只传 time ref
+ *  ═══════════════════════════════════════════════════════════════
  */
 
 // 唯一时间源
@@ -62,58 +79,31 @@ const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
-/* ──────────────────────────────────────────────────────────────
- * 半径级联布局（单一来源：DISK_OUTER_RADIUS）
- *
- * 四层半径过去全靠手写常量，改环厚度就要逐个重算。现在从最外缘一个数
- * 级联推算出全部，永不重叠。
- * ────────────────────────────────────────────────────────────── */
+/**
+ * 🔹 唯一配置常量：全圆盘外缘半径
+ * 所有内层半径由 RingStack + 各环组件自动计算，零手动配置
+ */
 const DISK_OUTER_RADIUS = 580
-const RING_GAP = 8
-
-// 外圈六环的厚度与间隙（由外到内）：
-// 360°刻度 → 七曜入宿度 → 二十八星宿 → 七曜天体 → 二十四节气 → 四象
-interface OuterRingDef {
-  thickness: number
-  gapBefore: number
-}
-const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
-  { thickness: 22, gapBefore: 0 }, // 360°赤经刻度
-  { thickness: 28, gapBefore: 6 }, // 七曜入宿度
-  { thickness: 40, gapBefore: 6 }, // 二十八星宿
-  { thickness: 30, gapBefore: 2 }, // 七曜天体标记（新增：统一 Body 环渲染）
-  { thickness: 30, gapBefore: 8 }, // 二十四节气
-  { thickness: 34, gapBefore: 4 }  // 四象
-]
-
-/** RingStack 累加后的内缘半径 */
-const ringStackInner = computed(
-  () =>
-    DISK_OUTER_RADIUS -
-    OUTER_RING_DEFS.reduce((sum, r) => sum + r.thickness + r.gapBefore, 0)
-)
-
-// 常量已从 skyProjection 导入，无需重复定义
-
-/** 星图赤道半径：让黄/白道最大鼓出顶到外圈内缘下方 RING_GAP 处 */
-const skyRadius = computed(() => (ringStackInner.value - RING_GAP) / OUTER_BULGE_RATIO)
-
-/** 日心盘外半径：填满星图中心空区再留 RING_GAP */
-const helioRadius = computed(() => skyRadius.value * INNER_GAP_RATIO - RING_GAP)
-/** 日心盘内半径：留出太阳本体空间 */
-const helioInnerRadius = computed(() => Math.max(20, helioRadius.value * 0.16))
 
 /* ──────────────────────────────────────────────────────────────
- * 外圈 RingStack 配置（由外到内）
+ * RingStack 全圆盘配置（由外到内，7 个环 + 中心 SkyChart）
  *
- * ⚠️ 全时间驱动架构：所有组件都只传 controlledTime ref
- * 没有父组件 computed，没有 .value 提取，整条链路响应式。
- * ────────────────────────────────────────────────────────────── */
+ * ═══════════════════════════════════════════════════════════════
+ *  🔑 架构成就：零手动半径计算 · 全自动化布局
+ *  ═══════════════════════════════════════════════════════════════
+ *
+ *  所有组件均为标准时间驱动环：
+ *    - 接受 MaybeRef<Date>
+ *    - 内部 computed 派生所有数据
+ *    - 父组件不做任何计算，只传 time ref
+ *
+ *  环类型分布：6 × Segment + 1 × Body + 1 × 复杂可视化
+ *  ────────────────────────────────────────────────────────────── */
 const outerRings = [
-  // 360°赤经刻度（静态间隔，不随时间）
+  // 1. 360°赤经刻度（静态间隔，不随时间）
   {
     component: markRaw(DegreeScale),
-    thickness: OUTER_RING_DEFS[0].thickness,
+    thickness: 22,
     props: {
       scaleInterval: 10,
       startDegree: 0,
@@ -124,41 +114,57 @@ const outerRings = [
       circleColor: '#555555'
     }
   },
-  // 七曜入宿度标记环（时间驱动）
+  // 2. 七曜入宿度标记环（时间驱动 · Body）
   {
     component: markRaw(MansionDegreeRing),
-    thickness: OUTER_RING_DEFS[1].thickness,
-    gapBefore: OUTER_RING_DEFS[1].gapBefore,
+    thickness: 28,
+    gapBefore: 6,
     props: { time: controlledTime }
   },
-  // 二十八宿环（时间驱动：动态赤经区间 + 天象事件高亮）
+  // 3. 二十八宿环（时间驱动 · Segment · 动态赤经区间 + 天象事件高亮）
   {
     component: markRaw(ConstellationsRing),
-    thickness: OUTER_RING_DEFS[2].thickness,
-    gapBefore: OUTER_RING_DEFS[2].gapBefore,
+    thickness: 40,
+    gapBefore: 6,
     props: { time: controlledTime }
   },
-  // 七曜天体标记环（时间驱动：统一 Body 环渲染器）
-  // 与 SkyChart 赤经坐标完全对齐，替代 SkyChart 内部行星渲染，保持架构一致
+  // 4. 七曜天体标记环（时间驱动 · Body · 统一 Body 环渲染器）
   {
     component: markRaw(SevenLuminariesRing),
-    thickness: OUTER_RING_DEFS[3].thickness,
-    gapBefore: OUTER_RING_DEFS[3].gapBefore,
+    thickness: 30,
+    gapBefore: 2,
     props: { time: controlledTime }
   },
-  // 二十四节气环（时间驱动：赤经动态对齐 + 当前节气高亮）
+  // 5. 二十四节气环（时间驱动 · Point · 赤经动态对齐）
   {
     component: markRaw(SolarTermsSkyRing),
-    thickness: OUTER_RING_DEFS[4].thickness,
-    gapBefore: OUTER_RING_DEFS[4].gapBefore,
+    thickness: 30,
+    gapBefore: 8,
     props: { time: controlledTime }
   },
-  // 四象环（时间驱动：按宿赤经动态合并）
+  // 6. 四象环（时间驱动 · Segment · 按宿赤经动态合并）
   {
     component: markRaw(SiXiangRing),
-    thickness: OUTER_RING_DEFS[5].thickness,
-    gapBefore: OUTER_RING_DEFS[5].gapBefore,
+    thickness: 34,
+    gapBefore: 4,
     props: { time: controlledTime }
+  },
+  // 7. 🔹 天极投影星图（时间驱动 · 复杂可视化 · 最内环）
+  //    内嵌日心轨道盘，赤道/黄道/白道半径全部自动计算
+  {
+    component: markRaw(SkyChart),
+    // thickness: 自动填充剩余全部中心空间
+    gapBefore: 8,
+    props: {
+      time: controlledTime,
+      showEquator: true,
+      showEcliptic: true,
+      showWhiteWay: true,
+      showMansions: false,
+      showNodes: true,
+      showCenters: true,
+      showHelioOrbits: true
+    }
   }
 ]
 </script>
@@ -170,28 +176,18 @@ const outerRings = [
 
     <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
-        <!-- 外圈复用环：360°赤经刻度 + 二十四节气 + 二十八星宿（动态对齐星图赤经） -->
+        <!-- ═══════════════════════════════════════════════════════════════
+             🔑 五层架构 · 全自动化布局
+             ──────────────────────────────────────────────────────────────
+             唯一配置：DISK_OUTER_RADIUS = 580
+             全部 7 个环 + 中心星图 + 日心轨道盘，半径 100% 自动计算
+             零手动配置 · 永不重叠 · 时间驱动
+             ═══════════════════════════════════════════════════════════════ -->
         <RingStack
           :outer-radius="DISK_OUTER_RADIUS"
           :rings="outerRings"
           rotation-direction="clockwise"
         />
-
-        <!-- 天极投影星图：赤道正圆居中，黄道/白道偏心，七曜各按赤经落位 -->
-        <SkyChart
-          :time="controlledTime"
-          :radius="skyRadius"
-          :show-equator="true"
-          :show-ecliptic="true"
-          :show-white-way="true"
-          :show-mansions="false"
-          :show-planets="true"
-          :show-sun="true"
-          :show-moon="true"
-        />
-
-        <!-- 最里层：日心轨道盘（太阳居中，地球+五星按日心黄经落位） -->
-        <HelioOrbits :time="controlledTime" :radius="helioRadius" :inner-radius="helioInnerRadius" :show-labels="true" />
       </g>
     </svg>
 

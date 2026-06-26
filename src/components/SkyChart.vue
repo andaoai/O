@@ -4,21 +4,32 @@ import {
   project,
   eclipticToEquatorial,
   moonPointToEquatorial,
-  type PlanePoint
+  type PlanePoint,
+  OUTER_BULGE_RATIO,
+  INNER_GAP_RATIO
 } from '@/utils/skyProjection'
 import { lunarOrbit } from '@/utils/celestial'
 import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
 import BodyMarker from './celestial/BodyMarker.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
+import HelioOrbits from './HelioOrbits.vue'
+
+/** 环与星图之间的默认间隙 */
+const RING_GAP = 8
 
 /**
- * 天极投影星图（轨道背景专用）
+ * 天极投影星图（标准时间驱动环组件）
+ *
+ * ⚠️ 五层架构范式：接受 MaybeRef<Date>，内部 computed 派生所有数据
+ *   - 自动计算：赤道半径、黄道/白道缩放、日心盘半径
+ *   - 无需父组件手动计算任何半径
  *
  * ⚠️ 架构优化：SkyChart 仅负责轨道背景渲染
  *   - 赤道圈 / 黄道圈 / 白道圈 的路径绘制
  *   - 二十八宿区间与宿名
  *   - 春秋分点 / 升降交点标记
+ *   - 内嵌日心轨道盘（中心区域自动布局）
  *
  * ⚠️ 天体标记已移至 RingStack 的 SevenLuminariesRing
  *   - 行星/太阳/月球的 BodyMarker 统一走 Body 环渲染器
@@ -34,8 +45,12 @@ import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
  */
 interface Props {
   time?: MaybeRef<Date>
-  /** 赤道半径（像素，天极居中） */
+  /** 环外半径（由 RingStack 注入） */
   radius?: number
+  /** 环内半径（由 RingStack 注入，未使用，保持接口一致） */
+  innerRadius?: number
+  /** 旋转方向（由 RingStack 注入） */
+  rotationDirection?: 'clockwise' | 'counterclockwise'
   showEquator?: boolean
   showEcliptic?: boolean
   showWhiteWay?: boolean
@@ -46,6 +61,8 @@ interface Props {
   showNodes?: boolean
   /** 显示黄道/白道圆心（几何中心） */
   showCenters?: boolean
+  /** 是否显示内嵌日心轨道盘 */
+  showHelioOrbits?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -60,10 +77,31 @@ const props = withDefaults(defineProps<Props>(), {
   showSun: false,
   showMoon: false,
   showNodes: true,
-  showCenters: true
+  showCenters: true,
+  showHelioOrbits: true
 })
 
-const R = computed(() => props.radius)
+/**
+ * ⚠️ 五层架构范式：所有半径自动计算，零手动配置
+ *
+ * 计算链：
+ *   outerRadius (RingStack 注入)
+ *     → skyRadius = (outerRadius - RING_GAP) / OUTER_BULGE_RATIO
+ *       → helioRadius = skyRadius * INNER_GAP_RATIO - RING_GAP
+ *         → helioInnerRadius = max(20, helioRadius * 0.16)
+ */
+
+/** 赤道半径（自动计算：让黄/白道最大鼓出顶到外环内缘下方） */
+const skyRadius = computed(() => (props.radius - RING_GAP) / OUTER_BULGE_RATIO)
+
+/** 日心盘外半径（自动计算：填满星图中心空区） */
+const helioRadius = computed(() => skyRadius.value * INNER_GAP_RATIO - RING_GAP)
+
+/** 日心盘内半径（自动计算：留出太阳本体空间） */
+const helioInnerRadius = computed(() => Math.max(20, helioRadius.value * 0.16))
+
+/** 赤道半径别名（兼容原有逻辑） */
+const R = computed(() => skyRadius.value)
 
 /** 确保时间参数是响应式的（默认值用 computed 包裹） */
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -309,6 +347,15 @@ const planetPos = computed(() => planets.value.map((p) => ({
         </template>
       </g>
     </g>
+
+    <!-- 🔹 内嵌日心轨道盘（自动计算半径，零手动配置） -->
+    <HelioOrbits
+      v-if="showHelioOrbits"
+      :time="timeRef"
+      :radius="helioRadius"
+      :inner-radius="helioInnerRadius"
+      :show-labels="true"
+    />
   </g>
 </template>
 
