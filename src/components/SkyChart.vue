@@ -13,9 +13,17 @@ import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
 
 /**
- * 天极投影星图
+ * 天极投影星图（轨道背景专用）
  *
- * ⚠️ 使用统一架构：内部调用 useSevenLuminaries composable
+ * ⚠️ 架构优化：SkyChart 仅负责轨道背景渲染
+ *   - 赤道圈 / 黄道圈 / 白道圈 的路径绘制
+ *   - 二十八宿区间与宿名
+ *   - 春秋分点 / 升降交点标记
+ *
+ * ⚠️ 天体标记已移至 RingStack 的 SevenLuminariesRing
+ *   - 行星/太阳/月球的 BodyMarker 统一走 Body 环渲染器
+ *   - 保持架构一致：所有同心环均通过 RingStack 管理
+ *   - 避免两套天体渲染逻辑造成冗余
  *
  * 每个天体待在自己的圈上：
  *   - 二十八宿距星 → 赤道圈（按赤经）
@@ -46,9 +54,11 @@ const props = withDefaults(defineProps<Props>(), {
   showEcliptic: true,
   showWhiteWay: true,
   showMansions: true,
-  showPlanets: true,
-  showSun: true,
-  showMoon: true,
+  // ⚠️ 架构优化：行星标记统一走 RingStack 的 SevenLuminariesRing
+  // SkyChart 仅负责轨道背景渲染，避免天体标记冗余
+  showPlanets: false,
+  showSun: false,
+  showMoon: false,
   showNodes: true,
   showCenters: true
 })

@@ -3,6 +3,7 @@ import { ref, computed, markRaw, onMounted, onUnmounted } from 'vue'
 import SkyChart from '../components/SkyChart.vue'
 import HelioOrbits from '../components/HelioOrbits.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
+import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
 import SiXiangRing from '../components/rings/SiXiangRing.vue'
 import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
@@ -70,16 +71,17 @@ const rotationAngle = ref(0)
 const DISK_OUTER_RADIUS = 580
 const RING_GAP = 8
 
-// 外圈五环的厚度与间隙（由外到内）：
-// 360°刻度 → 七曜入宿度 → 二十八星宿 → 二十四节气 → 四象
+// 外圈六环的厚度与间隙（由外到内）：
+// 360°刻度 → 七曜入宿度 → 二十八星宿 → 七曜天体 → 二十四节气 → 四象
 interface OuterRingDef {
   thickness: number
   gapBefore: number
 }
-const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
+const OUTER_RING_DEFS: [OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef, OuterRingDef] = [
   { thickness: 22, gapBefore: 0 }, // 360°赤经刻度
   { thickness: 28, gapBefore: 6 }, // 七曜入宿度
   { thickness: 40, gapBefore: 6 }, // 二十八星宿
+  { thickness: 30, gapBefore: 2 }, // 七曜天体标记（新增：统一 Body 环渲染）
   { thickness: 30, gapBefore: 8 }, // 二十四节气
   { thickness: 34, gapBefore: 4 }  // 四象
 ]
@@ -136,18 +138,26 @@ const outerRings = [
     gapBefore: OUTER_RING_DEFS[2].gapBefore,
     props: { time: controlledTime }
   },
+  // 七曜天体标记环（时间驱动：统一 Body 环渲染器）
+  // 与 SkyChart 赤经坐标完全对齐，替代 SkyChart 内部行星渲染，保持架构一致
+  {
+    component: markRaw(SevenLuminariesRing),
+    thickness: OUTER_RING_DEFS[3].thickness,
+    gapBefore: OUTER_RING_DEFS[3].gapBefore,
+    props: { time: controlledTime }
+  },
   // 二十四节气环（时间驱动：赤经动态对齐 + 当前节气高亮）
   {
     component: markRaw(SolarTermsSkyRing),
-    thickness: OUTER_RING_DEFS[3].thickness,
-    gapBefore: OUTER_RING_DEFS[3].gapBefore,
+    thickness: OUTER_RING_DEFS[4].thickness,
+    gapBefore: OUTER_RING_DEFS[4].gapBefore,
     props: { time: controlledTime }
   },
   // 四象环（时间驱动：按宿赤经动态合并）
   {
     component: markRaw(SiXiangRing),
-    thickness: OUTER_RING_DEFS[4].thickness,
-    gapBefore: OUTER_RING_DEFS[4].gapBefore,
+    thickness: OUTER_RING_DEFS[5].thickness,
+    gapBefore: OUTER_RING_DEFS[5].gapBefore,
     props: { time: controlledTime }
   }
 ]
