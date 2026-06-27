@@ -47,5 +47,12 @@ export const compasses: CompassMeta[] = [
     description: '天极投影盖天图，赤道·黄道·白道三道斜交，日月五星各居其道并实时入二十八宿，外缠二十四节气与 360° 赤经刻度，跟随真实时间并可调',
     category: '天文',
     component: () => import('@/views/PlanetMansionView.vue')
+  },
+  {
+    id: 'tropical-year',
+    name: '回归年闰月盘',
+    description: '365天回归年 vs 360度甲子纪年对比，二十四节气节/中气区分，农历月份含闰月特殊高亮，揭示「无中气置闰」的天文规律',
+    category: '天文',
+    component: () => import('@/views/TropicalYearView.vue')
   }
 ]

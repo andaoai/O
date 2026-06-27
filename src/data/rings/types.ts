@@ -95,7 +95,7 @@ export interface PointItem extends RingItemBase {
   /** 点的颜色（独立于标签颜色） */
   pointColor?: string
   /** 点的符号形状 */
-  pointSymbol?: 'circle' | 'diamond' | 'tick'
+  pointSymbol?: 'circle' | 'tick'
   /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始）
    *  用于主副刻度区分：主刻度 0, 副刻度 0.3
    */
@@ -125,7 +125,7 @@ export interface PointRingData extends RingDataBase {
   /** 默认点颜色 */
   pointColor?: string
   /** 默认点符号 */
-  pointSymbol?: 'circle' | 'diamond' | 'tick'
+  pointSymbol?: 'circle' | 'tick'
   /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始） */
   tickInnerRatio?: number
   /** tick 刻度线外侧结束比例（0=从内圆开始，1=从外圆开始） */

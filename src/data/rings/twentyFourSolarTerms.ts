@@ -29,7 +29,7 @@ function buildTerms(): PointRingData['items'] {
       angle,
       fontSize: isSpecial ? 13 : 11,
       pointSize: isSpecial ? 5 : 4,
-      pointSymbol: isSpecial ? 'diamond' as const : 'circle' as const,
+      pointSymbol: isSpecial ? 'tick' as const : 'circle' as const,
       pointColor: isSpecial ? '#ffdd00' : '#ffffff',
       color: isSpecial ? '#ffdd00' : '#ffffff'
     }

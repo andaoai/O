@@ -364,3 +364,218 @@ export function getTermHouInfo(date: Date, houNames: string[]): TermHouInfo {
     houName: houNames[houIndex] ?? ''
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+ * 农历月份遍历工具（用于回归年×农历闰月可视化）
+ * ═══════════════════════════════════════════════════════════════ */
+
+/**
+ * 农历月份信息
+ */
+export interface LunarMonthInfo {
+  /** 在年内 LunarYear.getMonths() 数组中的索引 */
+  index: number
+  /** 农历月名："正月""二月"…"闰六月" */
+  name: string
+  /** 是否闰月 */
+  isLeap: boolean
+  /** 该月天数（29 或 30） */
+  dayCount: number
+  /** 该月首日对应的公历日序数（1-365/366） */
+  startDayOfYear: number
+  /** 该月末日对应的公历日序数（1-365/366） */
+  endDayOfYear: number
+  /** 该月首日对应的公历年份 */
+  startYear: number
+  /** 该月末日对应的公历年份 */
+  endYear: number
+  /** 是否有中气（偶数索引节气） начала в этом месяце */
+  hasMidTerm: boolean
+  /** 该月内开始的节气名列表 */
+  termsInMonth: string[]
+}
+
+/**
+ * 判断公历闰年
+ */
+export function isGregorianLeapYear(year: number): boolean {
+  return (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0)
+}
+
+/**
+ * 计算日期在该年的序数（1-based）
+ *
+ * @param date 日期
+ * @returns 日序数（1-366）
+ */
+export function getDayOfYear(date: Date): number {
+  const start = new Date(date.getFullYear(), 0, 1)
+  const diff = date.getTime() - start.getTime()
+  return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1
+}
+
+/**
+ * 从序数回推日期
+ *
+ * @param year 年份
+ * @param dayOfYear 日序数（1-366）
+ */
+export function dateFromDayOfYear(year: number, dayOfYear: number): Date {
+  const start = new Date(year, 0, 1)
+  start.setDate(start.getDate() + dayOfYear - 1)
+  return start
+}
+
+/**
+ * 节气名列表（tyme4ts 索引序：冬至=0）
+ */
+const SOLAR_TERM_NAMES = [
+  '冬至', '小寒', '大寒', '立春', '雨水', '惊蛰',
+  '春分', '清明', '谷雨', '立夏', '小满', '芒种',
+  '夏至', '小暑', '大暑', '立秋', '处暑', '白露',
+  '秋分', '寒露', '霜降', '立冬', '小雪', '大雪'
+]
+
+/**
+ * 检查节气索引是否为中气
+ *
+ * tyme4ts 索引约定：冬至=0
+ * 偶数索引（0,2,4,6,8,10,12,14,16,18,20,22）为中气
+ * 奇数索引（1,3,5,7,9,11,13,15,17,19,21,23）为节
+ */
+export function isMidTerm(termIndex: number): boolean {
+  return termIndex % 2 === 0
+}
+
+/**
+ * 获取指定年份所有农历月份（含闰月信息）
+ *
+ * 核心依赖 tyme4ts 的 LunarYear.getMonths()，
+ * 自动处理平年12月/闰年13月，以及跨公历年的农历月。
+ *
+ * @param year 公历年份（用于查找该年大部分时间所在的农历年）
+ * @returns 农历月份信息数组，按从正月开始的顺序排列
+ */
+export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
+  const daysInSolarYear = isGregorianLeapYear(year) ? 366 : 365
+
+  // 逐日扫描整年，按农历月分组
+  // 使用 Map<monthKey, { name, isLeap, days[] }>
+  const monthMap = new Map<string, {
+    name: string
+    isLeap: boolean
+    daySet: Set<number>
+  }>()
+
+  for (let day = 1; day <= daysInSolarYear; day++) {
+    const date = dateFromDayOfYear(year, day)
+    const solarDay = SolarDay.fromYmd(year, date.getMonth() + 1, date.getDate())
+    const lunarDay = solarDay.getLunarDay()
+    const lunarMonth = lunarDay.getLunarMonth()
+
+    const key = lunarMonth.isLeap() ? 'L' + lunarMonth.getMonth() : 'M' + lunarMonth.getMonth()
+
+    if (!monthMap.has(key)) {
+      monthMap.set(key, {
+        name: lunarMonth.getName(),
+        isLeap: lunarMonth.isLeap(),
+        daySet: new Set()
+      })
+    }
+    monthMap.get(key)!.daySet.add(day)
+  }
+
+  // 按公历日期排序，将 daySet 合并为连续的 day 区间
+  const entries = Array.from(monthMap.entries())
+  // 按 daySet 的最小值排序
+  entries.sort((a, b) => Math.min(...a[1].daySet) - Math.min(...b[1].daySet))
+
+  const result: LunarMonthInfo[] = []
+  let index = 0
+
+  for (const [key, entry] of entries) {
+    const sortedDays = Array.from(entry.daySet).sort((a, b) => a - b)
+
+    // 合并连续的天数区间
+    const ranges: { start: number; end: number }[] = []
+    const firstDay = sortedDays[0]!
+    let rangeStart = firstDay
+    let prev = firstDay
+
+    for (let i = 1; i < sortedDays.length; i++) {
+      if (sortedDays[i]! !== prev + 1) {
+        ranges.push({ start: rangeStart, end: prev })
+        rangeStart = sortedDays[i]!
+      }
+      prev = sortedDays[i]!
+    }
+    ranges.push({ start: rangeStart, end: prev })
+
+    // 检测中气：按公历日期检查该月每个公历日，看是否有中气开始
+    let hasMidTerm = false
+    const termsInMonth: string[] = []
+    const checkedDates = new Set<string>()
+
+    // 从该月第一天的公历日期开始检查
+    const firstDayOfMonth = sortedDays[0]!
+    const startDate = dateFromDayOfYear(year, firstDayOfMonth)
+    const startSolarDay = SolarDay.fromYmd(year, startDate.getMonth() + 1, startDate.getDate())
+
+    // 遍历该月的每个公历日
+    for (let d = 0; d < entry.daySet.size + 2; d++) {
+      const sd = startSolarDay.next(d)
+      const key = sd.getYear() + '-' + sd.getMonth() + '-' + sd.getDay()
+      if (checkedDates.has(key)) continue
+      checkedDates.add(key)
+
+      const term = sd.getTerm()
+      const nextSd = sd.next(1)
+      const nextTerm = nextSd.getTerm()
+
+      if (term.getIndex() !== nextTerm.getIndex()) {
+        const termName = term.getName()
+        if (!termsInMonth.includes(termName)) {
+          termsInMonth.push(termName)
+        }
+        if (isMidTerm(term.getIndex())) {
+          hasMidTerm = true
+        }
+      }
+    }
+
+    // 仅保留首尾连续区间（取最长的那个）
+    const mainRange = ranges.reduce((longest, r) =>
+      (r.end - r.start) > (longest.end - longest.start) ? r : longest
+    , ranges[0]!)
+
+    result.push({
+      index,
+      name: entry.name,
+      isLeap: entry.isLeap,
+      dayCount: sortedDays.length,
+      startDayOfYear: mainRange!.start,
+      endDayOfYear: mainRange!.end,
+      startYear: year,
+      endYear: year,
+      hasMidTerm,
+      termsInMonth
+    })
+
+    index++
+  }
+
+  return result
+}
+
+/**
+ * 获取60甲子序列名称
+ *
+ * @param index 0-59 的索引
+ * @returns 甲子名称
+ */
+export function getJiaziName(index: number): string {
+  const stems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
+  const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+  const i = ((index % 60) + 60) % 60
+  return stems[i % 10]! + branches[i % 12]!
+}

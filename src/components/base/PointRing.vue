@@ -44,7 +44,7 @@ interface Props {
   /** 默认点颜色 */
   pointColor?: string
   /** 点的符号形状 */
-  pointSymbol?: 'circle' | 'diamond' | 'tick'
+  pointSymbol?: 'circle' | 'tick'
   /** tick 刻度线内侧起始比例（0=从内圆开始，1=从外圆开始）
    *  支持主副刻度区分：主刻度 0, 副刻度 0.3
    */
@@ -189,28 +189,9 @@ const { highlightLevelOf } = useHighlight<PointItem>()
                 'highlight-point-strong': highlightLevelOf(pt.item) >= 3
               }"
             />
-            <!-- 菱形点 -->
-            <g
-              v-else-if="(pt.item.pointSymbol || pointSymbol) === 'diamond'"
-              :transform="`translate(${pt.x}, ${pt.y})`"
-            >
-              <path
-                :d="`M 0 ${-(pt.item.pointSize || pointSize)} L ${(pt.item.pointSize || pointSize)} 0 L 0 ${pt.item.pointSize || pointSize} L ${-(pt.item.pointSize || pointSize)} 0 Z`"
-                :fill="pt.item.pointColor || pointColor"
-                :class="{
-                  'highlight-point': highlightLevelOf(pt.item) >= 2,
-                  'highlight-point-strong': highlightLevelOf(pt.item) >= 3
-                }"
-              />
-            </g>
-            <!-- 刻度线点（径向短线）：从外圆向内画刻度
-                 支持自定义刻度内外端点：
-                   tickInnerRatio: 内侧端点 (0=内圆, 1=外圆)
-                   tickOuterRatio: 外侧端点 (0=内圆, 1=外圆)
-                 默认: 从 tickInnerRatio 画到外圆 (1.0)
-                 标准罗盘: 从外圆向内画，tickOuterRatio 控制外侧起点 -->
+            <!-- 刻度线（径向短线） -->
             <line
-              v-else-if="(pt.item.pointSymbol || pointSymbol) === 'tick'"
+              v-else
               :x1="pt.x * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * (pt.item.tickInnerRatio ?? tickInnerRatio)) / radius : 0.98)"
               :y1="pt.y * (innerRadius > 0 ? (innerRadius + (radius - innerRadius) * (pt.item.tickInnerRatio ?? tickInnerRatio)) / radius : 0.98)"
               :x2="pt.x * (pt.item.tickOuterRatio ?? 1.0)"
