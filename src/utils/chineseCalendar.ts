@@ -15,6 +15,7 @@ import {
   SolarDay,
   SolarTime,
   LunarDay,
+  LunarYear,
   SolarTerm,
   SixtyCycle,
   HeavenStem,
@@ -389,10 +390,14 @@ export interface LunarMonthInfo {
   startYear: number
   /** 该月末日对应的公历年份 */
   endYear: number
-  /** 是否有中气（偶数索引节气） начала в этом месяце */
+  /** 是否有中气（偶数索引节气） */
   hasMidTerm: boolean
   /** 该月内开始的节气名列表 */
   termsInMonth: string[]
+  /** 该农历年的干支名称，如"丙午年" */
+  lunarYearName: string
+  /** tyme4ts LunarYear 的年份序号，用于跨环比对 */
+  lunarYearNumber: number
 }
 
 /**
@@ -473,7 +478,10 @@ export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
     const lunarDay = solarDay.getLunarDay()
     const lunarMonth = lunarDay.getLunarMonth()
 
-    const key = lunarMonth.isLeap() ? 'L' + lunarMonth.getMonth() : 'M' + lunarMonth.getMonth()
+    const lyKey = lunarMonth.getLunarYear().getYear()
+    const key = lunarMonth.isLeap()
+      ? `L${lunarMonth.getMonth()}-Y${lyKey}`
+      : `M${lunarMonth.getMonth()}-Y${lyKey}`
 
     if (!monthMap.has(key)) {
       monthMap.set(key, {
@@ -491,9 +499,8 @@ export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
   entries.sort((a, b) => Math.min(...a[1].daySet) - Math.min(...b[1].daySet))
 
   const result: LunarMonthInfo[] = []
-  let index = 0
 
-  for (const [key, entry] of entries) {
+  for (const [_key, entry] of entries) {
     const sortedDays = Array.from(entry.daySet).sort((a, b) => a - b)
 
     // 合并连续的天数区间
@@ -511,19 +518,146 @@ export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
     }
     ranges.push({ start: rangeStart, end: prev })
 
-    // 检测中气：按公历日期检查该月每个公历日，看是否有中气开始
+    // 保留所有连续区间，每段独立计算 lunarYear / index / 中气
+    for (const range of ranges) {
+      // 从该区间首日获取农历月/年元数据
+      const rangeStartDate = dateFromDayOfYear(year, range.start)
+      const rangeSolarDay = SolarDay.fromYmd(
+        year, rangeStartDate.getMonth() + 1, rangeStartDate.getDate()
+      )
+      const rangeLunarMonth = rangeSolarDay.getLunarDay().getLunarMonth()
+      const rangeLunarYear = rangeLunarMonth.getLunarYear()
+
+      // 检测中气
+      let hasMidTerm = false
+      const termsInMonth: string[] = []
+      const checkedDates = new Set<string>()
+      const daySpan = range.end - range.start + 1
+
+      for (let d = 0; d < daySpan + 2; d++) {
+        const sd = rangeSolarDay.next(d)
+        const dateKey = sd.getYear() + '-' + sd.getMonth() + '-' + sd.getDay()
+        if (checkedDates.has(dateKey)) continue
+        checkedDates.add(dateKey)
+
+        const term = sd.getTerm()
+        const nextSd = sd.next(1)
+        const nextTerm = nextSd.getTerm()
+
+        if (term.getIndex() !== nextTerm.getIndex()) {
+          const termName = term.getName()
+          if (!termsInMonth.includes(termName)) {
+            termsInMonth.push(termName)
+          }
+          if (isMidTerm(term.getIndex())) {
+            hasMidTerm = true
+          }
+        }
+      }
+
+      result.push({
+        index: rangeLunarMonth.getIndexInYear(),
+        name: entry.name,
+        isLeap: entry.isLeap,
+        dayCount: daySpan,
+        startDayOfYear: range.start,
+        endDayOfYear: range.end,
+        startYear: year,
+        endYear: year,
+        hasMidTerm,
+        termsInMonth,
+        lunarYearName: rangeLunarYear.getName(),
+        lunarYearNumber: rangeLunarYear.getYear()
+      })
+    }
+  }
+
+  return result
+}
+
+/**
+ * 🌕 获取完整农历年的所有月份（基于 LunarYear API）
+ *
+ * 与 getLunarMonthsOfYear（逐日扫描公历年）不同：
+ * - 本函数使用 tyme4ts 的 LunarYear API，返回完整的 12/13 个月
+ * - 每个月都是完整的（29 或 30 天），无截断
+ * - 从正月初一开始连续排列，startDayOfYear 可能 > 365（跨年溢出）
+ * - 适用于需要完整农历月可视化的场景
+ *
+ * @param solarYear 公历年份，用于定位该年内开始的农历年
+ * @returns 完整农历年所有月份，按正月→腊月顺序
+ */
+export function getCompleteLunarYearMonths(solarYear: number): LunarMonthInfo[] {
+  // 1. 在公历年份内找到正月初一（农历年第一天）
+  let firstMonthDayOfYear = -1
+
+  for (let day = 1; day <= 62; day++) {
+    const date = dateFromDayOfYear(solarYear, day)
+    const sd = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
+    const ld = sd.getLunarDay()
+    const lm = ld.getLunarMonth()
+
+    if (lm.getMonth() === 1 && !lm.isLeap() && ld.getDay() === 1) {
+      firstMonthDayOfYear = day
+      break
+    }
+  }
+
+  if (firstMonthDayOfYear < 0) {
+    return []
+  }
+
+  // 2. 获取完整的农历年
+  const springDate = dateFromDayOfYear(solarYear, firstMonthDayOfYear)
+  const springSolarDay = SolarDay.fromYmd(
+    springDate.getFullYear(), springDate.getMonth() + 1, springDate.getDate()
+  )
+  const lunarYear = springSolarDay.getLunarDay().getLunarMonth().getLunarYear()
+  const lunarYearName = lunarYear.getName()
+  const lunarYearNumber = lunarYear.getYear()
+  const months = lunarYear.getMonths()
+
+  // 3. 按顺序计算每个月的公历日序位置
+  const result: LunarMonthInfo[] = []
+  let cursorDay = firstMonthDayOfYear  // 当前月首日在公历年的日序
+  // 处理跨年：cursorDay 可能超过当年天数
+  // 使用一个虚拟"日序号轴"，以 solarYear 年 1 月 1 日为 1，持续延伸到次年
+
+  // 计算当年总天数
+  const daysInSolarYear = isGregorianLeapYear(solarYear) ? 366 : 365
+
+  for (let i = 0; i < months.length; i++) {
+    const month = months[i]!
+    const dayCount = month.getDayCount()
+    const startDay = cursorDay
+    const endDay = cursorDay + dayCount - 1
+
+    // 确定首尾所在的公历年
+    const startYear = startDay <= daysInSolarYear ? solarYear : solarYear + 1
+    const endYear = endDay <= daysInSolarYear ? solarYear : solarYear + 1
+
+    // 中气检测：遍历该月所有公历日
     let hasMidTerm = false
     const termsInMonth: string[] = []
     const checkedDates = new Set<string>()
 
-    // 从该月第一天的公历日期开始检查
-    const firstDayOfMonth = sortedDays[0]!
-    const startDate = dateFromDayOfYear(year, firstDayOfMonth)
-    const startSolarDay = SolarDay.fromYmd(year, startDate.getMonth() + 1, startDate.getDate())
+    for (let d = 0; d < dayCount + 2; d++) {
+      // 将虚拟日序号映射回实际日期
+      let actualYear: number
+      let actualDay: number
+      if (startDay + d <= daysInSolarYear) {
+        actualYear = solarYear
+        actualDay = startDay + d
+      } else {
+        actualYear = solarYear + 1
+        actualDay = startDay + d - daysInSolarYear
+      }
+      // 如果超出次年范围则跳过
+      const nextDays = isGregorianLeapYear(actualYear) ? 366 : 365
+      if (actualDay > nextDays) break
 
-    // 遍历该月的每个公历日
-    for (let d = 0; d < entry.daySet.size + 2; d++) {
-      const sd = startSolarDay.next(d)
+      const date = dateFromDayOfYear(actualYear, actualDay)
+      const sd = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
       const key = sd.getYear() + '-' + sd.getMonth() + '-' + sd.getDay()
       if (checkedDates.has(key)) continue
       checkedDates.add(key)
@@ -531,7 +665,6 @@ export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
       const term = sd.getTerm()
       const nextSd = sd.next(1)
       const nextTerm = nextSd.getTerm()
-
       if (term.getIndex() !== nextTerm.getIndex()) {
         const termName = term.getName()
         if (!termsInMonth.includes(termName)) {
@@ -543,28 +676,56 @@ export function getLunarMonthsOfYear(year: number): LunarMonthInfo[] {
       }
     }
 
-    // 仅保留首尾连续区间（取最长的那个）
-    const mainRange = ranges.reduce((longest, r) =>
-      (r.end - r.start) > (longest.end - longest.start) ? r : longest
-    , ranges[0]!)
-
     result.push({
-      index,
-      name: entry.name,
-      isLeap: entry.isLeap,
-      dayCount: sortedDays.length,
-      startDayOfYear: mainRange!.start,
-      endDayOfYear: mainRange!.end,
-      startYear: year,
-      endYear: year,
+      index: i,
+      name: month.getName(),
+      isLeap: month.isLeap(),
+      dayCount,
+      startDayOfYear: startDay,
+      endDayOfYear: endDay,
+      startYear,
+      endYear,
       hasMidTerm,
-      termsInMonth
+      termsInMonth,
+      lunarYearName,
+      lunarYearNumber
     })
 
-    index++
+    cursorDay = endDay + 1
   }
 
   return result
+}
+
+/**
+ * 获取指定日期所属的农历月/年定位信息
+ *
+ * 核心用途：无论日期在正月前还是正月后，
+ * 都能正确识别所属农历年和月在 LunarYear.getMonths() 中的序号。
+ *
+ * 使用 tyme4ts 的 LunarMonth / LunarYear API 直接获取，
+ * 无需扫描或比对，天然处理跨年归属问题。
+ *
+ * @param date 公历日期
+ * @returns 当前农历月/年定位信息
+ */
+export function getCurrentLunarInfo(date: Date): {
+  monthIndex: number
+  lunarYearNumber: number
+  lunarYearName: string
+  isLeap: boolean
+} {
+  const sd = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
+  const ld = sd.getLunarDay()
+  const lm = ld.getLunarMonth()
+  const ly = lm.getLunarYear()
+
+  return {
+    monthIndex: lm.getIndexInYear(),
+    lunarYearNumber: ly.getYear(),
+    lunarYearName: ly.getName(),
+    isLeap: lm.isLeap()
+  }
 }
 
 /**
