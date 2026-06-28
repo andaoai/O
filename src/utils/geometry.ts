@@ -71,10 +71,12 @@ export const arcPath = (
   const start = polarToCartesian(startAngle, radius, direction)
   const end = polarToCartesian(endAngle, radius, direction)
   const largeArcFlag = endAngle - startAngle > 180 ? 1 : 0
+  // 🔑 逆时针时 sweep-flag 取 0（SVG 逆时针），与 polarToCartesian 的取反坐标一致
+  const sweep = direction === 'counterclockwise' ? 0 : 1
   if (innerRadius === 0) {
-    return `M 0,0 L ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} Z`
+    return `M 0,0 L ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},${sweep} ${end.x},${end.y} Z`
   }
   const startInner = polarToCartesian(startAngle, innerRadius, direction)
   const endInner = polarToCartesian(endAngle, innerRadius, direction)
-  return `M ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},1 ${end.x},${end.y} L ${endInner.x},${endInner.y} A ${innerRadius},${innerRadius} 0 ${largeArcFlag},0 ${startInner.x},${startInner.y} Z`
+  return `M ${start.x},${start.y} A ${radius},${radius} 0 ${largeArcFlag},${sweep} ${end.x},${end.y} L ${endInner.x},${endInner.y} A ${innerRadius},${innerRadius} 0 ${largeArcFlag},${1 - sweep} ${startInner.x},${startInner.y} Z`
 }

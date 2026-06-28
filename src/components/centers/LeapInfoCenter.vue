@@ -34,11 +34,14 @@ interface Props {
   radius?: number
   time?: MaybeRef<Date>
   rotationDirection?: 'clockwise' | 'counterclockwise'
+  /** 外层 SVG 旋转角度，圆心区反向旋转保持文字正向可读 */
+  rotationAngle?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 200,
-  rotationDirection: 'clockwise'
+  rotationDirection: 'clockwise',
+  rotationAngle: 0
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -109,7 +112,8 @@ const leapCycleInfo = computed(() => {
 </script>
 
 <template>
-  <g>
+  <!-- 🔑 反向旋转：抵消外层 SVG rotate(rotationAngle)，保持文字始终正向 -->
+  <g :transform="`rotate(${-rotationAngle})`">
     <!-- 年份信息 -->
     <text
       :x="0"

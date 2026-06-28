@@ -89,6 +89,7 @@ const rings = [
               :radius="innerRadius * 0.85"
               :time="controlledTime"
               :rotation-direction="rotationDirection"
+              :rotation-angle="rotationAngle"
             />
           </template>
         </RingStack>
