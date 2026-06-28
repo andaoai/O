@@ -58,7 +58,7 @@ const rings = [
     props: { time: controlledTime, yearOffset: 0 }
   },
   // 4-12. 去年 → 九年前
-  ...Array.from({ length: 9 }, (_, i) => ({
+  ...Array.from({ length: 11 }, (_, i) => ({
     component: markRaw(LunarMonthsRing),
     thickness: 13,
     props: { time: controlledTime, yearOffset: -(i + 1) }

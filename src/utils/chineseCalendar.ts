@@ -453,6 +453,74 @@ export function isMidTerm(termIndex: number): boolean {
 }
 
 /**
+ * 节气在回归年盘上的定位信息
+ */
+export interface SolarTermPosition {
+  /** 节气名 */
+  name: string
+  /** tyme4ts 节气索引（冬至=0） */
+  tymeIndex: number
+  /** 在公历年中的日序数（1-366） */
+  dayOfYear: number
+  /** 是否为中气（偶数索引） */
+  isMidTerm: boolean
+  /** 立春起序号（0-23，立春=0） */
+  lichunIndex: number
+}
+
+/**
+ * 获取指定公历年内所有 24 节气的确切日期与日序
+ *
+ * 🔑 核心算法：
+ *   1. 调用 SolarTerm.fromIndex(year, tymeIndex) 获取节气精确时刻
+ *   2. 跨年处理：fromIndex(year, ...) 覆盖约 Dec(year-1)~Dec(year)
+ *      对于落在 year-1 的冬至，从 fromIndex(year+1, 0) 补取落在 year 内的冬至
+ *   3. 转换为公历日序数（1-365/366），供 DayScaleRing 对齐
+ *
+ * @param year 目标公历年份
+ * @returns 24 个节气的定位信息，按日序升序排列
+ */
+export function getSolarTermPositions(year: number): SolarTermPosition[] {
+  const results: SolarTermPosition[] = []
+
+  for (let tymeIdx = 0; tymeIdx < 24; tymeIdx++) {
+    // 本轮「冬至年」的节气
+    let term = SolarTerm.fromIndex(year, tymeIdx)
+    let sd = term.getJulianDay().getSolarDay()
+
+    if (sd.getYear() === year) {
+      const date = new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+      results.push({
+        name: term.getName(),
+        tymeIndex: tymeIdx,
+        dayOfYear: getDayOfYear(date),
+        isMidTerm: isMidTerm(tymeIdx),
+        lichunIndex: (tymeIdx - LICHUN_TYME_INDEX + 24) % 24
+      })
+      continue
+    }
+
+    // 冬至落在 year-1 的情况：从下一轮冬至年补取（冬至在当年 12 月）
+    term = SolarTerm.fromIndex(year + 1, tymeIdx)
+    sd = term.getJulianDay().getSolarDay()
+    if (sd.getYear() === year) {
+      const date = new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+      results.push({
+        name: term.getName(),
+        tymeIndex: tymeIdx,
+        dayOfYear: getDayOfYear(date),
+        isMidTerm: isMidTerm(tymeIdx),
+        lichunIndex: (tymeIdx - LICHUN_TYME_INDEX + 24) % 24
+      })
+    }
+  }
+
+  // 按日序升序排列
+  results.sort((a, b) => a.dayOfYear - b.dayOfYear)
+  return results
+}
+
+/**
  * 获取指定年份所有农历月份（含闰月信息）
  *
  * 核心依赖 tyme4ts 的 LunarYear.getMonths()，

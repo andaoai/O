@@ -2,6 +2,7 @@
 import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
 import { sunLongitude } from '@/utils/celestial'
+import { getSolarTermPositions, isGregorianLeapYear } from '@/utils/chineseCalendar'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
@@ -14,6 +15,13 @@ import type { PointRingData } from '@/data/rings/types'
  *   - 中气（雨水、春分…12个）：蓝色 #3498DB
  *   - 二分二至：稍长、金色 #FFD700
  *   - 当前节气：最长、金色加粗 + 呼吸动画
+ *
+ * 🔑 角度对齐（2026-06 修复）：
+ *   旧版将节气以固定 15° 间隔均匀铺开（立春恒在 0°），
+ *   与 DayScaleRing 的 365 天日点刻度完全错位。
+ *   现改为通过 getSolarTermPositions() 获取各节气在当年公历
+ *   中的确切日序，再换算为角度：angle = (dayOfYear-1)/daysInYear*360，
+ *   确保节气刻度线与日点环精确对齐。
  *
  * 标签从内缘向外偏移，始终在自环内，不与外层 DayScaleRing 重叠。
  */
@@ -36,16 +44,19 @@ const timeRef = computed(() => unref(props.time) ?? new Date())
 const norm = (a: number) => ((a % 360) + 360) % 360
 
 const ringData = computed((): PointRingData => {
-  const sunLon = sunLongitude(timeRef.value)
-  const currentIndex = Math.floor(norm(sunLon - 315) / 15)
-  const ringWidth = props.radius - props.innerRadius
+  const time = timeRef.value
+  const year = time.getFullYear()
+  const daysInYear = isGregorianLeapYear(year) ? 366 : 365
+  const anglePerDay = 360 / daysInYear
 
-  const termNames = [
-    '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
-    '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
-    '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
-    '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'
-  ]
+  // 🔑 获取当年每个节气的确切公历日序（对齐 DayScaleRing 的 365 天刻度）
+  const positions = getSolarTermPositions(year)
+
+  // 当前节气检测（基于太阳黄经，立春=0 起序）
+  const sunLon = sunLongitude(time)
+  const currentLichunIndex = Math.floor(norm(sunLon - 315) / 15)
+
+  const ringWidth = props.radius - props.innerRadius
 
   const specialNames = new Set(['春分', '夏至', '秋分', '冬至'])
 
@@ -54,17 +65,18 @@ const ringData = computed((): PointRingData => {
   const specialLen = ringWidth * 0.50  // 二分二至
   const currentLen = ringWidth * 0.65  // 当前节气
 
-  const items: PointRingData['items'] = termNames.map((name, i) => {
-    const angle = i * 15
-    const isZhongQi = i % 2 === 1
-    const isCurrent = i === currentIndex
-    const isSpecial = specialNames.has(name)
+  const items: PointRingData['items'] = positions.map((pos) => {
+    // 🔑 角度 = 公历日序 → 刻度角度，与 DayScaleRing 精确对齐
+    const angle = ((pos.dayOfYear - 1) * anglePerDay) % 360
+    const isZhongQi = pos.isMidTerm
+    const isCurrent = pos.lichunIndex === currentLichunIndex
+    const isSpecial = specialNames.has(pos.name)
 
     const len = isCurrent ? currentLen : (isSpecial ? specialLen : baseLen)
     const tickInnerRatio = 1 - len / ringWidth
 
     return {
-      label: name,
+      label: pos.name,
       angle,
       pointSymbol: 'tick' as const,
       pointColor: isCurrent
