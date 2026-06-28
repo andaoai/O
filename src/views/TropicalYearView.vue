@@ -72,9 +72,9 @@ const rings = [
     <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
 
     <svg
-      :width="1200"
-      :height="1200"
+      class="compass-svg"
       viewBox="0 0 1200 1200"
+      preserveAspectRatio="xMidYMid meet"
     >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <RingStack
@@ -120,6 +120,12 @@ const rings = [
 
 svg {
   display: block;
+}
+
+/* 罗盘填满视口较短边，保持正方形等比 */
+.compass-svg {
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
 }
 
 .back-link {
