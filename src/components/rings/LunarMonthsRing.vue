@@ -29,7 +29,7 @@ import type { RingData } from '@/data/rings/types'
  * 十二月份四象五行配色（跨年固定，便于追踪同月位移）：
  *   春·青龙(正月→三月) 绿系 | 夏·朱雀(四月→六月) 红系
  *   秋·白虎(七月→九月) 金系 | 冬·玄武(十月→十二月) 蓝紫系
- *   闰月 = 同月色 + 3 级快速闪烁
+ *   闰月 = 同月色 + 2 级慢呼吸 | 当前月 = 3 级快速闪烁
  *
  * yearOffset: 0=今年, -1=去年, … -9=九年前
  * 越老旧亮度越低，上年起用白色文字
@@ -139,7 +139,7 @@ const ringData = computed((): RingData => {
       color: alpha(baseColor, opacity),
       fontSize: Math.max(8, 10 - o * 0.3),
       highlight: isCurrentMonth,
-      highlightLevel: (m.isLeap ? 3 : (isCurrentMonth ? 2 : 0)) as 0 | 1 | 2 | 3
+      highlightLevel: (isCurrentMonth ? 3 : (m.isLeap ? 2 : 0)) as 0 | 1 | 2 | 3
     }
   })
 
@@ -199,7 +199,7 @@ const ringData = computed((): RingData => {
 </template>
 
 <style>
-/* 闰月快速闪动 0.35s（覆盖 CircleRing 默认 1.2s 强闪） */
+/* 当前月快速闪动 0.35s（覆盖 CircleRing 默认 1.2s 强闪） */
 .highlight-sector-strong {
   animation: leap-blink 0.35s ease-in-out infinite !important;
 }
