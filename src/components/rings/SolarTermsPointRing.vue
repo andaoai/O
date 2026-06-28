@@ -87,9 +87,9 @@ const ringData = computed((): PointRingData => {
       tickInnerRatio: Math.max(0.3, tickInnerRatio),
       tickOuterRatio: 1.0,
       tickWidth: isCurrent ? 2.5 : (isSpecial ? 1.5 : 1),
-      fontSize: isCurrent ? 12 : (isSpecial ? 11 : 9),
+      fontSize: 9,
       color: isCurrent ? '#FFD700' : (isSpecial ? '#FFD700' : '#CCCCCC'),
-      highlightLevel: (isCurrent ? 2 : 0) as 0 | 1 | 2 | 3
+      highlightLevel: (isCurrent ? 3 : 0) as 0 | 1 | 2 | 3
     }
   })
 

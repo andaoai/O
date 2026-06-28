@@ -86,14 +86,16 @@ const ringData = computed((): PointRingData => {
     if (isCurrentDay) {
       tickInnerRatio = 1 - (ringWidth * 0.55) / ringWidth  // 更长
       tickWidth = 3
-      label = ''
+      // 🔑 当天恰逢月首时保留月份标签，红色刻度 + 闪动即可，不要吞掉文字
+      const idx = monthStarts.indexOf(day)
+      label = idx >= 0 ? (MONTH_LABELS[idx] ?? '') : ''
       pointColor = '#FF4444'
       highlightLevel = 3
     } else if (isMonthStart) {
       tickInnerRatio = 1 - monthLen / ringWidth
       tickWidth = 1.5
-      const idx = monthStarts.indexOf(day)
-      label = idx >= 0 ? (MONTH_LABELS[idx] ?? '') : ''
+      const idx2 = monthStarts.indexOf(day)
+      label = idx2 >= 0 ? (MONTH_LABELS[idx2] ?? '') : ''
       pointColor = '#FFFFFF'
       highlightLevel = 1
     } else if (isFiveDay) {
@@ -116,7 +118,7 @@ const ringData = computed((): PointRingData => {
       label,
       pointSymbol: 'tick',
       pointColor,
-      fontSize: 10,
+      fontSize: 7,
       tickInnerRatio: Math.max(0.4, tickInnerRatio),
       tickOuterRatio: 1.0,
       tickWidth,
