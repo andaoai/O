@@ -125,8 +125,10 @@ export function getSolarTermInfo(date: Date): SolarTermInfo | undefined {
     }
 
     // Check if today is the start of a term
-    const tomorrowTerm = solarDay.next(1).getTerm()
-    const isStart = currentTerm.getIndex() !== tomorrowTerm.getIndex()
+    // （旧逻辑检査明天是否变节 → 实际检测到的是旧节气最后一天;
+    //   改为回溯昨天，昨天若是旧节气则今天即为新节气首日）
+    const yesterdayTerm = solarDay.next(-1).getTerm()
+    const isStart = currentTerm.getIndex() !== yesterdayTerm.getIndex()
 
     return {
       name: termName,
