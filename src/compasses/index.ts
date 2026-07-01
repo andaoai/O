@@ -42,6 +42,13 @@ export const compasses: CompassMeta[] = [
     component: () => import('@/views/SixtyFourGuaView.vue')
   },
   {
+    id: 'jingfang',
+    name: '京房十二消息卦盘',
+    description: '京房卦气体系：外圈365天刻度，60卦六日七分环（360爻位装载365.25天），四正卦顶四季（震春离夏兑秋坎冬），十二消息卦环（复临泰大壮夬乾姤遁否观剥坤）',
+    category: '易学',
+    component: () => import('@/views/JingFangView.vue')
+  },
+  {
     id: 'planet-mansion',
     name: '七曜入宿天象盘',
     description: '天极投影盖天图，赤道·黄道·白道三道斜交，日月五星各居其道并实时入二十八宿，外缠二十四节气与 360° 赤经刻度，跟随真实时间并可调',

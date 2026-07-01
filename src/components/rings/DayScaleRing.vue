@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
-import { isGregorianLeapYear, getDayOfYear } from '@/utils/chineseCalendar'
+import { isGregorianLeapYear, getDayOfYear, getSolarTermPositions } from '@/utils/chineseCalendar'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
@@ -17,6 +17,10 @@ import type { PointRingData } from '@/data/rings/types'
  *         ├─ 当天刻度(红, 粗, 呼吸)         ─── 1条
  *   内缘 ─┴─ 标签区(离内缘3px)              ─── 与所有刻度线无接触
  *
+ * 🔑 基准模式（originMode）：
+ *   - 'jan1'：公历 1 月 1 日 = 0°（默认，通用回归年刻度）
+ *   - 'winterSolstice'：冬至日 = 0°（京房卦气体系专用）
+ *
  * @example
  * ```vue
  * <DayScaleRing :time="controlledTime" :radius="480" :inner-radius="452" />
@@ -28,13 +32,16 @@ interface Props {
   innerRadius?: number
   startDegree?: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
+  /** 角度基准模式：'jan1' 公历1月1日=0°（默认），'winterSolstice' 冬至=0°（京房卦气） */
+  originMode?: 'jan1' | 'winterSolstice'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 480,
   innerRadius: 452,
   startDegree: 0,
-  rotationDirection: 'clockwise'
+  rotationDirection: 'clockwise',
+  originMode: 'jan1'  // 默认：公历1月1日=0°，兼容其他视图
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -55,6 +62,14 @@ const ringData = computed((): PointRingData => {
   const anglePerDay = 360 / daysInYear
   const ringWidth = props.radius - props.innerRadius
 
+  // 🔑 计算角度基准偏移
+  let originDayOfYear = 1  // 默认：公历 1 月 1 日 = 0°
+  if (props.originMode === 'winterSolstice') {
+    const solarTerms = getSolarTermPositions(year)
+    const winterSolstice = solarTerms.find(p => p.name === '冬至')
+    originDayOfYear = winterSolstice?.dayOfYear ?? 355
+  }
+
   // 每月首日
   const monthStarts: number[] = []
   let accum = 1
@@ -72,7 +87,13 @@ const ringData = computed((): PointRingData => {
   const items: PointRingData['items'] = []
 
   for (let day = 1; day <= daysInYear; day++) {
-    const angle = ((day - 1) * anglePerDay) % 360
+    // 🔑 角度 = 相对于基准日的日差
+    let daysFromOrigin = day - originDayOfYear
+    if (daysFromOrigin < 0) {
+      daysFromOrigin += daysInYear
+    }
+    const angle = (daysFromOrigin * anglePerDay) % 360
+
     const isMonthStart = monthStarts.includes(day)
     const isFiveDay = day % 5 === 0
     const isCurrentDay = day === currentDayOfYear

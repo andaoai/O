@@ -23,6 +23,10 @@ import type { PointRingData } from '@/data/rings/types'
  *   中的确切日序，再换算为角度：angle = (dayOfYear-1)/daysInYear*360，
  *   确保节气刻度线与日点环精确对齐。
  *
+ * 🔑 基准模式（originMode）：
+ *   - 'jan1'：公历 1 月 1 日 = 0°（默认，与回归年刻度对齐）
+ *   - 'winterSolstice'：冬至日 = 0°（京房卦气体系专用）
+ *
  * 标签从内缘向外偏移，始终在自环内，不与外层 DayScaleRing 重叠。
  */
 interface Props {
@@ -31,13 +35,16 @@ interface Props {
   innerRadius?: number
   startDegree?: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
+  /** 角度基准模式：'jan1' 公历1月1日=0°（默认），'winterSolstice' 冬至=0°（京房卦气） */
+  originMode?: 'jan1' | 'winterSolstice'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 200,
   innerRadius: 178,
   startDegree: 0,
-  rotationDirection: 'clockwise'
+  rotationDirection: 'clockwise',
+  originMode: 'jan1'  // 默认：公历1月1日=0°，兼容其他视图
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -49,8 +56,15 @@ const ringData = computed((): PointRingData => {
   const daysInYear = isGregorianLeapYear(year) ? 366 : 365
   const anglePerDay = 360 / daysInYear
 
-  // 🔑 获取当年每个节气的确切公历日序（对齐 DayScaleRing 的 365 天刻度）
+  // 🔑 获取当年每个节气的确切公历日序
   const positions = getSolarTermPositions(year)
+
+  // 🔑 计算角度基准偏移
+  let originDayOfYear = 1  // 默认：公历 1 月 1 日 = 0°
+  if (props.originMode === 'winterSolstice') {
+    const winterSolsticePos = positions.find(p => p.name === '冬至')
+    originDayOfYear = winterSolsticePos?.dayOfYear ?? 355
+  }
 
   // 当前节气检测（基于太阳黄经，立春=0 起序）
   const sunLon = sunLongitude(time)
@@ -66,8 +80,13 @@ const ringData = computed((): PointRingData => {
   const currentLen = ringWidth * 0.65  // 当前节气
 
   const items: PointRingData['items'] = positions.map((pos) => {
-    // 🔑 角度 = 公历日序 → 刻度角度，与 DayScaleRing 精确对齐
-    const angle = ((pos.dayOfYear - 1) * anglePerDay) % 360
+    // 🔑 角度 = 相对于基准日的日差
+    let daysFromOrigin = pos.dayOfYear - originDayOfYear
+    if (daysFromOrigin < 0) {
+      daysFromOrigin += daysInYear
+    }
+    const angle = (daysFromOrigin * anglePerDay) % 360
+
     const isZhongQi = pos.isMidTerm
     const isCurrent = pos.lichunIndex === currentLichunIndex
     const isSpecial = specialNames.has(pos.name)
