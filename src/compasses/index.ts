@@ -58,7 +58,7 @@ export const compasses: CompassMeta[] = [
   {
     id: 'tropical-year',
     name: '回归年闰月盘',
-    description: '365天回归年 vs 360度甲子纪年对比，二十四节气节/中气区分，农历月份含闰月特殊高亮，揭示「无中气置闰」的天文规律',
+    description: '365天回归年 vs 360度甲子纪年对比，二十四节气节/中气区分，农历月份含闰月特殊高亮，当日月相实时可视化，揭示「无中气置闰」的天文规律',
     category: '天文',
     component: () => import('@/views/TropicalYearView.vue')
   }
