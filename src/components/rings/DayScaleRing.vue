@@ -46,6 +46,9 @@ const props = withDefaults(defineProps<Props>(), {
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
+/** 当前公历年（拆出来让 yearLayout 只依赖 year，而非 timeRef 本身） */
+const currentYear = computed(() => timeRef.value.getFullYear())
+
 const MONTH_LABELS = [
   '1月', '2月', '3月', '4月', '5月', '6月',
   '7月', '8月', '9月', '10月', '11月', '12月'
@@ -53,50 +56,51 @@ const MONTH_LABELS = [
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
-const ringData = computed((): PointRingData => {
-  const time = timeRef.value
-  const year = time.getFullYear()
-  const currentDayOfYear = getDayOfYear(time)
+/**
+ * 🔑 性能关键：把「一整年 365/366 天的刻度布局」拆到只依赖 year / originMode
+ * 的 computed。Vue computed 有值 memoization，year 不变则整年数组不重建。
+ * 按住 D 键快速拖时间时，year 保持不变，这个大计算被跳过；下面的 ringData 只
+ * 做一次浅拷贝 + 覆写当天那一项。
+ */
+const yearLayout = computed(() => {
+  const year = currentYear.value
   const isLeap = isGregorianLeapYear(year)
   const daysInYear = isLeap ? 366 : 365
   const anglePerDay = 360 / daysInYear
   const ringWidth = props.radius - props.innerRadius
 
-  // 🔑 计算角度基准偏移
-  let originDayOfYear = 1  // 默认：公历 1 月 1 日 = 0°
+  // 角度基准偏移
+  let originDayOfYear = 1
   if (props.originMode === 'winterSolstice') {
     const solarTerms = getSolarTermPositions(year)
     const winterSolstice = solarTerms.find(p => p.name === '冬至')
     originDayOfYear = winterSolstice?.dayOfYear ?? 355
   }
 
-  // 每月首日
-  const monthStarts: number[] = []
+  // 每月首日索引（用 Map 免去 O(n) indexOf/includes）
+  const monthStartIndex = new Map<number, number>()
   let accum = 1
   for (let m = 0; m < 12; m++) {
-    monthStarts.push(accum)
+    monthStartIndex.set(accum, m)
     accum += (m === 1 && isLeap) ? 29 : DAYS_IN_MONTH[m]!
   }
 
-  // 刻度长度（从外缘向内延伸的像素）→ 转换为 tickInnerRatio
-  // tickOuterRatio = 1.0（外缘），tickInnerRatio = 1 - len/ringWidth
-  const dailyLen = ringWidth * 0.12    // 日刻度：极短，仅外缘纹理
-  const fiveLen = ringWidth * 0.28     // 5日刻度：中等
-  const monthLen = ringWidth * 0.50    // 月首刻度：半环宽
+  const dailyLen = ringWidth * 0.12
+  const fiveLen = ringWidth * 0.28
+  const monthLen = ringWidth * 0.50
 
-  const items: PointRingData['items'] = []
+  const items: PointRingData['items'] = new Array(daysInYear)
 
   for (let day = 1; day <= daysInYear; day++) {
-    // 🔑 角度 = 相对于基准日的日差
     let daysFromOrigin = day - originDayOfYear
     if (daysFromOrigin < 0) {
       daysFromOrigin += daysInYear
     }
     const angle = (daysFromOrigin * anglePerDay) % 360
 
-    const isMonthStart = monthStarts.includes(day)
+    const monthIdx = monthStartIndex.get(day)
+    const isMonthStart = monthIdx !== undefined
     const isFiveDay = day % 5 === 0
-    const isCurrentDay = day === currentDayOfYear
 
     let tickInnerRatio: number
     let tickWidth: number
@@ -104,19 +108,10 @@ const ringData = computed((): PointRingData => {
     let pointColor: string
     let highlightLevel: 0 | 1 | 2 | 3
 
-    if (isCurrentDay) {
-      tickInnerRatio = 1 - (ringWidth * 0.55) / ringWidth  // 更长
-      tickWidth = 3
-      // 🔑 当天恰逢月首时保留月份标签，红色刻度 + 闪动即可，不要吞掉文字
-      const idx = monthStarts.indexOf(day)
-      label = idx >= 0 ? (MONTH_LABELS[idx] ?? '') : ''
-      pointColor = '#FF4444'
-      highlightLevel = 3
-    } else if (isMonthStart) {
+    if (isMonthStart) {
       tickInnerRatio = 1 - monthLen / ringWidth
       tickWidth = 1.5
-      const idx2 = monthStarts.indexOf(day)
-      label = idx2 >= 0 ? (MONTH_LABELS[idx2] ?? '') : ''
+      label = MONTH_LABELS[monthIdx!] ?? ''
       pointColor = '#FFFFFF'
       highlightLevel = 1
     } else if (isFiveDay) {
@@ -126,7 +121,6 @@ const ringData = computed((): PointRingData => {
       pointColor = '#999999'
       highlightLevel = 0
     } else {
-      // 每日细节刻度
       tickInnerRatio = 1 - dailyLen / ringWidth
       tickWidth = 0.3
       label = ''
@@ -134,7 +128,7 @@ const ringData = computed((): PointRingData => {
       highlightLevel = 0
     }
 
-    items.push({
+    items[day - 1] = {
       angle,
       label,
       pointSymbol: 'tick',
@@ -144,18 +138,50 @@ const ringData = computed((): PointRingData => {
       tickOuterRatio: 1.0,
       tickWidth,
       highlightLevel
-    })
+    }
   }
 
-  // 标签放在内缘外侧（远离所有刻度线）
   const labelOffset = Math.max(2, ringWidth * 0.1)
+
+  return {
+    items,
+    ringWidth,
+    labelOffset,
+    monthStartIndex,
+    daysInYear
+  }
+})
+
+const currentDayOfYear = computed(() => getDayOfYear(timeRef.value))
+
+const ringData = computed((): PointRingData => {
+  const layout = yearLayout.value
+  const day = currentDayOfYear.value
+  const ringWidth = layout.ringWidth
+
+  // 只对「当天」这一项做浅拷贝覆写，避免整年 items 数组重建
+  const items = layout.items.slice()
+  const idx = day - 1
+  if (idx >= 0 && idx < items.length) {
+    const orig = items[idx]!
+    const monthIdx = layout.monthStartIndex.get(day)
+    items[idx] = {
+      ...orig,
+      tickInnerRatio: 1 - (ringWidth * 0.55) / ringWidth,
+      tickWidth: 3,
+      // 当天恰逢月首时保留月份标签
+      label: monthIdx !== undefined ? (MONTH_LABELS[monthIdx] ?? '') : '',
+      pointColor: '#FF4444',
+      highlightLevel: 3
+    }
+  }
 
   return {
     radius: props.radius,
     innerRadius: props.innerRadius,
     startDegree: props.startDegree,
     labelColor: '#FFFFFF',
-    labelOffset,
+    labelOffset: layout.labelOffset,
     labelOffsetBase: 'inner',
     circleColor: '#444444',
     circleWidth: 0.5,

@@ -46,16 +46,16 @@ const props = withDefaults(defineProps<Props>(), {
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
+/** 当前公历年（先拆出来，让 lunarMonths 只依赖年份变化） */
+const currentYear = computed(() => timeRef.value.getFullYear())
+
 /** 完整历法信息 */
 const calendarInfo = computed<ChineseCalendarInfo>(() =>
   getChineseCalendarInfo(timeRef.value)
 )
 
-/** 农历月份列表 */
-const lunarMonths = computed(() => {
-  const year = timeRef.value.getFullYear()
-  return getLunarMonthsOfYear(year)
-})
+/** 农历月份列表 —— 只依赖 currentYear，year 不变时不重算逐日扫描 */
+const lunarMonths = computed(() => getLunarMonthsOfYear(currentYear.value))
 
 /** 是否有闰月 */
 const hasLeapMonth = computed(() =>

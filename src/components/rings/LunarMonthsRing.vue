@@ -52,7 +52,9 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
-const targetYear = computed(() => timeRef.value.getFullYear() + (props.yearOffset ?? 0))
+// 🔑 拆出当前公历年，让 targetYear 只依赖 year 而非整个 timeRef —— 年不变时下游布局不重算
+const currentYear = computed(() => timeRef.value.getFullYear())
+const targetYear = computed(() => currentYear.value + (props.yearOffset ?? 0))
 const offset = computed(() => Math.abs(props.yearOffset ?? 0))
 
 // ── 四象五行配色（由外向内：春青·夏赤·秋白·冬玄）──
@@ -101,55 +103,38 @@ function alpha(hex: string, a: number): string {
 // 使用 tyme4ts API 直接获取，无论日期在正月前还是正月后均正确
 const currentLunarInfo = computed(() => getCurrentLunarInfo(timeRef.value))
 
-const ringData = computed((): RingData => {
+// 🔑 性能关键：年内农历月布局只依赖 year，不依赖 timeRef
+// 按住 D 键快速拖时间时，year 大多数时候不变 → getLunarMonthsOfYear 不重算，
+// 12 圈 × 365 天 tyme4ts 扫描的开销被消除。
+const yearLayout = computed(() => {
   const year = targetYear.value
   const daysInYear = isGregorianLeapYear(year) ? 366 : 365
   const anglePerDay = 360 / daysInYear
   const o = offset.value
-
-  // 🌕 获取该公历年内的所有农历月片段（逐日扫描，含跨年边界月）
   const lunarMonths = getLunarMonthsOfYear(year)
 
-  // 🔍 当前月检测：通过农历年序号 + 月序号精确匹配
-  // 正月前（1月）→ 当前属上年腊月 → yearOffset=0 环无匹配 → yearOffset=-1 环的腊月高亮 ✓
-  // 正月后 → 当前属今年正月 → yearOffset=0 环正月高亮 ✓
-  const cur = currentLunarInfo.value
-
-  const items = lunarMonths.map((m) => {
-    // 日序在 [1, daysInYear] 内，角度始终在 [0, 360]，无需 wrap
+  // 预计算每个月的静态几何/样式属性（除 highlight 外全部固定）
+  const staticItems = lunarMonths.map((m) => {
     const startAngle = (m.startDayOfYear - 1) * anglePerDay
     const endAngle = m.endDayOfYear * anglePerDay
-
-    // 通过农历年序号 + 月序号精确匹配
-    const isCurrentMonth =
-      cur.lunarYearNumber === m.lunarYearNumber &&
-      cur.monthIndex === m.index
-
     const mn = monthNumber(m.name)
     const baseColor = MONTH_COLORS[(mn - 1 + 12) % 12]!
-
     const opacity = m.isLeap
       ? Math.max(0.40, 0.80 - o * 0.04)
       : Math.max(0.22, 0.58 - o * 0.04)
-
     return {
       label: m.name,
       startAngle,
       endAngle,
       color: alpha(baseColor, opacity),
       fontSize: Math.max(8, 10 - o * 0.3),
-      highlight: isCurrentMonth,
-      highlightLevel: (isCurrentMonth ? 3 : (m.isLeap ? 2 : 0)) as 0 | 1 | 2 | 3
+      isLeap: m.isLeap,
+      lunarYearNumber: m.lunarYearNumber,
+      monthIndex: m.index
     }
   })
 
-  const brightness = Math.max(0.55, 1 - o * 0.06)
-  const labelBright = Math.floor(255 * brightness)
-  const tickBright = Math.floor(140 * brightness)
-  const circleBright = Math.floor(120 * brightness)
-
-  // 🔑 主导农历年名：环上可能包含两个农历年的月份片段（年头上年腊月+年尾本年），
-  // 按日数加权取多数作为该环的「名义农历年」
+  // 主导农历年名（该环名义农历年）
   const nameDays = new Map<string, number>()
   for (const m of lunarMonths) {
     const days = m.endDayOfYear - m.startDayOfYear + 1
@@ -163,6 +148,42 @@ const ringData = computed((): RingData => {
       dominantName = name
     }
   }
+
+  const brightness = Math.max(0.55, 1 - o * 0.06)
+  const labelBright = Math.floor(255 * brightness)
+  const tickBright = Math.floor(140 * brightness)
+  const circleBright = Math.floor(120 * brightness)
+
+  return {
+    staticItems,
+    dominantName,
+    labelBright,
+    tickBright,
+    circleBright
+  }
+})
+
+const ringData = computed((): RingData => {
+  const cur = currentLunarInfo.value
+  const { staticItems, dominantName, labelBright, tickBright, circleBright } =
+    yearLayout.value
+
+  // 仅叠加 highlight 位（当前月判定），几何/颜色/字号从缓存布局取
+  const items = staticItems.map((si) => {
+    const isCurrentMonth =
+      cur.lunarYearNumber === si.lunarYearNumber &&
+      cur.monthIndex === si.monthIndex
+
+    return {
+      label: si.label,
+      startAngle: si.startAngle,
+      endAngle: si.endAngle,
+      color: si.color,
+      fontSize: si.fontSize,
+      highlight: isCurrentMonth,
+      highlightLevel: (isCurrentMonth ? 3 : (si.isLeap ? 2 : 0)) as 0 | 1 | 2 | 3
+    }
+  })
 
   const boxed = {
     radius: props.radius,
