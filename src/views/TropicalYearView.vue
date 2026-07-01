@@ -2,6 +2,7 @@
 import { ref, markRaw } from 'vue'
 import DayScaleRing from '../components/rings/DayScaleRing.vue'
 import SolarTermsPointRing from '../components/rings/SolarTermsPointRing.vue'
+import MoonPhaseRing from '../components/rings/MoonPhaseRing.vue'
 import LunarMonthsRing from '../components/rings/LunarMonthsRing.vue'
 import LeapInfoCenter from '../components/centers/LeapInfoCenter.vue'
 import Control from '../components/Control.vue'
@@ -11,16 +12,17 @@ import RingStack from '../components/base/RingStack.vue'
  * 回归年 × 农历闰月 可视化罗盘
  *
  * ═══════════════════════════════════════════════════════════════
- *  🔑 架构：唯一时间源 controlledTime → 10环 + 圆心
+ *  🔑 架构：唯一时间源 controlledTime → 15环 + 圆心
  *  ─────────────────────────────────────────────────────────────
  *
  *   环1  22px DayScaleRing         365天刻度（三级）
  *   环2  14px SolarTermsPointRing  24节气（绿节/蓝中气）
- *   环3  13px 今年  农历月
- *   环4  13px 去年  农历月
+ *   环3  22px MoonPhaseRing        月亮月相（每日月牙 + 朔望弦标注）
+ *   环4  13px 今年   农历月
+ *   环5  13px 去年   农历月
  *   …    …                        （12月固定色，逐年变淡）
- *   环12 13px 九年前 农历月
- *   圆心  ~292px LeapInfoCenter    年中信息
+ *   环15 13px 十一年前 农历月
+ *   圆心  ~238px LeapInfoCenter    年中信息
  *
  *  ═══════════════════════════════════════════════════════════════
  */
@@ -51,13 +53,19 @@ const rings = [
     thickness: 14,
     props: { time: controlledTime }
   },
-  // 3. 今年（最亮）
+  // 3. 月亮月相变化（每日月牙 + 朔/上弦/望/下弦标注）
+  {
+    component: markRaw(MoonPhaseRing),
+    thickness: 22,
+    props: { time: controlledTime }
+  },
+  // 4. 今年（最亮）
   {
     component: markRaw(LunarMonthsRing),
     thickness: 13,
     props: { time: controlledTime, yearOffset: 0 }
   },
-  // 4-12. 去年 → 九年前
+  // 5-15. 去年 → 十一年前
   ...Array.from({ length: 11 }, (_, i) => ({
     component: markRaw(LunarMonthsRing),
     thickness: 13,
