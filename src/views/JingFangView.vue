@@ -16,7 +16,7 @@ import RingStack from '../components/base/RingStack.vue'
  *  -------------------------------------------------------------
  *
  *   外环  16px  SolarTermsPointRing        24节气（节/中气双色，冬至=0°）
- *   环2   22px  DayScaleRing               365天三级刻度（日/5日/月首，冬至=0°）
+ *   环2   36px  DayScaleRing               365天三级刻度 + 日干支（月首/甲子日锚点，当日显示干支两字，冬至=0°）
  *   环3   18px  LiuRiQiFenScaleRing        六日七分 360爻刻度（每爻1°，当日高亮）
  *   环4   80px  JingFangGuaRing            京房 60 卦爻线图形环（当前爻红色高亮）
  *   环5   80px  NajiaRing                  60 卦浑天纳甲环（每爻竖排干支，当前爻金色高亮）
@@ -60,11 +60,11 @@ const rings = [
     thickness: 16,
     props: { time: controlledTime, originMode: 'winterSolstice' as const }
   },
-  // 2. 365天回归年刻度（冬至=0° 基准）
+  // 2. 365天回归年刻度 + 日干支叠加（冬至=0° 基准，月首/甲子日锚点，当日显示干支两字）
   {
     component: markRaw(DayScaleRing),
-    thickness: 22,
-    props: { time: controlledTime, originMode: 'winterSolstice' as const }
+    thickness: 36,
+    props: { time: controlledTime, originMode: 'winterSolstice' as const, showGanzhi: true }
   },
   // 3. 六日七分 360爻位刻度环（每爻1°，当日高亮）
   {

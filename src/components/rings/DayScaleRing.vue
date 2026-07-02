@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
-import { isGregorianLeapYear, getDayOfYear, getSolarTermPositions } from '@/utils/chineseCalendar'
+import {
+  isGregorianLeapYear,
+  getDayOfYear,
+  dateFromDayOfYear,
+  getSolarTermPositions
+} from '@/utils/chineseCalendar'
+import { getJiaziIndices, ganzhiName } from '@/utils/liushiJiazi'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
@@ -21,9 +27,15 @@ import type { PointRingData } from '@/data/rings/types'
  *   - 'jan1'：公历 1 月 1 日 = 0°（默认，通用回归年刻度）
  *   - 'winterSolstice'：冬至日 = 0°（京房卦气体系专用）
  *
+ * 🔑 日干支叠加（showGanzhi=true，京房卦气盘专用）：
+ *   - 每年 6~7 个「甲子日」（每 60 天一个）加木绿长刻度 + "甲子"标签作周期锚点
+ *   - 当日高亮 label 改为当日干支两字（如"乙丑"），覆盖原月首"X月"标签
+ *   - 六十甲子日 vs 365 天不整除 → 用稀疏锚点解决可视化问题
+ *
  * @example
  * ```vue
  * <DayScaleRing :time="controlledTime" :radius="480" :inner-radius="452" />
+ * <DayScaleRing :time="controlledTime" show-ganzhi origin-mode="winterSolstice" />
  * ```
  */
 interface Props {
@@ -34,6 +46,8 @@ interface Props {
   rotationDirection?: 'clockwise' | 'counterclockwise'
   /** 角度基准模式：'jan1' 公历1月1日=0°（默认），'winterSolstice' 冬至=0°（京房卦气） */
   originMode?: 'jan1' | 'winterSolstice'
+  /** 叠加日干支信息：甲子日锚点 + 当日高亮显示干支两字（京房卦气盘专用） */
+  showGanzhi?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -41,7 +55,8 @@ const props = withDefaults(defineProps<Props>(), {
   innerRadius: 452,
   startDegree: 0,
   rotationDirection: 'clockwise',
-  originMode: 'jan1'  // 默认：公历1月1日=0°，兼容其他视图
+  originMode: 'jan1', // 默认：公历1月1日=0°，兼容其他视图
+  showGanzhi: false
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
@@ -85,9 +100,23 @@ const yearLayout = computed(() => {
     accum += (m === 1 && isLeap) ? 29 : DAYS_IN_MONTH[m]!
   }
 
+  // 甲子日锚点集合（仅 showGanzhi 时计算）
+  // 逻辑：年初 1/1 的甲子索引 day1Jiazi ∈ [0, 60) → 第一个甲子日 dayOfYear
+  //       = day1Jiazi === 0 ? 1 : (60 - day1Jiazi + 1)，之后每 +60 天一个
+  const jiaziDaySet = new Set<number>()
+  if (props.showGanzhi) {
+    const day1Date = dateFromDayOfYear(year, 1)
+    const day1Jiazi = getJiaziIndices(day1Date).day
+    const firstJiaziDoy = day1Jiazi === 0 ? 1 : (60 - day1Jiazi + 1)
+    for (let d = firstJiaziDoy; d <= daysInYear; d += 60) {
+      jiaziDaySet.add(d)
+    }
+  }
+
   const dailyLen = ringWidth * 0.12
   const fiveLen = ringWidth * 0.28
   const monthLen = ringWidth * 0.50
+  const jiaziLen = ringWidth * 0.55 // 甲子锚略长于月首，视觉主锚
 
   const items: PointRingData['items'] = new Array(daysInYear)
 
@@ -101,6 +130,7 @@ const yearLayout = computed(() => {
     const monthIdx = monthStartIndex.get(day)
     const isMonthStart = monthIdx !== undefined
     const isFiveDay = day % 5 === 0
+    const isJiaziAnchor = jiaziDaySet.has(day)
 
     let tickInnerRatio: number
     let tickWidth: number
@@ -108,7 +138,14 @@ const yearLayout = computed(() => {
     let pointColor: string
     let highlightLevel: 0 | 1 | 2 | 3
 
-    if (isMonthStart) {
+    if (isJiaziAnchor) {
+      // 甲子日：最长刻度 + "甲子"两字木绿色（甲=木），压过月首
+      tickInnerRatio = 1 - jiaziLen / ringWidth
+      tickWidth = 1.6
+      label = '甲子'
+      pointColor = '#2ECC71'
+      highlightLevel = 2
+    } else if (isMonthStart) {
       tickInnerRatio = 1 - monthLen / ringWidth
       tickWidth = 1.5
       label = MONTH_LABELS[monthIdx!] ?? ''
@@ -133,7 +170,7 @@ const yearLayout = computed(() => {
       label,
       pointSymbol: 'tick',
       pointColor,
-      fontSize: 7,
+      fontSize: isJiaziAnchor ? 9 : 7,
       tickInnerRatio: Math.max(0.4, tickInnerRatio),
       tickOuterRatio: 1.0,
       tickWidth,
@@ -154,6 +191,11 @@ const yearLayout = computed(() => {
 
 const currentDayOfYear = computed(() => getDayOfYear(timeRef.value))
 
+/** 当日日柱干支索引（0-59），仅 showGanzhi 时使用 */
+const currentDayJiaziIndex = computed(() =>
+  props.showGanzhi ? getJiaziIndices(timeRef.value).day : 0
+)
+
 const ringData = computed((): PointRingData => {
   const layout = yearLayout.value
   const day = currentDayOfYear.value
@@ -164,13 +206,21 @@ const ringData = computed((): PointRingData => {
   const idx = day - 1
   if (idx >= 0 && idx < items.length) {
     const orig = items[idx]!
-    const monthIdx = layout.monthStartIndex.get(day)
+    let label = ''
+    if (props.showGanzhi) {
+      // 京房盘：显示当日干支两字（如"乙丑"），甲子日时依然是"甲子"，语义等价
+      label = ganzhiName(currentDayJiaziIndex.value)
+    } else {
+      // 通用回归年：当天恰逢月首时保留月份标签
+      const monthIdx = layout.monthStartIndex.get(day)
+      label = monthIdx !== undefined ? (MONTH_LABELS[monthIdx] ?? '') : ''
+    }
     items[idx] = {
       ...orig,
       tickInnerRatio: 1 - (ringWidth * 0.55) / ringWidth,
       tickWidth: 3,
-      // 当天恰逢月首时保留月份标签
-      label: monthIdx !== undefined ? (MONTH_LABELS[monthIdx] ?? '') : '',
+      fontSize: props.showGanzhi ? 12 : (orig.fontSize ?? 7),
+      label,
       pointColor: '#FF4444',
       highlightLevel: 3
     }
