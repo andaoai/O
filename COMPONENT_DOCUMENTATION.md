@@ -1,6 +1,6 @@
 # 组件文档 - Component Documentation
 
-本文档说明中华传统罗盘平台中各组件的功能、API 和用法。整体架构（多页面路由、数据驱动圆环、同心自动布局）见 [README.md](README.md) 与 [CLAUDE.md](CLAUDE.md)。
+本文档说明**乙巳观**（道由天观）中各组件的功能、API 和用法。整体架构（多页面路由、数据驱动圆环、同心自动布局）见 [README.md](README.md) 与 [CLAUDE.md](CLAUDE.md)。
 
 ## 📚 目录
 
@@ -790,6 +790,8 @@ useKeyboardShortcuts({
 | `component` | () => Promise<Component> | 懒加载的页面视图组件 |
 
 ```typescript
+// 当前已注册 6 个罗盘（astronomy / liushi-jiazi / sixty-four-gua /
+// jingfang / planet-mansion / tropical-year），详见 src/compasses/index.ts
 export const compasses: CompassMeta[] = [
   {
     id: 'astronomy',
@@ -798,7 +800,21 @@ export const compasses: CompassMeta[] = [
     category: '天文',
     component: () => import('@/views/AstronomyView.vue')
   },
-  // …新增罗盘在此追加
+  {
+    id: 'jingfang',
+    name: '京房十二消息卦盘',
+    description: '365 天刻度 + 60 卦六日七分 + 四正卦 + 十二消息 + 八宫世应 + 纳甲 + 日干支',
+    category: '易学',
+    component: () => import('@/views/JingFangView.vue')
+  },
+  {
+    id: 'tropical-year',
+    name: '回归年闰月盘',
+    description: '365 天回归年 vs 360 度甲子纪年，节/中气区分，农历闰月与月相实时高亮',
+    category: '天文',
+    component: () => import('@/views/TropicalYearView.vue')
+  },
+  // …其余罗盘同理，新增罗盘在此追加
 ]
 ```
 

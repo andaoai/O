@@ -4,14 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a **Chinese traditional compass visualization platform** (中华传统罗盘可视化平台) built with Vue 3 + TypeScript. It is a multi-page app: a home page lists available "compasses" (罗盘), and each compass is a full-screen, polar-coordinate SVG visualization of traditional Chinese cosmological elements.
+This is **乙巳观 (Yisiguan)** — 道由天观 — a personal Vue 3 + TypeScript project born from an observation of the sky in the Yisi (乙巳) year. It is used to visualize various ancient Chinese algorithms as full-screen, polar-coordinate SVG "compasses" (罗盘). Multi-page app: a home page lists available compasses, and each compass is a full-screen interactive polar SVG plate.
 
-Four compasses currently ship:
+Six compasses currently ship:
 
 - **中华天文圆环 (astronomy)** — a full astronomical disk stacking many concentric rings: 360-degree degree scale, 24 solar terms (二十四节气), 28 constellations (二十八星宿), 60 jiazi (六十甲子) with five-element nayin (五行纳音), 10 heavenly stems (十天干) with void positions (天干空亡), 12 longevity stages (十二长生), 12 earthly branches (十二地支), 8 gates (八门), four celestial symbols (四象), plus a solar ecliptic and a Taiji (太极) at the center.
 - **六十甲子六环 (liushi-jiazi)** — six concentric 60-jiazi rings (year/month/day/hour/minute/second pillars) that track real time and highlight the current ganzhi cell on each ring.
-- **七曜入宿天象盘 (planet-mansion)** — celestial sky projection with polar equator, ecliptic and lunar orbit obliquity, sun/moon/five planets real-time positioning into 28 mansions, featuring point-based 24 solar terms outer ring.
 - **先天六十四卦盘 (sixty-four-gua)** — Fu Xi/Shao Yong's先天 circular diagram: 64 hexagrams arranged by binary bit-reversal order, Qian south Kun north, displaying hexagram symbols, names and six lines.
+- **京房十二消息卦盘 (jingfang)** — Jing Fang's gua-qi (卦气) system: 365-day outer scale, 60-gua "six-days-seven-fen" (六日七分) ring, four cardinal gua (震春/离夏/兑秋/坎冬), twelve monthly-message gua (十二消息卦), eight-palace shi-ying (八宫世应), Huntian najia (浑天纳甲), and a day-ganzhi active ring.
+- **七曜入宿天象盘 (planet-mansion)** — celestial sky projection with polar equator, ecliptic and lunar orbit obliquity, sun/moon/five planets real-time positioning into 28 mansions, featuring point-based 24 solar terms outer ring.
+- **回归年闰月盘 (tropical-year)** — 365-day tropical year vs 360-degree jiazi year comparison, jie/zhongqi distinction of 24 solar terms, lunar months with leap-month highlight, real-time moon phase, illustrating the "no-zhongqi ⇒ leap month" rule.
 
 Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations, **vue-router** for the multi-page structure.
 
@@ -34,22 +36,23 @@ The project evolved from a "one .vue component per ring" design → **data-drive
 ┌────────────────────────────────────┴────────────────────────┐
 │  Layer 2: Composition Layer (组合层)                          │
 │  └─ Views: 持有状态，编排组件，通过 RingStack 统一布局         │
-│     AstronomyView, LiushiJiaziView, PlanetMansionView        │
+│     AstronomyView, LiushiJiaziView, SixtyFourGuaView,        │
+│     JingFangView, PlanetMansionView, TropicalYearView        │
 │     🔹 RingStack: 「圆心 → 圆环」统一分层布局容器              │
 └────────────────────────────────────┬────────────────────────┘
                                      │
 ┌────────────────────────────────────┴────────────────────────┐
 │  Layer 3: Domain Component Layer (领域组件层)                 │
 │  ┌─────────────────────────────────────────────────────────┐│
-│  │  ⚫ 圆心区 (centers/)：3 个圆心组件                       ││
-│  │     TaiChi, HelioOrbits, SolarEcliptic                   ││
+│  │  ⚫ 圆心区 (centers/)：4 个圆心组件                       ││
+│  │     TaiChi, HelioOrbits, SolarEcliptic, LeapInfoCenter   ││
 │  └───────────────────────────┬─────────────────────────────┘│
 │                              │ 自动注入 innerRadius          │
 │  ┌───────────────────────────▼─────────────────────────────┐│
-│  │  🔵 圆环区 (rings/)：16 个同心环组件                      ││
+│  │  🔵 圆环区 (rings/)：22+ 个同心环组件                     ││
 │  │     SixtyJiaziRing, BranchesRing, ConstellationsRing,    ││
-│  │     SolarTermsSkyRing, SiXiangRing, SevenLuminariesRing, ││
-│  │     MansionDegreeRing, SinglePlanetRing, SkyChart, ...   ││
+│  │     JingFangGuaRing, NajiaRing, ShiYingRing,             ││
+│  │     LunarMonthsRing, MoonPhaseRing, SkyChart, ...        ││
 │  └─────────────────────────────────────────────────────────┘│
 └────────────────────────────────────┬────────────────────────┘
                                      │
@@ -155,6 +158,15 @@ const ringData = computed(() => transform(timeRef.value))
 | `SevenLuminariesRing.vue` | Body | 七曜 | 行星赤经计算 + 入宿定位 |
 | `MansionDegreeRing.vue` | Body | 入宿度标记 | 七曜入宿度数径向标记 |
 | `SinglePlanetRing.vue` | Body | 单行星 | 单行星深度研究模式 |
+| `JingFangGuaRing.vue` | Segment | 京房六日七分 | 60 卦六日七分角度分配 + 当日值卦高亮 |
+| `JingFangEightPalaceRing.vue` | Segment | 京房八宫 | 八宫卦所属排列 + 世应位标记 |
+| `NajiaRing.vue` | Segment | 浑天纳甲 | 六爻天干配纳 + 五行配色 |
+| `ShiYingRing.vue` | Segment | 世应爻位 | 世爻应爻位置标记 |
+| `LiuRiQiFenScaleRing.vue` | Point | 六日七分刻度 | 365.25 天精细刻度 |
+| `DayScaleRing.vue` | Point | 日刻度 + 日干支 | 一日一格刻度 + 甲子锚点 + 当日高亮 |
+| `LunarMonthsRing.vue` | Segment | 农历月份 | 农历十二月分布 + 闰月特殊高亮 |
+| `MoonPhaseRing.vue` | Body | 月相 | 当日月相实时绘制 |
+| `SolarTermsPointRing.vue` | Point | 节气节/中气 | 二十四节气按节/中气分色标记 |
 
 ---
 
@@ -276,6 +288,7 @@ interface CenterProps {
 | `TaiChi.vue` | 太极阴阳 | AstronomyView 盘心 |
 | `HelioOrbits.vue` | 日心轨道 | SkyChart 内嵌的日心行星轨道 |
 | `SolarEcliptic.vue` | 黄道编排 | AstronomyView 中心黄道环 |
+| `LeapInfoCenter.vue` | 闰月信息 | TropicalYearView 盘心，展示当前闰月/月相状态 |
 
 **BaseCenter 基础容器：**
 - 可选的辅助容器，用于复杂插槽分发
@@ -408,8 +421,10 @@ src/
 │   ├── HomeView.vue               # Home page: grid of compass cards
 │   ├── AstronomyView.vue          # 中华天文圆环 compass
 │   ├── LiushiJiaziView.vue        # 六十甲子六环 compass
+│   ├── SixtyFourGuaView.vue       # 先天六十四卦盘 compass
+│   ├── JingFangView.vue           # 京房十二消息卦盘 compass
 │   ├── PlanetMansionView.vue      # 七曜入宿天象盘 compass
-│   └── SixtyFourGuaView.vue       # 先天六十四卦盘 compass
+│   └── TropicalYearView.vue       # 回归年闰月盘 compass
 ├── components/
 │   ├── base/                       # Layer 4: Base Render Layer
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
@@ -431,13 +446,23 @@ src/
 │   │   ├── SiXiangRing.vue         # Domain: 4 symbols dynamic RA spans
 │   │   ├── SolarTermsRing.vue      # Domain: 24 solar terms (traditional)
 │   │   ├── SolarTermsSkyRing.vue   # Domain: 24 solar terms (sky chart)
+│   │   ├── SolarTermsPointRing.vue # Domain: 24 solar terms jie/zhongqi color-coded
 │   │   ├── SevenLuminariesRing.vue # Domain: 7 planets positioning
 │   │   ├── SinglePlanetRing.vue    # Domain: single planet deep study
-│   │   └── SkyChart.vue            # Sky chart projection ring (most inner)
+│   │   ├── SkyChart.vue            # Sky chart projection ring (most inner)
+│   │   ├── JingFangGuaRing.vue     # Domain: Jing Fang 60-gua six-days-seven-fen
+│   │   ├── JingFangEightPalaceRing.vue # Domain: Jing Fang eight-palace layout
+│   │   ├── NajiaRing.vue           # Domain: Huntian najia (纳甲) six-line stems
+│   │   ├── ShiYingRing.vue         # Domain: shi-ying (世应) line positions
+│   │   ├── LiuRiQiFenScaleRing.vue # Domain: 365.25-day fine scale ring
+│   │   ├── DayScaleRing.vue        # Domain: per-day scale + day ganzhi anchor
+│   │   ├── LunarMonthsRing.vue     # Domain: lunar months with leap-month highlight
+│   │   └── MoonPhaseRing.vue       # Domain: current-day moon phase
 │   ├── centers/                     # Layer 3: Center Domain Components
 │   │   ├── TaiChi.vue              # Time-driven Taiji disk
 │   │   ├── HelioOrbits.vue         # Heliocentric orbits (planet-mansion)
-│   │   └── SolarEcliptic.vue       # Solar ecliptic center component
+│   │   ├── SolarEcliptic.vue       # Solar ecliptic center component
+│   │   └── LeapInfoCenter.vue      # Leap-month / moon-phase info center (tropical-year)
 │   ├── celestial/                   # Celestial visualization
 │   │   ├── BodyMarker.vue          # Celestial body with halos + symbol
 │   │   ├── CelestialBody.vue       # Celestial body container

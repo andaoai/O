@@ -5,8 +5,8 @@ import { compasses } from '@/compasses'
 <template>
   <div class="home">
     <header class="home-header">
-      <h1>罗盘</h1>
-      <p class="subtitle">中华传统罗盘可视化平台</p>
+      <h1>乙巳观</h1>
+      <p class="subtitle">道由天观</p>
     </header>
 
     <div class="compass-grid">
