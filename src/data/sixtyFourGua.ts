@@ -29,6 +29,25 @@
 /** 每卦圆心角步长：360 / 64 */
 export const GUA_STEP = 360 / 64
 
+/**
+ * 八经卦 bit 值 → 卦名
+ * 与文件顶部注释「坤☷=0、震☳=1、坎☵=2、兑☱=3、艮☶=4、离☲=5、巽☴=6、乾☰=7」严格一致。
+ * 索引即三爻二进制值：bit0=初爻,bit2=三爻，阳=1阴=0。
+ */
+export const BAGUA_NAMES: readonly string[] = [
+  '坤', '震', '坎', '兑', '艮', '离', '巽', '乾'
+]
+
+/** 由 64 卦 value 取内卦（下卦）八经卦名：取 bit0..bit2 */
+export function getInnerGuaName(value: number): string {
+  return BAGUA_NAMES[value & 0b111]!
+}
+
+/** 由 64 卦 value 取外卦（上卦）八经卦名：取 bit3..bit5 */
+export function getOuterGuaName(value: number): string {
+  return BAGUA_NAMES[(value >> 3) & 0b111]!
+}
+
 /** 一卦的基础元信息（按 value 硬编码） */
 export interface GuaMeta {
   /** 六爻二进制编码 0-63（bit0=初爻,bit5=上爻；阳=1阴=0） */

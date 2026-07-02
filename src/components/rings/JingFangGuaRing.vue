@@ -53,6 +53,12 @@ interface Props {
   nameColor?: string
   /** 当前卦（含当前爻的那一卦）卦名颜色 */
   currentNameColor?: string
+  /** 内/外卦八经卦名字号（px），0 = 不显示。默认 = nameFontSize × 0.65 */
+  baguaFontSize?: number
+  /** 内/外卦标签常规颜色 */
+  baguaColor?: string
+  /** 当前卦的内/外卦标签颜色 */
+  currentBaguaColor?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -101,7 +107,18 @@ const props = withDefaults(defineProps<Props>(), {
   nameColor: '#C8B88A',
 
   // 【卦名·高亮】当前卦（含当前爻）卦名亮金，与红爻形成主次呼应。
-  currentNameColor: '#FFD700'
+  currentNameColor: '#FFD700',
+
+  // 【内/外卦】小字标签字号（px）。默认 0 → 走 nameFontSize × 0.65 派生（在下方 computed 处理）。
+  // 之所以取 0 而非直接算，是为了让父组件仅覆盖 nameFontSize 时，本字号能自动跟随缩放。
+  baguaFontSize: 0,
+
+  // 【内/外卦·配色】常规态用比卦名更暗一档的褐色，视觉主次：卦名 > 内外卦 > 爻线断口。
+  baguaColor: '#8A7A54',
+
+  // 【内/外卦·高亮】当前卦对应的内外卦标签，用比 currentNameColor 更暗一档的金铜色，
+  // 保持金色系呼应又不与主卦名平级。
+  currentBaguaColor: '#D4A94A'
 })
 
 // ⚠️ 时间驱动范式：MaybeRef → computed timeRef
@@ -136,11 +153,40 @@ const currentYaoInGua = computed(() => currentYaoIndex.value % 6)
 
 /** 环径向厚度 */
 const band = computed(() => props.radius - props.innerRadius)
-/** 6 爻径向堆叠区（下留白 30% 给卦名，上留 8%） */
-const lineBandInner = computed(() => props.innerRadius + band.value * 0.30)
-const lineBandOuter = computed(() => props.radius - band.value * 0.08)
-/** 卦名径向位置：位于 6 爻堆叠区之内、内圆边线之外，即"卦的下面" */
-const nameRadius = computed(() => props.innerRadius + band.value * 0.15)
+/**
+ * 径向分区（自内向外，比例基于当前 band=thickness）：
+ *
+ *   卦象可视化区（6 条爻线）保持在环的**外侧一半**，与 thickness=80 时的绝对位置一致；
+ *   加宽 thickness 时，多出来的空间**全部**下沉给内侧文字区，用来拉开卦名与内/外卦标签，
+ *   避免字号 18px + 12px 上下叠字。
+ *
+ *   ┌────────────── radius（外圆）
+ *   │  外缘留白 6%
+ *   ├──── lineBandOuter  = radius - band*0.06     ← 6 爻堆叠区外缘
+ *   │  6 条爻线均匀分布（占 48% 径向）
+ *   ├──── lineBandInner  = innerR + band*0.49     ← 6 爻堆叠区内缘
+ *   │  分隔缓冲
+ *   ├──── nameRadius     = innerR + band*0.27     ← 卦名（大字 18px）
+ *   │  分隔缓冲（band=110 时 ~22px，足够容纳两行文字）
+ *   ├──── baguaRadius    = innerR + band*0.075    ← 内/外卦（小字 ~12px）
+ *   │  内缘留白 ~5%
+ *   └────────────── innerRadius（内圆）
+ *
+ *   关键约束（不叠字的必要条件）：
+ *     (nameRadius - baguaRadius) ≥ (nameFontSize + baguaFontSize) / 2
+ *     (0.27 - 0.075) * band ≥ (18 + 12) / 2
+ *     0.195 * band ≥ 15  →  band ≥ 77
+ *   thickness=110 时 0.195*110 ≈ 21.5px，径向净间距约 7px，充分。
+ */
+const lineBandInner = computed(() => props.innerRadius + band.value * 0.49)
+const lineBandOuter = computed(() => props.radius - band.value * 0.06)
+const nameRadius = computed(() => props.innerRadius + band.value * 0.27)
+const baguaRadius = computed(() => props.innerRadius + band.value * 0.075)
+
+/** 内/外卦标签字号：默认 = nameFontSize × 0.65，允许父组件通过 baguaFontSize 覆盖 */
+const effectiveBaguaFontSize = computed(() =>
+  props.baguaFontSize > 0 ? props.baguaFontSize : Math.max(1, Math.round(props.nameFontSize * 0.65))
+)
 
 /**
  * 60 卦 × 6 爻的所有 SVG 线段
@@ -238,6 +284,41 @@ const nameLabels = computed<NameLabel[]>(() => {
     }
   })
 })
+
+/**
+ * 60 个内/外卦八经卦名标签
+ *
+ * 【格式约定】"内卦/外卦"（如 中孚 = 兑/巽 → "兑/巽"），
+ * 顺序刻意采用「先下后上」，与本组件径向堆叠一致（内=下=初二三爻在内）：
+ *   看到「兑/巽」= 下卦兑、上卦巽，正是中孚 ䷼ 的经卦分解。
+ *
+ * 位置在卦名下方（更靠近内圆），字号约为卦名的 65%。
+ */
+interface BaguaLabel {
+  key: number
+  text: string
+  x: number
+  y: number
+  rot: number
+  isCurrent: boolean
+}
+
+const baguaLabels = computed<BaguaLabel[]>(() => {
+  if (effectiveBaguaFontSize.value <= 0) return []
+  const curGua = currentGuaIndex.value
+  return JING_FANG_SIXTY_GUA.map(gua => {
+    const centerAngle = gua.index * JING_FANG_GUA_STEP + JING_FANG_GUA_STEP / 2
+    const p = polarToCartesian(centerAngle, baguaRadius.value)
+    return {
+      key: gua.index,
+      text: `${gua.innerGua}/${gua.outerGua}`,
+      x: p.x,
+      y: p.y,
+      rot: radialTextRotation((centerAngle + props.startDegree) % 360, props.rotationDirection),
+      isCurrent: gua.index === curGua
+    }
+  })
+})
 </script>
 
 <template>
@@ -277,6 +358,21 @@ const nameLabels = computed<NameLabel[]>(() => {
           :class="{ 'current-name': lbl.isCurrent }"
         >
           {{ lbl.name }}
+        </text>
+
+        <!-- 60 个「内卦/外卦」小标签（卦名下方，先内后外） -->
+        <text
+          v-for="lbl in baguaLabels"
+          :key="`bagua-${lbl.key}`"
+          :x="lbl.x"
+          :y="lbl.y"
+          :fill="lbl.isCurrent ? currentBaguaColor : baguaColor"
+          :font-size="effectiveBaguaFontSize"
+          text-anchor="middle"
+          dominant-baseline="central"
+          :transform="`rotate(${lbl.rot} ${lbl.x} ${lbl.y})`"
+        >
+          {{ lbl.text }}
         </text>
       </g>
     </template>

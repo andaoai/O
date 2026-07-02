@@ -15,7 +15,7 @@
  *   value 到六爻数组的映射走 [[sixtyFourGua]] 的 getGuaLines()。
  *   不重复编码六爻二进制。
  */
-import { WENWANG_GUA_BY_VALUE, getGuaLines } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE, getGuaLines, getInnerGuaName, getOuterGuaName } from '@/data/sixtyFourGua'
 
 /** 京房卦气 60 卦的一卦元信息 */
 export interface JingFangGua {
@@ -27,6 +27,10 @@ export interface JingFangGua {
   value: number
   /** 六爻数组，自下而上，下标 0 = 初爻，true = 阳爻 */
   lines: readonly boolean[]
+  /** 内卦（下卦）八经卦名，取自初/二/三爻 */
+  innerGua: string
+  /** 外卦（上卦）八经卦名，取自四/五/上爻 */
+  outerGua: string
 }
 
 /**
@@ -60,7 +64,9 @@ export const JING_FANG_SIXTY_GUA: readonly JingFangGua[] = JING_FANG_ORDER.map((
     index,
     name,
     value,
-    lines: Object.freeze(getGuaLines(value))
+    lines: Object.freeze(getGuaLines(value)),
+    innerGua: getInnerGuaName(value),
+    outerGua: getOuterGuaName(value)
   }
 })
 

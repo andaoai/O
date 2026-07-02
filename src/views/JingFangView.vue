@@ -72,10 +72,12 @@ const rings = [
     thickness: 18,
     props: { time: controlledTime }
   },
-  // 4. 京房 60 卦爻线图形环（60卦×6爻，当前爻红色高亮 + 卦名标签）
+  // 4. 京房 60 卦爻线图形环（60卦×6爻，当前爻红色高亮 + 卦名标签 + 内外经卦标签）
+  //    thickness=110：需容纳 6 条爻线堆叠 + 卦名(18px) + 内外卦标签(~12px)三层径向元素，
+  //    低于 100 时卦名与内外卦标签的径向 bounding box 会重叠。
   {
     component: markRaw(JingFangGuaRing),
-    thickness: 80,
+    thickness: 110,
     props: { time: controlledTime }
   },
   // 5. 浑天纳甲环（60卦×6爻纳甲干支，径向由内向外排布，当前爻金色高亮）
