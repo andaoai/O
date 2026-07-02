@@ -4,6 +4,7 @@ import SolarTermsPointRing from '../components/rings/SolarTermsPointRing.vue'
 import DayScaleRing from '../components/rings/DayScaleRing.vue'
 import LiuRiQiFenScaleRing from '../components/rings/LiuRiQiFenScaleRing.vue'
 import JingFangGuaRing from '../components/rings/JingFangGuaRing.vue'
+import NajiaRing from '../components/rings/NajiaRing.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 
@@ -17,7 +18,8 @@ import RingStack from '../components/base/RingStack.vue'
  *   外环  16px  SolarTermsPointRing        24节气（节/中气双色，冬至=0°）
  *   环2   22px  DayScaleRing               365天三级刻度（日/5日/月首，冬至=0°）
  *   环3   18px  LiuRiQiFenScaleRing        六日七分 360爻刻度（每爻1°，当日高亮）
- *   环4   60px  JingFangGuaRing            京房 60 卦爻线图形环（当前爻红色高亮）
+ *   环4   80px  JingFangGuaRing            京房 60 卦爻线图形环（当前爻红色高亮）
+ *   环5   80px  NajiaRing                  60 卦浑天纳甲环（每爻竖排干支，当前爻金色高亮）
  *
  * =============================================================
  *
@@ -73,6 +75,12 @@ const rings = [
   // 4. 京房 60 卦爻线图形环（60卦×6爻，当前爻红色高亮 + 卦名标签）
   {
     component: markRaw(JingFangGuaRing),
+    thickness: 80,
+    props: { time: controlledTime }
+  },
+  // 5. 浑天纳甲环（60卦×6爻纳甲干支，径向由内向外排布，当前爻金色高亮）
+  {
+    component: markRaw(NajiaRing),
     thickness: 80,
     props: { time: controlledTime }
   }
