@@ -18,11 +18,9 @@ export { sixtyJiaziNayin } from './sixtyJiaziNayin'
 export { heavenlyStems } from './heavenlyStems'
 export { tianganKongwang } from './tianganKongwang'
 export { twelveLongevity } from './twelveLongevity'
-export { earthlyBranches } from './earthlyBranches'
 export { eightGates } from './eightGates'
 export { siXiang } from './siXiang'
 export { twelveShichen } from './twelveShichen'
-export { seventyTwoHou } from './seventyTwoHou'
 
 // ⚠️ 天体环统一架构
 // 七曜配置的【唯一真相源】，所有组件必须从这里导入

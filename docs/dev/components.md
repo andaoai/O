@@ -92,12 +92,12 @@ RingDataBase (所有环通用)
 | `showSectors` | boolean? | 是否显示扇形背景 |
 | `verticalTwoChar` | boolean? | 双字标签是否竖排 |
 
-#### 示例（`src/data/rings/earthlyBranches.ts` 节选）
+#### 示例（`src/data/rings/twelveShichen.ts` 节选）
 
 ```typescript
 import type { RingData } from './types'
 
-export const earthlyBranches: RingData = {
+export const twelveShichen: RingData = {
   startDegree: -90,
   radius: 280,
   innerRadius: 250,
@@ -230,7 +230,7 @@ const jupiterRing = singlePlanetBody('jupiter', 120, {
 })
 ```
 
-现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`earthlyBranches`、`eightGates`、`siXiang`、`seventyTwoHou`、`twelveShichen`、`sevenLuminaries`，统一从 `src/data/rings/index.ts` 导出。
+现有数据文件：`twentyFourSolarTerms`、`twentyEightConstellations`、`sixtyJiazi`、`sixtyJiaziNayin`、`heavenlyStems`、`tianganKongwang`、`twelveLongevity`、`eightGates`、`siXiang`、`twelveShichen`、`sevenLuminaries`、`jingFangSixtyGua`、`jingFangEightPalaces`，统一从 `src/data/rings/index.ts` 导出。
 
 ---
 
@@ -400,7 +400,7 @@ const rings = [
 | `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向（`RingStack` 注入） |
 
 ```vue
-<DataRing :data="earthlyBranches" :radius="280" :inner-radius="252" />
+<DataRing :data="twelveShichen" :radius="280" :inner-radius="252" />
 ```
 
 ---
