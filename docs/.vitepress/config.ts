@@ -85,11 +85,62 @@ export default defineConfig({
             },
           ],
         },
+        {
+          text: '京氏易傳',
+          collapsed: false,
+          items: [
+            { text: '书籍导读', link: '/books/京氏易傳/' },
+            {
+              text: '卷上',
+              collapsed: false,
+              items: [
+                { text: '乾', link: '/books/京氏易傳/乾卦' },
+              ],
+            },
+          ],
+        },
       ],
       '/concepts/': [
         {
           text: '通用概念',
           items: [{ text: '概览', link: '/concepts/' }],
+        },
+        {
+          text: '时间与历法',
+          collapsed: false,
+          items: [
+            { text: '干支 · 六十甲子', link: '/concepts/ganzhi' },
+            { text: '二十四节气 · 节气与中气', link: '/concepts/solar-terms' },
+            { text: '十二辰 · 十二时辰', link: '/concepts/shichen' },
+            { text: '闰月 · 无中气置闰法', link: '/concepts/leap-month' },
+            { text: '岁差', link: '/concepts/precession' },
+          ],
+        },
+        {
+          text: '空间与星辰',
+          collapsed: false,
+          items: [
+            { text: '二十八宿 · 距星', link: '/concepts/constellations' },
+            { text: '四象 · 青龙白虎朱雀玄武', link: '/concepts/si-xiang' },
+            { text: '七曜 · 日月五星', link: '/concepts/seven-luminaries' },
+          ],
+        },
+        {
+          text: '象数与义理',
+          collapsed: false,
+          items: [
+            { text: '六十四卦 · 序卦', link: '/concepts/sixty-four-gua' },
+            { text: '八宫卦', link: '/concepts/eight-palace' },
+          ],
+        },
+        {
+          text: '占验方法',
+          collapsed: false,
+          items: [
+            { text: '京房卦气 · 六日七分', link: '/concepts/jingfang-guaqi' },
+            { text: '纳甲', link: '/concepts/najia' },
+            { text: '世应爻位', link: '/concepts/shi-ying' },
+          ],
         },
       ],
       '/dev/': [

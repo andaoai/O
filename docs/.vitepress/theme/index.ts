@@ -25,7 +25,19 @@ import CompassLayout from './layouts/CompassLayout.vue'
 import ConstellationsRing from '@/components/rings/ConstellationsRing.vue'
 import SiXiangRing from '@/components/rings/SiXiangRing.vue'
 import SolarTermsRing from '@/components/rings/SolarTermsRing.vue'
+import SolarTermsPointRing from '@/components/rings/SolarTermsPointRing.vue'
 import DataRing from '@/components/rings/DataRing.vue'
+import SixtyJiaziRing from '@/components/rings/SixtyJiaziRing.vue'
+import BranchesRing from '@/components/rings/BranchesRing.vue'
+import StemsRing from '@/components/rings/StemsRing.vue'
+import LunarMonthsRing from '@/components/rings/LunarMonthsRing.vue'
+import GuaRing from '@/components/rings/GuaRing.vue'
+import JingFangGuaRing from '@/components/rings/JingFangGuaRing.vue'
+import JingFangEightPalaceRing from '@/components/rings/JingFangEightPalaceRing.vue'
+import NajiaRing from '@/components/rings/NajiaRing.vue'
+import ShiYingRing from '@/components/rings/ShiYingRing.vue'
+import SevenLuminariesRing from '@/components/rings/SevenLuminariesRing.vue'
+import MansionDegreeRing from '@/components/rings/MansionDegreeRing.vue'
 
 // 罗盘一览页（挂到 docs/compass/index.md，走默认主题 layout）
 import HomeView from '@/views/HomeView.vue'
@@ -61,7 +73,19 @@ export default {
     app.component('ConstellationsRing', ConstellationsRing)
     app.component('SiXiangRing', SiXiangRing)
     app.component('SolarTermsRing', SolarTermsRing)
+    app.component('SolarTermsPointRing', SolarTermsPointRing)
     app.component('DataRing', DataRing)
+    app.component('SixtyJiaziRing', SixtyJiaziRing)
+    app.component('BranchesRing', BranchesRing)
+    app.component('StemsRing', StemsRing)
+    app.component('LunarMonthsRing', LunarMonthsRing)
+    app.component('GuaRing', GuaRing)
+    app.component('JingFangGuaRing', JingFangGuaRing)
+    app.component('JingFangEightPalaceRing', JingFangEightPalaceRing)
+    app.component('NajiaRing', NajiaRing)
+    app.component('ShiYingRing', ShiYingRing)
+    app.component('SevenLuminariesRing', SevenLuminariesRing)
+    app.component('MansionDegreeRing', MansionDegreeRing)
 
     // 罗盘 View 全局注册（供 docs/compass/*.md 直接调用）
     app.component('HomeView', HomeView)   // /compass/ 罗盘一览（page layout）
