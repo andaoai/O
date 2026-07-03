@@ -52,11 +52,6 @@ export default defineConfig({
   // 关闭默认的 vitepress 页脚
   cleanUrls: true,
 
-  // 忽略指向未创建 compasses/说明页的死链
-  ignoreDeadLinks: [
-    /^\/compasses\//,
-  ],
-
   themeConfig: {
     // 站内 logo（同样复用品牌资产）
     logo: '/andaoai-logo.svg',
@@ -67,6 +62,7 @@ export default defineConfig({
       { text: '古籍笔记', link: '/books/' },
       { text: '通用概念', link: '/concepts/' },
       { text: '罗盘', link: '/compass/' },
+      { text: '开发文档', link: '/dev/' },
     ],
 
     sidebar: {
@@ -96,10 +92,14 @@ export default defineConfig({
           items: [{ text: '概览', link: '/concepts/' }],
         },
       ],
-      '/compasses/': [
+      '/dev/': [
         {
-          text: '罗盘',
-          items: [{ text: '罗盘一览', link: '/compass/' }],
+          text: '开发文档',
+          items: [
+            { text: '总览', link: '/dev/' },
+            { text: '组件 API 与类型契约', link: '/dev/components' },
+            { text: 'Astronomy Engine 集成', link: '/dev/astronomy-engine' },
+          ],
         },
       ],
       // /compass/* 走 CompassLayout 全屏 layout，不显示 sidebar

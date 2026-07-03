@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is **乙巳观 (Yisiguan)** — 道由天观 — a personal Vue 3 + TypeScript project born from an observation of the sky in the Yisi (乙巳) year. It is used to visualize various ancient Chinese algorithms as full-screen, polar-coordinate SVG "compasses" (罗盘). Multi-page app: a home page lists available compasses, and each compass is a full-screen interactive polar SVG plate.
+This is **乙巳观 (Yisiguan)** — 道由天观 — a personal Vue 3 + TypeScript project born from an observation of the sky in the Yisi (乙巳) year. It is used to visualize various ancient Chinese algorithms as full-screen, polar-coordinate SVG "compasses" (罗盘). The site is a **VitePress-hosted knowledge hub**: a documentation stack for classical astronomy notes plus a set of full-screen interactive compass pages, sharing one build and one deploy.
 
 Six compasses currently ship:
 
@@ -15,7 +15,7 @@ Six compasses currently ship:
 - **七曜入宿天象盘 (planet-mansion)** — celestial sky projection with polar equator, ecliptic and lunar orbit obliquity, sun/moon/five planets real-time positioning into 28 mansions, featuring point-based 24 solar terms outer ring.
 - **回归年闰月盘 (tropical-year)** — 365-day tropical year vs 360-degree jiazi year comparison, jie/zhongqi distinction of 24 solar terms, lunar months with leap-month highlight, real-time moon phase, illustrating the "no-zhongqi ⇒ leap month" rule.
 
-Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations, **vue-router** for the multi-page structure.
+Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations. Hosting: **VitePress 1.6** (no Vue Router, no SPA entry). Compass pages live as `docs/compass/*.md` with a custom `layout: compass` that full-screen-renders `src/views/*.vue`. See §"VitePress ↔ src/ 融合关系" below.
 
 ## Architecture
 
@@ -413,12 +413,36 @@ export const myRing: RingData = {
 
 ## Project Structure
 
+项目由两个顶层目录组成：**docs/** 是 VitePress 站点根，**src/** 是罗盘组件库（被 VitePress 通过 `@` alias 消费）。
+
 ```
-src/
+docs/                              # VitePress 站点根
+├── .vitepress/
+│   ├── config.ts                  # 站点配置（base='/O/'、outDir='../dist'、nav、sidebar、alias @→src/）
+│   └── theme/
+│       ├── index.ts               # 主题入口：Layout 分派 + 全局注册 View/环组件
+│       ├── tokens.css             # 紫金 design tokens
+│       ├── layouts/
+│       │   └── CompassLayout.vue  # 全屏罗盘 layout（隐藏 nav/sidebar/aside）
+│       └── components/
+│           └── CompassFigure.vue  # md 内嵌罗盘插图外壳
+├── index.md                       # 站点首页
+├── books/                         # 古籍笔记（乙巳占·卷一·天说 示例）
+├── concepts/                      # 通用概念索引
+└── compass/                       # 六个罗盘页 + 一览页（全部 layout: compass）
+    ├── index.md                   # 罗盘一览（<HomeView />）
+    ├── astronomy.md               # <AstronomyView />
+    ├── liushi-jiazi.md            # <LiushiJiaziView />
+    ├── sixty-four-gua.md          # <SixtyFourGuaView />
+    ├── jingfang.md                # <JingFangView />
+    ├── planet-mansion.md          # <PlanetMansionView />
+    └── tropical-year.md           # <TropicalYearView />
+
+src/                               # 组件库（无 main.ts / App.vue / router）
 ├── compasses/
-│   └── index.ts                   # Compass registry (drives home grid + routes)
+│   └── index.ts                   # 罗盘注册表（元数据，驱动 HomeView 卡片列表）
 ├── views/                         # Layer 2: Composition Layer
-│   ├── HomeView.vue               # Home page: grid of compass cards
+│   ├── HomeView.vue               # 罗盘一览：卡片式导航
 │   ├── AstronomyView.vue          # 中华天文圆环 compass
 │   ├── LiushiJiaziView.vue        # 六十甲子六环 compass
 │   ├── SixtyFourGuaView.vue       # 先天六十四卦盘 compass
@@ -491,33 +515,115 @@ src/
 │   ├── useSevenLuminaries.ts       # Seven luminaries unified calculation
 │   ├── useTimePlayback.ts          # Time playback control (from Control)
 │   ├── usePanelDrag.ts             # Panel dragging (from Control)
-│   └── useKeyboardShortcuts.ts     # Keyboard shortcuts (from Control)
-├── utils/                          # Layer 5: Utility Layer (Pure Functions)
-│   ├── chineseCalendar.ts          # Chinese calendar helpers (tyme4ts)
-│   ├── liushiJiazi.ts              # Six-pillar 60-jiazi index calc
-│   ├── celestial.ts                # Celestial coordinate calculations
-│   ├── eraCalendar.ts              # Dynasty era conversion
-│   ├── geometry.ts                 # Polar geometry utilities
-│   ├── planetMansion.ts            # Planet mansion calculations
-│   ├── skyEvents.ts                # Celestial event calculations
-│   └── skyProjection.ts            # Sky coordinate projection
-├── router/index.ts                 # Routes generated from compass registry
-├── App.vue                         # Shell: just <RouterView />
-└── main.ts                         # App entry (Vue + Pinia + Router)
+│   ├── useKeyboardShortcuts.ts     # Keyboard shortcuts (from Control)
+│   └── useUrlTime.ts               # URL ↔ controlledTime 双向绑定（History API 实现）
+└── utils/                          # Layer 5: Utility Layer (Pure Functions)
+    ├── chineseCalendar.ts          # Chinese calendar helpers (tyme4ts)
+    ├── liushiJiazi.ts              # Six-pillar 60-jiazi index calc
+    ├── celestial.ts                # Celestial coordinate calculations
+    ├── eraCalendar.ts              # Dynasty era conversion
+    ├── geometry.ts                 # Polar geometry utilities
+    ├── planetMansion.ts            # Planet mansion calculations
+    ├── skyEvents.ts                # Celestial event calculations
+    └── skyProjection.ts            # Sky coordinate projection
 ```
+
+---
+
+## 🔗 VitePress ↔ src/ 融合关系
+
+项目**没有 SPA 入口**——`main.ts` / `App.vue` / `src/router/` / 根级 `vite.config.ts` 都已删除。所有页面（含罗盘）都由 VitePress 生成，src/ 只作为组件库被消费。
+
+### 1. VitePress 如何找到 src/
+
+`docs/.vitepress/config.ts` 里给 VitePress 内嵌的 Vite 加了别名：
+
+```ts
+vite: {
+  resolve: {
+    alias: { '@': fileURLToPath(new URL('../../src', import.meta.url)) }
+  },
+  ssr: { noExternal: ['astronomy-engine', 'tyme4ts'] }, // 让这两个 CJS 库能 SSR 内联
+}
+```
+
+于是 `docs/.vitepress/theme/index.ts` 可以：
+
+```ts
+import AstronomyView from '@/views/AstronomyView.vue'
+import ConstellationsRing from '@/components/rings/ConstellationsRing.vue'
+```
+
+### 2. 罗盘页三件套
+
+每个罗盘由三个部分构成：
+
+| 位置 | 内容 |
+|------|------|
+| `src/compasses/index.ts` 一项 | 元数据：id / name / description / category |
+| `src/views/XxxView.vue` | Layer 2 View：持 `controlledTime`，编排 rings |
+| `docs/compass/xxx.md` | 极简 md：仅 frontmatter + `<ClientOnly><XxxView /></ClientOnly>` |
+
+md 页面靠 `layout: compass` 触发 `CompassLayout` 全屏渲染，隐藏 VitePress 默认的 nav/sidebar/aside。
+
+### 3. Layout 分派机制
+
+`docs/.vitepress/theme/index.ts` 里根据 frontmatter 决定 Layout：
+
+```ts
+Layout: () => {
+  const { frontmatter } = useData()
+  if (frontmatter.value.layout === 'compass') return h(CompassLayout)
+  return h(DefaultTheme.Layout)
+}
+```
+
+普通文档页走 `DefaultTheme.Layout`，罗盘页走 `CompassLayout`。
+
+### 4. 时间与 URL 联动
+
+罗盘页支持 URL 参数 `?t=YYYY-MM-DDTHH:MM` 精确定位。因为项目不使用 vue-router，`useUrlTime.ts` 直接用 `window.location` + `window.history.replaceState` + `popstate` 实现双向绑定：
+
+```ts
+// src/composables/useUrlTime.ts
+export function useUrlTime(paramName = 't') {
+  const controlledTime = ref<Date>(parseFromQuery() ?? new Date())
+  watch(controlledTime, t => writeQuery(paramName, formatTime(t)))
+  window.addEventListener('popstate', () => { /* 重读 */ })
+  return { controlledTime }
+}
+```
+
+### 5. md 中内嵌罗盘（插图模式）
+
+古籍笔记 md 里可以直接引用环组件作为插图，与全屏罗盘共用同一份代码：
+
+```md
+<CompassFigure caption="四象方位">
+  <SiXiangRing :radius="240" />
+</CompassFigure>
+```
+
+需要的环组件已在 `theme/index.ts` 里全局注册。
+
+### 6. 构建产物
+
+- `npm run build` → `vitepress build docs` → 产物直接落在项目根 `dist/`（由 `outDir: '../dist'` 指定）
+- GitHub Actions 上传 `./dist` 到 GitHub Pages
+- 所有页面共用一个 base `/O/`
 
 ## Development Commands
 
 ```bash
-npm run dev          # Development server (Vite)
-npm run build        # Type-check + production build
-npm run preview      # Preview production build
-npm run type-check   # vue-tsc type checking
-npm run lint         # ESLint with auto-fix
-npm run format       # Prettier on src/
-npm run test:unit    # Vitest unit tests
-npm run test:e2e     # Playwright e2e tests
-npm run deploy       # Build + publish dist/ to gh-pages
+npm run dev          # VitePress dev server（含文档 + 罗盘），默认 http://localhost:5173/O/
+npm run build        # vitepress build docs → dist/
+npm run preview      # 预览生产产物
+npm run type-check   # vue-tsc --build --noEmit（覆盖 src/ 与 docs/.vitepress/theme/）
+npm run lint         # ESLint --fix
+npm run format       # Prettier on src/ + docs/.vitepress/
+npm run test:unit    # Vitest（jsdom 环境）
+npm run test:e2e     # Playwright e2e
+npm run deploy       # build + gh-pages -d dist（也可交给 GitHub Actions）
 ```
 
 ## Architecture Compliance Checklist (30 Items)

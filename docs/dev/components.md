@@ -1,6 +1,6 @@
 # 组件文档 - Component Documentation
 
-本文档说明**乙巳观**（道由天观）中各组件的功能、API 和用法。整体架构（多页面路由、数据驱动圆环、同心自动布局）见 [README.md](README.md) 与 [CLAUDE.md](CLAUDE.md)。
+本文档说明**乙巳观**（道由天观）中各组件的功能、API 和用法。整体架构（VitePress 单栈、数据驱动圆环、同心自动布局）见仓库根的 [README.md](https://github.com/andaoai/O/blob/main/README.md) 与 [CLAUDE.md](https://github.com/andaoai/O/blob/main/CLAUDE.md)。
 
 ## 📚 目录
 
@@ -775,52 +775,69 @@ useKeyboardShortcuts({
 
 ## 平台层
 
-### 罗盘注册表与路由
+### 罗盘注册表
 
-`src/compasses/index.ts` 是平台的单一注册表。首页网格（`HomeView.vue`）和路由（`router/index.ts`）都从中读取。
+`src/compasses/index.ts` 是平台的单一注册表，仅承载元数据（**不再挂载路由 / 懒加载组件**）。它驱动 `HomeView.vue` 的卡片列表；具体的罗盘 View 通过 `docs/.vitepress/theme/index.ts` 全局注册。
 
 #### CompassMeta
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `id` | string | 路由片段，`'astronomy'` → `/compass/astronomy` |
-| `name` | string | 显示名（首页卡片标题、路由名） |
+| `id` | string | 页面 slug，`'astronomy'` → `/O/compass/astronomy` |
+| `name` | string | 显示名（首页卡片标题） |
 | `description` | string | 首页卡片描述 |
-| `category` | string? | 分类（天文 / 干支历……），用于首页分组或筛选 |
-| `component` | () => Promise<Component> | 懒加载的页面视图组件 |
+| `category` | string? | 分类（天文 / 干支历 / 易学……），用于首页分组或筛选 |
 
 ```typescript
-// 当前已注册 6 个罗盘（astronomy / liushi-jiazi / sixty-four-gua /
-// jingfang / planet-mansion / tropical-year），详见 src/compasses/index.ts
+// src/compasses/index.ts —— 纯元数据，无 component 字段
 export const compasses: CompassMeta[] = [
-  {
-    id: 'astronomy',
-    name: '中华天文圆环',
-    description: '360 度刻度、二十四节气、二十八星宿……日月五星黄道与太极',
-    category: '天文',
-    component: () => import('@/views/AstronomyView.vue')
-  },
-  {
-    id: 'jingfang',
-    name: '京房十二消息卦盘',
-    description: '365 天刻度 + 60 卦六日七分 + 四正卦 + 十二消息 + 八宫世应 + 纳甲 + 日干支',
-    category: '易学',
-    component: () => import('@/views/JingFangView.vue')
-  },
-  {
-    id: 'tropical-year',
-    name: '回归年闰月盘',
-    description: '365 天回归年 vs 360 度甲子纪年，节/中气区分，农历闰月与月相实时高亮',
-    category: '天文',
-    component: () => import('@/views/TropicalYearView.vue')
-  },
-  // …其余罗盘同理，新增罗盘在此追加
+  { id: 'astronomy',      name: '中华天文圆环',       description: '360 度刻度、二十四节气……', category: '天文' },
+  { id: 'liushi-jiazi',   name: '六十甲子六环',       description: '年月日时分秒六柱……',       category: '干支历' },
+  { id: 'sixty-four-gua', name: '先天六十四卦盘',     description: '伏羲/邵雍先天圆图……',      category: '易学' },
+  { id: 'jingfang',       name: '京房十二消息卦盘',   description: '365 天刻度 + 60 卦六日七分……', category: '易学' },
+  { id: 'planet-mansion', name: '七曜入宿天象盘',     description: '天极投影盖天图……',         category: '天文' },
+  { id: 'tropical-year',  name: '回归年闰月盘',       description: '365 天回归年 vs 360 度甲子……', category: '天文' },
 ]
 ```
 
-路由由注册表动态生成：`/` 为首页，`/compass/:id` 为各罗盘（懒加载），未匹配路径重定向回首页。
+### 页面生成机制（VitePress-driven，无 Vue Router）
+
+项目**没有** SPA 入口或 vue-router。每个罗盘对应三个部分：
+
+1. **`src/compasses/index.ts` 中的一项元数据**（上表）
+2. **`src/views/XxxView.vue`**——Layer 2 View，持有 `controlledTime` 与 UI 状态
+3. **`docs/compass/xxx.md`**——极简 md：
+
+   ```md
+   ---
+   layout: compass
+   title: 中华天文圆环
+   ---
+
+   <ClientOnly>
+     <AstronomyView />
+   </ClientOnly>
+   ```
+
+`docs/.vitepress/theme/index.ts` 的 `enhanceApp` 里把 6 个 View + `HomeView` 全局注册；Layout 分派根据 `frontmatter.layout === 'compass'` 切换到 `CompassLayout`（全屏、隐藏 nav/sidebar/aside）。
+
+### URL 时间参数
+
+罗盘页支持 `?t=YYYY-MM-DDTHH:MM` 精确定位。因为不使用 vue-router，`src/composables/useUrlTime.ts` 使用纯 `window.location` + `history.replaceState` + `popstate` 事件实现 URL ↔ `controlledTime` 双向绑定。View 只需：
+
+```ts
+const { controlledTime } = useUrlTime()
+```
+
+### 新增罗盘的完整步骤
+
+1. `src/views/NewView.vue` —— 用五层架构范式实现
+2. `src/compasses/index.ts` —— 追加一项元数据
+3. `docs/compass/new.md` —— 极简 md（frontmatter + `<ClientOnly><NewView /></ClientOnly>`）
+4. `docs/.vitepress/theme/index.ts` —— `import NewView from '@/views/NewView.vue'` 并全局注册
 
 ---
+
 
 ## 开发指南
 

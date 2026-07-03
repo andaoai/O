@@ -11,8 +11,6 @@ node_modules
 .DS_Store
 dist
 dist-ssr
-dist-docs
-dist-compass
 coverage
 *.local
 
@@ -40,5 +38,4 @@ playwright-report/
 
 # Playwright MCP screenshots
 .playwright-mcp/
-astronomy-engine-usage.md
 .claude/worktrees/
