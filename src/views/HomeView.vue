@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { compasses } from '@/compasses'
+import logoUrl from '@/assets/andaoai-logo-dark.svg'
 </script>
 
 <template>
   <div class="home">
     <header class="home-header">
-      <h1>乙巳观</h1>
+      <img :src="logoUrl" alt="乙巳观 · AnDaoAi" class="home-logo" />
       <p class="subtitle">道由天观</p>
     </header>
 
@@ -47,6 +48,18 @@ import { compasses } from '@/compasses'
   color: #fff;
 }
 
+.home-logo {
+  width: 160px;
+  height: 160px;
+  display: block;
+  margin: 0 auto;
+  transition: transform 0.4s ease;
+}
+
+.home-logo:hover {
+  transform: rotate(2deg) scale(1.02);
+}
+
 .subtitle {
   margin-top: 12px;
   color: #888;
@@ -82,8 +95,8 @@ import { compasses } from '@/compasses'
 .card-category {
   display: inline-block;
   font-size: 12px;
-  color: #d4af37;
-  border: 1px solid #d4af37;
+  color: #C8A2E8;
+  border: 1px solid #C8A2E8;
   border-radius: 4px;
   padding: 2px 8px;
   margin-bottom: 12px;
