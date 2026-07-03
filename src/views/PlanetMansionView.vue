@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw } from 'vue'
 import { withBase } from 'vitepress'
 import SkyChart from '../components/rings/SkyChart.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
@@ -11,6 +11,7 @@ import Control from '../components/Control.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
+import { useLiveClock } from '@/composables/useLiveClock'
 
 /**
  * 七曜入宿天象盘（五层架构 · 纯时间驱动）
@@ -46,36 +47,9 @@ import { useUrlTime } from '@/composables/useUrlTime'
 // 唯一时间源（阶段三：与 URL ?t=... 双向绑定）
 const { controlledTime, hasUrlTime } = useUrlTime()
 
-// 实时时钟：默认每秒推进 controlledTime，七曜随真实时间移动
+// 实时时钟：每秒推进 controlledTime，七曜随真实时间移动
 // URL 带 t 时不进入 live 模式（用户明确指定了时刻）
-let tickTimer: number | null = null
-const liveMode = ref(!hasUrlTime.value)
-
-function startLiveClock() {
-  if (tickTimer !== null) return
-  tickTimer = window.setInterval(() => {
-    controlledTime.value = new Date()
-  }, 1000)
-}
-
-function stopLiveClock() {
-  if (tickTimer !== null) {
-    clearInterval(tickTimer)
-    tickTimer = null
-  }
-}
-
-function onUserTimeChange() {
-  if (liveMode.value) {
-    liveMode.value = false
-    stopLiveClock()
-  }
-}
-
-onMounted(() => {
-  if (liveMode.value) startLiveClock()
-})
-onUnmounted(stopLiveClock)
+const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime })
 
 // 视口控制
 const zoomLevel = ref(1)

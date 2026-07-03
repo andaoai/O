@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, markRaw } from 'vue'
 import { withBase } from 'vitepress'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
@@ -7,6 +7,7 @@ import SixtyJiaziRing from '../components/rings/SixtyJiaziRing.vue'
 import StemsRing from '../components/rings/StemsRing.vue'
 import BranchesRing from '../components/rings/BranchesRing.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
+import { useLiveClock } from '@/composables/useLiveClock'
 import { type PillarId } from '../utils/liushiJiazi'
 
 // ═══════════════════════════════════════════════════════════════
@@ -21,39 +22,9 @@ import { type PillarId } from '../utils/liushiJiazi'
 // ═══════════════════════════════════════════════════════════════
 const { controlledTime, hasUrlTime } = useUrlTime()
 
-// 实时时钟：默认每秒推进 controlledTime → 六环随真实时间自动跳。
-// 一旦用户用控制面板播放/手动调时/选时，停掉实时跟随，把控制权交还给用户。
-// 若 URL 已带 t，则从一开始就不进入 liveMode。
-let tickTimer: number | null = null
-const liveMode = ref(!hasUrlTime.value)
-
-function startLiveClock() {
-  if (tickTimer !== null) return
-  tickTimer = window.setInterval(() => {
-    controlledTime.value = new Date()
-  }, 1000)
-}
-
-function stopLiveClock() {
-  if (tickTimer !== null) {
-    clearInterval(tickTimer)
-    tickTimer = null
-  }
-}
-
-// 控制面板触发的时间变化 = 用户接管，停掉实时跟随
-function onUserTimeChange() {
-  if (liveMode.value) {
-    liveMode.value = false
-    stopLiveClock()
-  }
-}
-
-onMounted(() => {
-  // URL 无 t → 进入 live 模式；有 t → 保持用户指定的时刻不动
-  if (liveMode.value) startLiveClock()
-})
-onUnmounted(stopLiveClock)
+// 实时时钟：每秒推进 controlledTime → 六环随真实时间自动跳。
+// 一旦用户用控制面板播放/手动调时/选时，onUserTimeChange 触发退出 liveMode。
+const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime })
 
 // 视图控制：缩放 / 平移 / 旋转
 const zoomLevel = ref(1)
