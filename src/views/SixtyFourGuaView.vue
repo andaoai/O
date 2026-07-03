@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
+import { withBase } from 'vitepress'
 import GuaRing from '../components/rings/GuaRing.vue'
 import JingFangEightPalaceRing from '../components/rings/JingFangEightPalaceRing.vue'
 import ShiYingRing from '../components/rings/ShiYingRing.vue'
 import RingStack from '../components/base/RingStack.vue'
 import Control from '../components/Control.vue'
+import { useUrlTime } from '@/composables/useUrlTime'
 import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 
 /**
@@ -17,10 +19,11 @@ import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
  *   4. 中央 8×8 伏羲方图
  *
  * 先天圆图与京房八宫皆是静态易学分类；controlledTime 仅供控制面板显示。
+ * ✨ 阶段三：controlledTime 由 URL ?t=... 驱动，与其它罗盘共享时间锚点
  */
 
 // 时间控制（仅供面板显示，盘面结构与时间无关）
-const controlledTime = ref(new Date())
+const { controlledTime } = useUrlTime()
 
 // 视图控制：缩放 / 平移 / 旋转
 const zoomLevel = ref(1)
@@ -92,7 +95,7 @@ const gridLines = computed(() => {
 
 <template>
   <div class="container">
-    <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
+    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg class="compass-svg" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">

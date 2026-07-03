@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
+import { withBase } from 'vitepress'
 import DayScaleRing from '../components/rings/DayScaleRing.vue'
 import SolarTermsPointRing from '../components/rings/SolarTermsPointRing.vue'
 import MoonPhaseRing from '../components/rings/MoonPhaseRing.vue'
@@ -7,6 +8,7 @@ import LunarMonthsRing from '../components/rings/LunarMonthsRing.vue'
 import LeapInfoCenter from '../components/centers/LeapInfoCenter.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
+import { useUrlTime } from '@/composables/useUrlTime'
 
 /**
  * 回归年 × 农历闰月 可视化罗盘
@@ -27,8 +29,8 @@ import RingStack from '../components/base/RingStack.vue'
  *  ═══════════════════════════════════════════════════════════════
  */
 
-// 唯一时间源
-const controlledTime = ref(new Date())
+// 唯一时间源（阶段三：与 URL ?t=... 双向绑定）
+const { controlledTime } = useUrlTime()
 
 // 视图控制
 const zoomLevel = ref(1)
@@ -77,7 +79,7 @@ const rings = [
 <template>
   <div class="container">
     <!-- 返回首页 -->
-    <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
+    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
       class="compass-svg"

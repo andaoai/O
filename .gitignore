@@ -11,8 +11,14 @@ node_modules
 .DS_Store
 dist
 dist-ssr
+dist-docs
+dist-compass
 coverage
 *.local
+
+# VitePress build cache
+docs/.vitepress/cache
+docs/.vitepress/dist
 
 /cypress/videos/
 /cypress/screenshots/

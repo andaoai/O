@@ -1,0 +1,341 @@
+/**
+ * 乙巳观 · 紫金 Design Tokens · 黑底沉浸版
+ *
+ * 视觉基调：
+ *   - 背景：纯黑 → 深紫墨，沉浸如夜观星空
+ *   - 主色：淡紫金辉光（品牌色 #C8A2E8），呼应 favicon
+ *   - 强调：老金 · 沉稳有年代感
+ *   - 正文：宣纸暖白，避免纯白刺眼
+ *
+ * 默认深色，不提供浅色模式（VitePress 的浅色模式变量也被覆盖成黑底）
+ */
+
+:root {
+  /* ────────────── 紫 · 故宫紫（低饱、偏冷、带墨感） ────────────── */
+  --ysg-purple-950: #0a0517;
+  --ysg-purple-900: #100822;
+  --ysg-purple-800: #1a1033; /* 品牌主背景（favicon 底色） */
+  --ysg-purple-700: #241748;
+  --ysg-purple-600: #2d1b4e;
+  --ysg-purple-500: #4a2c7a;
+  --ysg-purple-400: #6543a0;
+  --ysg-purple-300: #7a5db0;
+  --ysg-purple-200: #a48bcf;
+  --ysg-purple-100: #c8b3e0;
+
+  /* ────────────── 金 · 老金（偏赭、非亮金） ────────────── */
+  --ysg-gold-900: #4a3315;
+  --ysg-gold-800: #6b4a1e;
+  --ysg-gold-700: #8a5f26;
+  --ysg-gold-600: #9a7028;
+  --ysg-gold-500: #c9a355;
+  --ysg-gold-400: #d7b872;
+  --ysg-gold-300: #e5c987;
+  --ysg-gold-200: #efd9a6;
+  --ysg-gold-100: #f4e5c1;
+
+  /* ────────────── 品牌淡紫金辉光（与 favicon 同色） ────────────── */
+  --ysg-brand-glow: #c8a2e8;
+  --ysg-brand-glow-soft: rgba(200, 162, 232, 0.4);
+  --ysg-brand-glow-dim: rgba(200, 162, 232, 0.15);
+
+  /* ────────────── 中性 · 宣纸 & 墨 ────────────── */
+  --ysg-paper-100: #faf6ec;
+  --ysg-paper-200: #f5efe0;
+  --ysg-paper-300: #ede4cd;
+  --ysg-paper-400: #d9ceaf;
+
+  --ysg-ink-black: #000000;
+  --ysg-ink-950: #050307;
+  --ysg-ink-900: #0d0a13;
+
+  /* ────────────── 字体族 ────────────── */
+  --ysg-font-serif: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', 'SimSun', serif;
+  --ysg-font-sans: 'Noto Sans SC', 'PingFang SC', 'HarmonyOS Sans SC', -apple-system, sans-serif;
+  --ysg-font-mono: ui-monospace, 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * 主题应用：无论 :root 还是 .dark，都用黑底紫金
+ * 让浅色模式也不出戏——用户切换按钮时，只是紫→金的比例翻转
+ * ═══════════════════════════════════════════════════════════ */
+
+:root,
+.dark {
+  /* 品牌色：淡紫金辉光 */
+  --vp-c-brand-1: var(--ysg-brand-glow);
+  --vp-c-brand-2: var(--ysg-purple-300);
+  --vp-c-brand-3: var(--ysg-purple-400);
+  --vp-c-brand-soft: rgba(200, 162, 232, 0.14);
+  --vp-c-brand-mute: rgba(200, 162, 232, 0.08);
+
+  /* 背景层级：纯黑 → 深紫墨 */
+  --vp-c-bg: var(--ysg-ink-black);
+  --vp-c-bg-alt: var(--ysg-ink-950);
+  --vp-c-bg-elv: var(--ysg-purple-900);
+  --vp-c-bg-soft: var(--ysg-purple-800);
+
+  /* 文字层级：主用淡紫金辉光，次级宣纸暖白 */
+  --vp-c-text-1: var(--ysg-brand-glow);
+  --vp-c-text-2: var(--ysg-paper-200);
+  --vp-c-text-3: var(--ysg-paper-400);
+
+  /* 分割线：紫金细线 */
+  --vp-c-divider: rgba(200, 162, 232, 0.18);
+  --vp-c-gutter: rgba(200, 162, 232, 0.08);
+  --vp-c-border: rgba(200, 162, 232, 0.28);
+
+  /* 提示：老金 */
+  --vp-c-tip-1: var(--ysg-gold-400);
+  --vp-c-tip-2: var(--ysg-gold-500);
+  --vp-c-tip-3: var(--ysg-gold-600);
+  --vp-c-tip-soft: rgba(201, 163, 85, 0.14);
+
+  /* 中性字色变量强制覆盖（VitePress 默认在 .dark 下会用亮白） */
+  --vp-c-neutral: var(--ysg-brand-glow);
+  --vp-c-neutral-inverse: var(--ysg-ink-black);
+
+  /* 侧边栏与顶栏 */
+  --vp-nav-bg-color: rgba(10, 5, 23, 0.85);
+  --vp-sidebar-bg-color: var(--ysg-ink-950);
+
+  /* Hero 首页渐变 */
+  --vp-home-hero-name-color: transparent;
+  --vp-home-hero-name-background: -webkit-linear-gradient(
+    120deg,
+    var(--ysg-brand-glow) 20%,
+    var(--ysg-gold-400) 80%
+  );
+  --vp-home-hero-tagline-color: var(--ysg-paper-300);
+  --vp-home-hero-image-background-image: linear-gradient(
+    -45deg,
+    var(--ysg-purple-500) 30%,
+    var(--ysg-gold-600) 100%
+  );
+  --vp-home-hero-image-filter: blur(60px);
+
+  /* 按钮：紫金渐变边框 */
+  --vp-button-brand-bg: var(--ysg-purple-600);
+  --vp-button-brand-hover-bg: var(--ysg-purple-500);
+  --vp-button-brand-active-bg: var(--ysg-purple-700);
+  --vp-button-brand-border: var(--ysg-gold-500);
+  --vp-button-brand-hover-border: var(--ysg-gold-400);
+  --vp-button-brand-text: var(--ysg-brand-glow);
+  --vp-button-brand-hover-text: var(--ysg-gold-200);
+
+  --vp-button-alt-bg: transparent;
+  --vp-button-alt-hover-bg: var(--ysg-purple-800);
+  --vp-button-alt-active-bg: var(--ysg-purple-900);
+  --vp-button-alt-border: var(--ysg-purple-400);
+  --vp-button-alt-hover-border: var(--ysg-brand-glow);
+  --vp-button-alt-text: var(--ysg-paper-200);
+  --vp-button-alt-hover-text: var(--ysg-brand-glow);
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * 全局：字体、正文排版
+ * ═══════════════════════════════════════════════════════════ */
+:root {
+  --vp-font-family-base: var(--ysg-font-sans);
+  --vp-font-family-mono: var(--ysg-font-mono);
+}
+
+body {
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    var(--ysg-purple-900) 0%,
+    var(--ysg-ink-black) 55%
+  ) fixed;
+}
+
+/* 正文用宋体，回到经典阅读感 */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4,
+.vp-doc p,
+.vp-doc li,
+.vp-doc blockquote {
+  font-family: var(--ysg-font-serif);
+}
+
+/* 一级标题：淡紫金辉光 + 底部金线 */
+.vp-doc h1 {
+  color: var(--ysg-brand-glow);
+  text-shadow: 0 0 12px var(--ysg-brand-glow-soft);
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 0.5rem;
+}
+
+/* 二级标题：老金 */
+.vp-doc h2 {
+  color: var(--ysg-gold-400);
+  border-top: none;
+  padding-top: 1.4rem;
+}
+.vp-doc h2::before {
+  content: '☯ ';
+  color: var(--ysg-purple-300);
+  font-size: 0.9em;
+  margin-right: 0.3em;
+}
+
+/* 三级标题：中紫 */
+.vp-doc h3 {
+  color: var(--ysg-purple-200);
+}
+
+/* 正文段落：宣纸暖白（不用纯白） */
+.vp-doc p,
+.vp-doc li {
+  color: var(--ysg-paper-200);
+  line-height: 1.85;
+}
+
+/* 引用块：古籍原文强化 · 紫底金边 */
+.vp-doc blockquote {
+  border-left: 3px solid var(--ysg-gold-500);
+  background: linear-gradient(90deg, var(--ysg-brand-glow-dim), transparent);
+  padding: 0.9em 1.4em;
+  font-size: 1.02em;
+  line-height: 1.95;
+  border-radius: 0 4px 4px 0;
+}
+.vp-doc blockquote > p {
+  color: var(--ysg-paper-100);
+  margin: 0;
+}
+
+/* 强调 · 加粗：金色 */
+.vp-doc strong {
+  color: var(--ysg-gold-300);
+  font-weight: 600;
+}
+
+/* 链接：淡紫金辉光 + hover 变金 */
+.vp-doc a {
+  color: var(--ysg-brand-glow);
+  text-decoration-color: var(--vp-c-divider);
+  transition: all 0.2s;
+}
+.vp-doc a:hover {
+  color: var(--ysg-gold-300);
+  text-decoration-color: var(--ysg-gold-400);
+}
+
+/* 行内代码：低调金 */
+.vp-doc :not(pre) > code {
+  color: var(--ysg-gold-300);
+  background: var(--vp-c-brand-mute);
+  padding: 0.15em 0.4em;
+  border-radius: 3px;
+  border: 1px solid var(--vp-c-brand-soft);
+}
+
+/* 代码块：更深的墨色 */
+.vp-doc div[class*='language-'] {
+  background: var(--ysg-ink-950);
+  border: 1px solid var(--vp-c-brand-soft);
+}
+
+/* 表格 */
+.vp-doc table {
+  border-color: var(--vp-c-border);
+}
+.vp-doc tr {
+  background: transparent;
+}
+.vp-doc th {
+  background: var(--ysg-purple-800);
+  color: var(--ysg-brand-glow);
+  border-color: var(--vp-c-border);
+}
+.vp-doc td {
+  border-color: var(--vp-c-divider);
+  color: var(--ysg-paper-200);
+}
+
+/* 分隔线 */
+.vp-doc hr {
+  border-color: var(--vp-c-border);
+  border-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--ysg-gold-500),
+    transparent
+  ) 1;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * 侧边栏 & 顶栏
+ * ═══════════════════════════════════════════════════════════ */
+
+/* 侧边栏组标题：老金 */
+.VPSidebarItem.level-0 > .item > .text {
+  color: var(--ysg-gold-400) !important;
+  font-family: var(--ysg-font-serif);
+}
+
+/* 侧边栏当前项：紫金辉光 */
+.VPSidebarItem.is-active > .item .link .text {
+  color: var(--ysg-brand-glow) !important;
+  font-weight: 600;
+}
+
+/* 顶栏 logo 标题 */
+.VPNavBarTitle .title {
+  color: var(--ysg-brand-glow);
+  font-family: var(--ysg-font-serif);
+  letter-spacing: 0.05em;
+}
+
+/* Feature 卡片 */
+.VPFeature {
+  background: linear-gradient(
+    135deg,
+    var(--ysg-purple-900) 0%,
+    var(--ysg-ink-950) 100%
+  ) !important;
+  border: 1px solid var(--vp-c-brand-soft) !important;
+  transition: all 0.3s;
+}
+.VPFeature:hover {
+  border-color: var(--ysg-brand-glow) !important;
+  box-shadow: 0 4px 24px var(--ysg-brand-glow-dim);
+  transform: translateY(-2px);
+}
+.VPFeature .title {
+  color: var(--ysg-brand-glow) !important;
+  font-family: var(--ysg-font-serif);
+}
+.VPFeature .details {
+  color: var(--ysg-paper-300) !important;
+}
+.VPFeature .link-text-value {
+  color: var(--ysg-gold-400) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+ * 罗盘内嵌容器（阶段二用）
+ * ═══════════════════════════════════════════════════════════ */
+.compass-inline {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(
+    circle at center,
+    var(--ysg-purple-800) 0%,
+    var(--ysg-ink-black) 100%
+  );
+  border: 1px solid var(--vp-c-brand-soft);
+  border-radius: 8px;
+  padding: 2rem;
+  margin: 1.6rem 0;
+  min-height: 300px;
+  box-shadow: 0 2px 24px var(--ysg-brand-glow-dim);
+}
+
+/* Hero 图片背景光晕 */
+.VPHero .image-bg {
+  opacity: 0.5;
+}

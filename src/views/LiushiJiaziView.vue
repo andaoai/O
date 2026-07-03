@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, markRaw, onMounted, onUnmounted } from 'vue'
+import { withBase } from 'vitepress'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import SixtyJiaziRing from '../components/rings/SixtyJiaziRing.vue'
 import StemsRing from '../components/rings/StemsRing.vue'
 import BranchesRing from '../components/rings/BranchesRing.vue'
+import { useUrlTime } from '@/composables/useUrlTime'
 import { type PillarId } from '../utils/liushiJiazi'
 
 // ═══════════════════════════════════════════════════════════════
@@ -12,13 +14,18 @@ import { type PillarId } from '../utils/liushiJiazi'
 //  ─────────────────────────────────────────────────────────────
 //  整个罗盘只有这一个 controlledTime，所有环都从这里驱动。
 //  父组件不传 data，只传 time ref，子组件内部自己计算渲染数据。
+//
+//  ✨ 阶段三：controlledTime 与 URL ?t=... 双向绑定
+//     · URL 无 t 参数 → 启动实时时钟，六环随真实时间推进
+//     · URL 有 t 参数 → 用户明确指定时刻，不启动实时时钟（liveMode=false）
 // ═══════════════════════════════════════════════════════════════
-const controlledTime = ref(new Date())
+const { controlledTime, hasUrlTime } = useUrlTime()
 
 // 实时时钟：默认每秒推进 controlledTime → 六环随真实时间自动跳。
 // 一旦用户用控制面板播放/手动调时/选时，停掉实时跟随，把控制权交还给用户。
+// 若 URL 已带 t，则从一开始就不进入 liveMode。
 let tickTimer: number | null = null
-const liveMode = ref(true)
+const liveMode = ref(!hasUrlTime.value)
 
 function startLiveClock() {
   if (tickTimer !== null) return
@@ -42,7 +49,10 @@ function onUserTimeChange() {
   }
 }
 
-onMounted(startLiveClock)
+onMounted(() => {
+  // URL 无 t → 进入 live 模式；有 t → 保持用户指定的时刻不动
+  if (liveMode.value) startLiveClock()
+})
 onUnmounted(stopLiveClock)
 
 // 视图控制：缩放 / 平移 / 旋转
@@ -238,7 +248,7 @@ const rings = [
 
 <template>
   <div class="container">
-    <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
+    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
       class="compass-svg"

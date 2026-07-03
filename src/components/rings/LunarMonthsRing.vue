@@ -210,18 +210,26 @@ const ringData = computed((): RingData => {
 </script>
 
 <template>
-  <DataRing
-    :data="ringData"
-    :radius="radius"
-    :inner-radius="innerRadius"
-    :start-degree="startDegree"
-    :rotation-direction="rotationDirection"
-  />
+  <g class="lunar-months-ring">
+    <DataRing
+      :data="ringData"
+      :radius="radius"
+      :inner-radius="innerRadius"
+      :start-degree="startDegree"
+      :rotation-direction="rotationDirection"
+    />
+  </g>
 </template>
 
-<style>
-/* 当前月快速闪动 0.35s（覆盖 CircleRing 默认 1.2s 强闪） */
-.highlight-sector-strong {
+<style scoped>
+/**
+ * 当前月快速闪动 0.35s（覆盖 CircleRing 默认 1.2s 强闪）
+ *
+ * ⚠️ 作用域收敛：用 :deep() 只穿透到当前 LunarMonthsRing 内部的 CircleRing，
+ * 避免同页面其他罗盘的 highlight-sector-strong 被一起改。
+ * 阶段二 md 内嵌罗盘时的关键前提。
+ */
+.lunar-months-ring :deep(.highlight-sector-strong) {
   animation: leap-blink 0.35s ease-in-out infinite !important;
 }
 @keyframes leap-blink {

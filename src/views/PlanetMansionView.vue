@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, markRaw, onMounted, onUnmounted } from 'vue'
+import { withBase } from 'vitepress'
 import SkyChart from '../components/rings/SkyChart.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
@@ -9,6 +10,7 @@ import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
 import Control from '../components/Control.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
+import { useUrlTime } from '@/composables/useUrlTime'
 
 /**
  * 七曜入宿天象盘（五层架构 · 纯时间驱动）
@@ -41,12 +43,13 @@ import RingStack from '../components/base/RingStack.vue'
  *  ═══════════════════════════════════════════════════════════════
  */
 
-// 唯一时间源
-const controlledTime = ref(new Date())
+// 唯一时间源（阶段三：与 URL ?t=... 双向绑定）
+const { controlledTime, hasUrlTime } = useUrlTime()
 
 // 实时时钟：默认每秒推进 controlledTime，七曜随真实时间移动
+// URL 带 t 时不进入 live 模式（用户明确指定了时刻）
 let tickTimer: number | null = null
-const liveMode = ref(true)
+const liveMode = ref(!hasUrlTime.value)
 
 function startLiveClock() {
   if (tickTimer !== null) return
@@ -69,7 +72,9 @@ function onUserTimeChange() {
   }
 }
 
-onMounted(startLiveClock)
+onMounted(() => {
+  if (liveMode.value) startLiveClock()
+})
 onUnmounted(stopLiveClock)
 
 // 视口控制
@@ -177,7 +182,7 @@ const outerRings = [
 <template>
   <div class="container">
     <!-- 返回首页 -->
-    <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
+    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">

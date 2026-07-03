@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
+import { withBase } from 'vitepress'
 import SixtyJiaziRing from '../components/rings/SixtyJiaziRing.vue'
 import BranchesRing from '../components/rings/BranchesRing.vue'
 import SolarTermsRing from '../components/rings/SolarTermsRing.vue'
@@ -10,6 +11,7 @@ import TaiChi from '../components/centers/TaiChi.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import BaseCenter from '../components/base/BaseCenter.vue'
+import { useUrlTime } from '@/composables/useUrlTime'
 import {
   twentyEightConstellations,
   sixtyJiaziNayin,
@@ -24,15 +26,19 @@ import {
  * 中华天文圆环（时间驱动统一架构）
  *
  * ═══════════════════════════════════════════════════════════════
- *  🔑 架构原则：唯一时间源 controlledTime
+ *  🔑 架构原则：唯一时间源 controlledTime（现由 useUrlTime 提供）
  *  ─────────────────────────────────────────────────────────────
  *  所有时间驱动的组件都直接传 time ref，整条链路响应式。
  *  静态数据的环（二十八宿、纳音、八门等）保持数据驱动即可。
+ *
+ *  ✨ 阶段三新增：controlledTime 与 URL ?t=... 双向绑定
+ *     ?t=0665-01-15T12:00 → 打开即定位到麟德二年
+ *     用户拖时间条 → URL 自动同步（防抖 500ms，分钟精度）
  * ═══════════════════════════════════════════════════════════════
  */
 
-// 唯一时间源
-const controlledTime = ref(new Date())
+// 唯一时间源（由 URL 参数驱动，无 URL 参数则用当前时间）
+const { controlledTime } = useUrlTime()
 
 // 视图控制
 const zoomLevel = ref(1)
@@ -108,7 +114,7 @@ const rings = [
 <template>
   <div class="container">
     <!-- 返回首页 -->
-    <RouterLink to="/" class="back-link">← 罗盘列表</RouterLink>
+    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
       class="compass-svg"

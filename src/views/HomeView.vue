@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { withBase } from 'vitepress'
 import { compasses } from '@/compasses'
 import logoUrl from '@/assets/andaoai-logo-dark.svg'
 </script>
@@ -11,16 +12,16 @@ import logoUrl from '@/assets/andaoai-logo-dark.svg'
     </header>
 
     <div class="compass-grid">
-      <RouterLink
+      <a
         v-for="c in compasses"
         :key="c.id"
-        :to="`/compass/${c.id}`"
+        :href="withBase(`/compass/${c.id}`)"
         class="compass-card"
       >
         <span v-if="c.category" class="card-category">{{ c.category }}</span>
         <h2 class="card-name">{{ c.name }}</h2>
         <p class="card-desc">{{ c.description }}</p>
-      </RouterLink>
+      </a>
     </div>
   </div>
 </template>

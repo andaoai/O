@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <!--
+    乙巳观 · AnDaoAi logo
+    玄青底色 + 紫色辉光
+    - 圆环 + 内方
+    - 圆内上：AnDaoAi 英文标（等宽）
+    - 圆内下：乙巳观 中文标（衬线，宽字距）
+  -->
+  <defs>
+    <!-- 紫色辉光 filter -->
+    <filter id="purpleGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <!-- 内层：小范围紫光 -->
+      <feGaussianBlur stdDeviation="1.2" result="blur1"/>
+      <feFlood flood-color="#a855f7" flood-opacity="0.9" result="color1"/>
+      <feComposite in="color1" in2="blur1" operator="in" result="glow1"/>
+
+      <!-- 外层：大范围紫光晕 -->
+      <feGaussianBlur stdDeviation="4" in="SourceGraphic" result="blur2"/>
+      <feFlood flood-color="#c084fc" flood-opacity="0.55" result="color2"/>
+      <feComposite in="color2" in2="blur2" operator="in" result="glow2"/>
+
+      <!-- 合成：外光晕 + 内光晕 + 原图 -->
+      <feMerge>
+        <feMergeNode in="glow2"/>
+        <feMergeNode in="glow1"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- 主体：外圆 + 内方 + 圆内双行文字，统一玄青色，整体套发光 filter -->
+  <g filter="url(#purpleGlow)" fill="none" stroke="#1a1033" stroke-width="4">
+    <!-- 外圆 -->
+    <circle cx="100" cy="100" r="88"/>
+
+    <!-- 内正方形（小一圈，四边不贴圆） -->
+    <rect x="45" y="45" width="110" height="110" stroke-width="3"/>
+
+    <!-- 圆内上：AnDaoAi · 等宽字体 -->
+    <text x="100" y="88"
+          font-family="'JetBrains Mono', 'Fira Code', 'Consolas', 'SF Mono', 'Menlo', monospace"
+          font-size="12"
+          fill="#1a1033"
+          stroke="none"
+          text-anchor="middle"
+          dominant-baseline="central"
+          letter-spacing="1.2"
+          font-weight="700">AnDaoAi</text>
+
+    <!-- 圆内下：乙巳观 · 衬线，宽字距 -->
+    <text x="100" y="115"
+          font-family="'Noto Serif SC', 'Songti SC', 'STSong', 'SimSun', serif"
+          font-size="16"
+          fill="#1a1033"
+          stroke="none"
+          text-anchor="middle"
+          dominant-baseline="central"
+          letter-spacing="4"
+          font-weight="700">乙巳观</text>
+  </g>
+</svg>
