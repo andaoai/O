@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import { polarToCartesian as polarUtil, radialTextRotation } from '@/utils/geometry'
+import { radialTextRotation } from '@/utils/geometry'
+import { usePolar } from '@/composables/useRingBase'
 import { getDayOfYear, getSolarTermPositions } from '@/utils/chineseCalendar'
 import { JING_FANG_SIXTY_GUA, JING_FANG_GUA_STEP } from '@/data/rings/jingFangSixtyGua'
 
@@ -124,9 +125,11 @@ const props = withDefaults(defineProps<Props>(), {
 // ⚠️ 时间驱动范式：MaybeRef → computed timeRef
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
-/** 极坐标 → 笛卡尔（统一走 geometry，按 rotationDirection 处理顺/逆时针） */
-const polarToCartesian = (angle: number, radius: number) =>
-  polarUtil((angle + props.startDegree) % 360, radius, props.rotationDirection)
+/** 极坐标 → 笛卡尔（统一走 useRingBase.usePolar，按 startDegree / rotationDirection 处理） */
+const polarToCartesian = usePolar(
+  () => props.startDegree,
+  () => props.rotationDirection
+)
 
 /** 当前爻位索引 0-359（与 LiuRiQiFenScaleRing 算法完全一致） */
 const currentYaoIndex = computed(() => {

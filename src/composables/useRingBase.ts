@@ -1,5 +1,10 @@
 import { computed } from 'vue'
 import type { RingItem, PointItem } from '@/data/rings/types'
+import {
+  normalizeAngle,
+  polarToCartesian as polarToCartesianRaw,
+  type RotationDirection
+} from '@/utils/geometry'
 
 /**
  * useRingBase - 圆环基础逻辑 composable
@@ -12,6 +17,10 @@ import type { RingItem, PointItem } from '@/data/rings/types'
  *
  * 作为所有圆环组件的基础能力，消除重复代码。
  */
+
+/** re-export：utils/geometry 是几何函数的唯一真理源 */
+export { normalizeAngle } from '@/utils/geometry'
+export type { RotationDirection } from '@/utils/geometry'
 
 /* ──────────────────────────────────────────────
    高亮层级计算（RingItem / PointItem 通用
@@ -97,16 +106,42 @@ export function useRingItemsWithFontSize<
    ────────────────────────────────────────────── */
 
 export function useRingAngles() {
-  /** 归一化角度到 [0, 360) */
-  const normalizeAngle = (angle: number): number =>
-    ((angle % 360) + 360) % 360
-
   /** 均分角度：n 个项目均分 360° */
   const angleStep = (count: number): number => 360 / count
 
   return {
     normalizeAngle,
     angleStep
+  }
+}
+
+/* ──────────────────────────────────────────────
+   极坐标 toXY 工厂（段环通用）
+   ────────────────────────────────────────────── */
+
+/**
+ * 生成绑定了 startDegree 偏移与 rotationDirection 的 polarToCartesian。
+ *
+ * 消除以下重复模式（原分散在 GuaRing / JingFangGuaRing / JingFangEightPalaceRing /
+ * NajiaRing 里各写一遍）：
+ *
+ *   const polarToCartesian = (angle, radius) =>
+ *     polarUtil((angle + props.startDegree) % 360, radius, props.rotationDirection)
+ *
+ * 用法：
+ *   const toXY = usePolar(() => props.startDegree, () => props.rotationDirection)
+ *   const p = toXY(angle, radius)
+ *
+ * @param startDegreeRef  返回当前 startDegree 的 getter（未使用偏移传 0 或 () => 0）
+ * @param directionRef    返回当前 rotationDirection 的 getter
+ */
+export function usePolar(
+  startDegreeRef: () => number,
+  directionRef: () => RotationDirection
+) {
+  return (angle: number, radius: number): { x: number; y: number } => {
+    const shifted = normalizeAngle(angle + startDegreeRef())
+    return polarToCartesianRaw(shifted, radius, directionRef())
   }
 }
 
@@ -136,7 +171,7 @@ export function useRingBase<
     () => (props.data as any).items as TItem[],
     () => props.data.fontSize
   )
-  const { normalizeAngle, angleStep } = useRingAngles()
+  const { angleStep } = useRingAngles()
 
   return {
     // 半径/角度

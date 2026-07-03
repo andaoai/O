@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import { polarToCartesian as polarUtil, arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
+import { arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
+import { usePolar } from '@/composables/useRingBase'
 import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
 
@@ -86,9 +87,11 @@ const nameRadius = computed(() => {
 const centerAngleOf = (order: number) =>
   (270 + order * JING_FANG_EIGHT_PALACE_STEP + props.startDegree) % 360
 
-/** 极坐标 → 笛卡尔 */
-const polarToCartesian = (angle: number, radius: number) =>
-  polarUtil(angle, radius, props.rotationDirection)
+/** 极坐标 → 笛卡尔（startDegree 已在 centerAngleOf 内部处理，此处不再叠加） */
+const polarToCartesian = usePolar(
+  () => 0,
+  () => props.rotationDirection
+)
 
 /** 环形扇形 path */
 const arcPath = (rOuter: number, rInner: number, startAngle: number, endAngle: number) =>

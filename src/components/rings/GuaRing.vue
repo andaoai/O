@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import { polarToCartesian as polarUtil, arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
+import { arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
+import { usePolar } from '@/composables/useRingBase'
 import { XIANTIAN_64_GUA, GUA_STEP, type XiantianGuaItem } from '@/data/sixtyFourGua'
 
 /**
@@ -78,9 +79,11 @@ const props = withDefaults(defineProps<Props>(), {
   lineStrokeWidth: 2
 })
 
-/** 极坐标 → 笛卡尔（统一走 geometry，按 rotationDirection 处理顺/逆时针），中心 0,0 */
-const polarToCartesian = (angle: number, radius: number) =>
-  polarUtil(angle, radius, props.rotationDirection)
+/** 极坐标 → 笛卡尔（统一走 useRingBase.usePolar，按 rotationDirection 处理顺/逆时针），中心 0,0 */
+const polarToCartesian = usePolar(
+  () => 0,
+  () => props.rotationDirection
+)
 
 /** 环形扇形 path（内外两弧），用于阴阳两仪背景 */
 const arcPath = (rOuter: number, rInner: number, startAngle: number, endAngle: number): string =>
