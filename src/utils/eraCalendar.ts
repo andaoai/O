@@ -11,11 +11,9 @@
 import { SolarDay } from 'tyme4ts'
 import { findDynasty, formatYearShort } from '@/data/dynasties'
 import type { GanzhiInfo } from './chineseCalendar'
+import { STEMS as HEAVENLY_STEMS, BRANCHES as EARTHLY_BRANCHES, HOUR_START_STEM } from './constants/ganzhi'
 
 // ── 常量表 ──
-
-const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'] as const
-const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'] as const
 
 const ELEMENT_BY_STEM: Record<string, string> = {
   甲: '木', 乙: '木', 丙: '火', 丁: '火', 戊: '土', 己: '土',
@@ -26,9 +24,6 @@ const ZODIAC_BY_BRANCH: Record<string, string> = {
   子: '鼠', 丑: '牛', 寅: '虎', 卯: '兔', 辰: '龙', 巳: '蛇',
   午: '马', 未: '羊', 申: '猴', 酉: '鸡', 戌: '狗', 亥: '猪'
 }
-
-/** 日干 → 子时时干起始（甲己起甲、乙庚起丙、丙辛起戊、丁壬起庚、戊癸起壬） */
-const HOUR_START_STEM: number[] = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
 
 // ── 公历格式化 ──
 

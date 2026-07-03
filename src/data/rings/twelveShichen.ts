@@ -1,4 +1,5 @@
 import type { RingData } from './types'
+import { BRANCHES } from '@/utils/constants/ganzhi'
 
 /**
  * 十二时辰：以地支命名，每时辰 2 小时，子时 23:00 起。
@@ -15,8 +16,8 @@ import type { RingData } from './types'
  * 当前时辰序号 = 时柱六十甲子序号 % 12（子=0），由视图层算好后高亮。
  */
 
-/** 十二地支（时辰）按子→亥顺序，每格 30 度 */
-const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+/** 十二地支（时辰）按子→亥顺序，每格 30 度 —— 单一真理源见 utils/constants/ganzhi.ts */
+const branches = BRANCHES
 
 /** 地支五行配色（与天文盘地支环保持一致的色系） */
 const colors = [

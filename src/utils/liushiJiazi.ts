@@ -13,11 +13,10 @@
  *   于是秒柱每 1 秒前进一格、60 秒走完整圈；分柱每 1 分钟前进一格、60 分钟一圈。
  */
 import { SolarTime } from 'tyme4ts'
+import { BRANCHES, HOUR_START_STEM, ganzhiName as ganzhiNameShared } from './constants/ganzhi'
 
-/** 十天干 */
-export const STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'] as const
-/** 十二地支 */
-export const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'] as const
+/** 十天干 / 十二地支 —— re-export，保持既有 import 路径可用 */
+export { STEMS, BRANCHES } from './constants/ganzhi'
 
 /** 六柱标识（由外到内的渲染顺序） */
 export type PillarId = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
@@ -43,8 +42,8 @@ function fallbackDayIndex(date: Date): number {
   return ((54 + diffDays) % 60 + 60) % 60
 }
 
-/** 日干 → 子时时干起始（甲己起甲、乙庚起丙、丙辛起戊、丁壬起庚、戊癸起壬） */
-const HOUR_START_STEM = [0, 2, 4, 6, 8, 0, 2, 4, 6, 8]
+/** 日干 → 子时时干起始（甲己起甲、乙庚起丙、丙辛起戊、丁壬起庚、戊癸起壬），单一真理源见 constants/ganzhi.ts */
+// HOUR_START_STEM imported above
 
 /** 时干支：23:00 起属次日，按次日日干起时 */
 function fallbackHourIndex(date: Date, dayIdx: number): number {
@@ -112,7 +111,7 @@ export function getJiaziIndices(date: Date): JiaziIndices {
 
 /** 由六十甲子序号(0-59) 得干支名，如 0 → 甲子 */
 export function ganzhiName(index: number): string {
-  return STEMS[index % 10]! + BRANCHES[index % 12]!
+  return ganzhiNameShared(index)
 }
 
 /** 由六十甲子序号(0-59) 取地支序号（0-11，子=0）。日柱、时柱通用。 */

@@ -1,4 +1,5 @@
 import type { RingData, RingItem } from './types'
+import { STEMS, BRANCHES } from '@/utils/constants/ganzhi'
 
 /** 五行配色（六个深浅档），用于六十甲子按五行着色 */
 const elementColors: string[][] = [
@@ -9,9 +10,6 @@ const elementColors: string[][] = [
   ['#3498DB', '#5DADE2', '#85C1E2', '#AED6F1', '#D6EAF8', '#EBF5FB']  // 水（壬癸）
 ]
 
-const heavenlyStems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
-const earthlyBranches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
-
 /** 生成 60 个甲子，每个 6 度，按天干五行着色 */
 function buildSixtyJiazi(): RingItem[] {
   const items: RingItem[] = []
@@ -21,7 +19,7 @@ function buildSixtyJiazi(): RingItem[] {
     const elementIndex = Math.floor(stemIndex / 2) // 0-4 对应五行
     const colorGroup = elementColors[elementIndex]!
     items.push({
-      label: heavenlyStems[stemIndex]! + earthlyBranches[branchIndex]!,
+      label: STEMS[stemIndex]! + BRANCHES[branchIndex]!,
       color: colorGroup[i % colorGroup.length]!,
       startAngle: i * 6,
       endAngle: i * 6 + 6

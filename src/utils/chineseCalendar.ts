@@ -21,6 +21,7 @@ import {
   HeavenStem,
   EarthBranch
 } from 'tyme4ts'
+import { STEMS, ganzhiName } from './constants/ganzhi'
 
 /**
  * 节气信息接口
@@ -83,7 +84,7 @@ const ELEMENTS = ['木', '火', '土', '金', '水']
  * 从天干获取五行属性
  */
 function getElementFromStem(stem: string): string {
-  const stemIndex = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'].indexOf(stem)
+  const stemIndex = STEMS.indexOf(stem as (typeof STEMS)[number])
   if (stemIndex === -1 || stemIndex >= 10) return '木'
   const elementIndex = Math.floor(stemIndex / 2)
   return ELEMENTS[elementIndex] || '木'
@@ -805,8 +806,5 @@ export function getCurrentLunarInfo(date: Date): {
  * @returns 甲子名称
  */
 export function getJiaziName(index: number): string {
-  const stems = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸']
-  const branches = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
-  const i = ((index % 60) + 60) % 60
-  return stems[i % 10]! + branches[i % 12]!
+  return ganzhiName(index)
 }
