@@ -95,6 +95,7 @@ export default defineConfig({
               collapsed: false,
               items: [
                 { text: '乾', link: '/books/京氏易傳/乾卦' },
+                { text: '姤', link: '/books/京氏易傳/姤卦' },
               ],
             },
           ],

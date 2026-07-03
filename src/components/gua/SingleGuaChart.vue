@@ -28,7 +28,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  width: 520
+  width: 900
 })
 
 /** 从 value 派生完整卦信息 */
@@ -59,17 +59,18 @@ const LAYOUT = {
   colX: {
     pos: 30,        // 爻位（初九 世）
     text: 110,      // 爻辞
-    lineStart: 220, // 爻线起点
+    lineStart: 600, // 爻线起点（爻辞列展至 590，留 10px 间隔）
     lineWidth: 80,
-    najia: 320,     // 纳甲
-    element: 390,   // 五行
-    liuqin: 450     // 六亲
+    najia: 700,     // 纳甲
+    element: 770,   // 五行
+    liuqin: 830     // 六亲
   },
   rowY: {
     header: 66,     // 表头
     first: 90,      // 第一行（上爻）
     step: 40        // 行间距
   },
+  width: 900,       // viewBox 宽度
   height: 340       // viewBox 高度
 } as const
 
@@ -111,18 +112,18 @@ const figcaptionStyle = {
 <template>
   <figure :style="figureStyle">
     <svg
-      :viewBox="`0 0 520 ${LAYOUT.height}`"
+      :viewBox="`0 0 ${LAYOUT.width} ${LAYOUT.height}`"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
       :aria-label="`${gua.name}卦纳甲六亲图`"
       :style="svgStyle"
     >
       <!-- 深紫底 -->
-      <rect x="0" y="0" width="520" :height="LAYOUT.height" fill="#1a0f2e" rx="6" />
+      <rect x="0" y="0" :width="LAYOUT.width" :height="LAYOUT.height" fill="#1a0f2e" rx="6" />
 
       <!-- 标题：卦名 + Unicode 卦符 + 所属宫 + 本宫五行 -->
       <text
-        x="260" y="30"
+        :x="LAYOUT.width / 2" y="30"
         text-anchor="middle"
         fill="#f1c40f"
         font-size="18"
@@ -183,12 +184,12 @@ const figcaptionStyle = {
 
       <!--
         内外卦分界：虚线横穿全图，中央小徽章标注 "外 X / 内 Y"。
-        徽章 x 位置落在爻辞列右端 (x=162) 与爻线列左端 (x=220) 之间的空白带上，
+        徽章 x 位置落在爻辞列右端与爻线列左端之间的空白带上，
         用底色矩形把虚线中段遮盖，避免文字与虚线交叉。
       -->
-      <line x1="20" :y1="dividerY" x2="500" :y2="dividerY" stroke="#555" stroke-dasharray="3 4" />
+      <line x1="20" :y1="dividerY" :x2="LAYOUT.width - 20" :y2="dividerY" stroke="#555" stroke-dasharray="3 4" />
       <rect
-        :x="164"
+        :x="LAYOUT.colX.lineStart - 60"
         :y="dividerY - 9"
         width="52"
         height="18"
@@ -196,7 +197,7 @@ const figcaptionStyle = {
         rx="2"
       />
       <text
-        x="190"
+        :x="LAYOUT.colX.lineStart - 34"
         :y="dividerY + 4"
         fill="#aaa"
         font-size="10"
