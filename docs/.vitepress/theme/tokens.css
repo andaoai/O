@@ -192,18 +192,30 @@ body {
   line-height: 1.85;
 }
 
-/* 引用块：古籍原文强化 · 紫底金边 */
+/**
+ * 引用块「 > ... 」在本站语义定为「次主级注释」——
+ * 古籍笔记页里，正文承担『原文』角色（明亮宋体），引用承担『注解 / 白话译』
+ * 角色。整块以暗紫作视觉分组：微微暗紫底 + 左紫边 + 文字也用淡紫辉光，
+ * 与正文的宣纸白拉开色相区分，同时紫辉光带微亮感不显灰。
+ */
 .vp-doc blockquote {
-  border-left: 3px solid var(--ysg-gold-500);
-  background: linear-gradient(90deg, var(--ysg-brand-glow-dim), transparent);
-  padding: 0.9em 1.4em;
-  font-size: 1.02em;
-  line-height: 1.95;
-  border-radius: 0 4px 4px 0;
+  border-left: 2px solid var(--ysg-purple-500);
+  background: rgba(74, 44, 122, 0.12);
+  padding: 0.5em 1.1em;
+  margin: 0.6em 0 1.2em;
+  font-size: 0.92em;
+  line-height: 1.75;
+  border-radius: 0 3px 3px 0;
 }
-.vp-doc blockquote > p {
-  color: var(--ysg-paper-100);
-  margin: 0;
+.vp-doc blockquote > p,
+.vp-doc blockquote > ul,
+.vp-doc blockquote > ol {
+  color: var(--ysg-purple-100);
+  text-shadow: 0 0 6px rgba(200, 162, 232, 0.15);
+  margin: 0.2em 0;
+}
+.vp-doc blockquote strong {
+  color: var(--ysg-gold-400);
 }
 
 /* 强调 · 加粗：金色 */
