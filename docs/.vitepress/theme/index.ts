@@ -38,6 +38,7 @@ import NajiaRing from '@/components/rings/NajiaRing.vue'
 import ShiYingRing from '@/components/rings/ShiYingRing.vue'
 import SevenLuminariesRing from '@/components/rings/SevenLuminariesRing.vue'
 import MansionDegreeRing from '@/components/rings/MansionDegreeRing.vue'
+import DegreeScale from '@/components/rings/DegreeScale.vue'
 
 // 单卦静态图（书籍笔记专用，非环组件）
 import SingleGuaChart from '@/components/gua/SingleGuaChart.vue'
@@ -89,6 +90,7 @@ export default {
     app.component('ShiYingRing', ShiYingRing)
     app.component('SevenLuminariesRing', SevenLuminariesRing)
     app.component('MansionDegreeRing', MansionDegreeRing)
+    app.component('DegreeScale', DegreeScale)
     app.component('SingleGuaChart', SingleGuaChart)
 
     // 罗盘 View 全局注册（供 docs/compass/*.md 直接调用）
