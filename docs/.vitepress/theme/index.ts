@@ -27,8 +27,9 @@ import SiXiangRing from '@/components/rings/SiXiangRing.vue'
 import SolarTermsRing from '@/components/rings/SolarTermsRing.vue'
 import DataRing from '@/components/rings/DataRing.vue'
 
-// 罗盘全屏 View（挂到 docs/compass/*.md）
+// 罗盘一览页（挂到 docs/compass/index.md，走默认主题 layout）
 import HomeView from '@/views/HomeView.vue'
+// 罗盘全屏 View（挂到 docs/compass/*.md，走 CompassLayout）
 import AstronomyView from '@/views/AstronomyView.vue'
 import LiushiJiaziView from '@/views/LiushiJiaziView.vue'
 import SixtyFourGuaView from '@/views/SixtyFourGuaView.vue'
@@ -63,7 +64,7 @@ export default {
     app.component('DataRing', DataRing)
 
     // 罗盘 View 全局注册（供 docs/compass/*.md 直接调用）
-    app.component('HomeView', HomeView)
+    app.component('HomeView', HomeView)   // /compass/ 罗盘一览（page layout）
     app.component('AstronomyView', AstronomyView)
     app.component('LiushiJiaziView', LiushiJiaziView)
     app.component('SixtyFourGuaView', SixtyFourGuaView)
