@@ -14,5 +14,5 @@ title: 十二辰 · 十二时辰
   <BranchesRing :radius="240" :inner-radius="200" pillar-id="hour" />
 </CompassFigure>
 
-- 参见 [[ganzhi]]——地支五行 / 天干配对；
-- 参见 [[si-xiang]]——子午卯酉四正与四象方位。
+- 参见 [干支 · 六十甲子](./ganzhi)——地支五行 / 天干配对；
+- 参见 [四象](./si-xiang)——子午卯酉四正与四象方位。

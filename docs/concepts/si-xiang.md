@@ -20,5 +20,5 @@ title: 四象 · 青龙白虎朱雀玄武
   <ConstellationsRing :radius="240" :inner-radius="190" />
 </CompassFigure>
 
-- 参见 [[constellations]]（二十八宿）；
-- 参见 [[shichen]]（十二辰方位）——子午卯酉四正与四象对应。
+- 参见 [二十八宿 · 距星](./constellations)（二十八宿）；
+- 参见 [十二辰 · 十二时辰](./shichen)（十二辰方位）——子午卯酉四正与四象对应。

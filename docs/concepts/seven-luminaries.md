@@ -18,8 +18,8 @@ title: 七曜 · 日月五星
   <ConstellationsRing :radius="260" :inner-radius="222" />
 </CompassFigure>
 
-- 参见 [[constellations]]（二十八宿）——七曜的位置以宿为坐标；
-- 参见 [[precession]]（岁差）——古今宿位差 20°，七曜入宿的记载须回算。
+- 参见 [二十八宿 · 距星](./constellations)（二十八宿）——七曜的位置以宿为坐标；
+- 参见 [岁差](./precession)（岁差）——古今宿位差 20°，七曜入宿的记载须回算。
 
 ::: tip 联动罗盘
 含逆行轨迹、日心轨道、赤道 / 黄道 / 白道倾角的完整交互版见 [七曜入宿天象盘](/compass/planet-mansion)。

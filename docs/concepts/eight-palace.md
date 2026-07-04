@@ -17,9 +17,9 @@ title: 八宫卦
   <ShiYingRing :radius="195" :inner-radius="160" />
 </CompassFigure>
 
-- 参见 [[sixty-four-gua]]（先天六十四卦）——另一种排列方式；
-- 参见 [[shi-ying]]（世应爻位）；
-- 参见 [[najia]]（纳甲）——六爻配天干。
+- 参见 [六十四卦 · 序卦](./sixty-four-gua)（先天六十四卦）——另一种排列方式；
+- 参见 [世应爻位](./shi-ying)（世应爻位）；
+- 参见 [纳甲](./najia)（纳甲）——六爻配天干。
 
 ::: tip 联动罗盘
 八宫世应与卦气、纳甲同盘对照见 [京房十二消息卦盘](/compass/jingfang)。

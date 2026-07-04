@@ -19,5 +19,5 @@ title: 世应爻位
   <ShiYingRing :radius="220" :inner-radius="180" />
 </CompassFigure>
 
-- 参见 [[eight-palace]]（八宫卦）——世爻位置定卦次；
-- 参见 [[najia]]（纳甲）——世应爻的天干地支。
+- 参见 [八宫卦](./eight-palace)（八宫卦）——世爻位置定卦次；
+- 参见 [纳甲](./najia)（纳甲）——世应爻的天干地支。

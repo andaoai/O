@@ -14,9 +14,9 @@ title: 二十四节气 · 节气与中气
   <SolarTermsPointRing :radius="240" :inner-radius="210" origin-mode="jan1" />
 </CompassFigure>
 
-- 参见 [[leap-month]]（闰月 · 无中气置闰法）——即以此为据。
-- 参见 [[jingfang-guaqi]]（京房卦气）——冬至为零点，六十四卦匀分周年。
-- 参见 [[precession]]（岁差）——节气位置在恒星背景上会缓慢西退。
+- 参见 [闰月 · 无中气置闰法](./leap-month)（闰月 · 无中气置闰法）——即以此为据。
+- 参见 [京房卦气 · 六日七分](./jingfang-guaqi)（京房卦气）——冬至为零点，六十四卦匀分周年。
+- 参见 [岁差](./precession)（岁差）——节气位置在恒星背景上会缓慢西退。
 
 ::: tip 联动罗盘
 节气在实景天球中的位置见 [七曜入宿天象盘](/compass/planet-mansion)；节气 / 中气驱动置闰见 [回归年闰月盘](/compass/tropical-year)。

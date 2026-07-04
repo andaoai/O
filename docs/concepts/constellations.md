@@ -19,8 +19,8 @@ title: 二十八宿 · 距星
   <ConstellationsRing :radius="240" :inner-radius="180" />
 </CompassFigure>
 
-- 参见 [[si-xiang]]——四象与七宿分组；
-- 参见 [[precession]]——古今差异约 20°。
+- 参见 [四象](./si-xiang)——四象与七宿分组；
+- 参见 [岁差](./precession)——古今差异约 20°。
 
 ::: tip 联动罗盘
 二十八宿在实景天球投影中的位置见 [七曜入宿天象盘](/compass/planet-mansion)。

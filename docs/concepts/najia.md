@@ -24,6 +24,6 @@ title: 纳甲
   <NajiaRing :radius="220" :inner-radius="150" />
 </CompassFigure>
 
-- 参见 [[eight-palace]]（八宫卦）；
-- 参见 [[shi-ying]]（世应爻位）；
-- 参见 [[ganzhi]]（干支）——纳甲字符集。
+- 参见 [八宫卦](./eight-palace)（八宫卦）；
+- 参见 [世应爻位](./shi-ying)（世应爻位）；
+- 参见 [干支 · 六十甲子](./ganzhi)（干支）——纳甲字符集。

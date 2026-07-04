@@ -15,9 +15,9 @@ title: 京房卦气 · 六日七分
   <JingFangGuaRing :radius="235" :inner-radius="185" />
 </CompassFigure>
 
-- 参见 [[sixty-four-gua]]（六十四卦）；
-- 参见 [[solar-terms]]（节气）；
-- 参见 [[eight-palace]]（八宫卦）——同盘另一维度。
+- 参见 [六十四卦 · 序卦](./sixty-four-gua)（六十四卦）；
+- 参见 [二十四节气](./solar-terms)（节气）；
+- 参见 [八宫卦](./eight-palace)（八宫卦）——同盘另一维度。
 
 ::: tip 联动罗盘
 完整卦气 + 十二消息 + 八宫 + 纳甲 + 世应同盘参见 [京房十二消息卦盘](/compass/jingfang)。

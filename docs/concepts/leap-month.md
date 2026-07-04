@@ -17,8 +17,8 @@ title: 闰月 · 无中气置闰法
   <LunarMonthsRing :radius="240" :inner-radius="200" :time="new Date('2025-08-01T12:00:00Z')" />
 </CompassFigure>
 
-- 参见 [[solar-terms]]——节气 / 中气之别；
-- 参见 [[ganzhi]]——农历月份的月柱干支。
+- 参见 [二十四节气](./solar-terms)——节气 / 中气之别；
+- 参见 [干支 · 六十甲子](./ganzhi)——农历月份的月柱干支。
 
 ::: tip 联动罗盘
 365 天回归年与 360° 甲子年、闰月机制的完整对照见 [回归年闰月盘](/compass/tropical-year)。
