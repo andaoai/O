@@ -87,8 +87,15 @@ export interface LunarOrbitInfo {
   descendingNodeLongitude: number
 }
 
-/** 把任意度数归一化到 [0, 360) */
-export const normalizeDegree = (deg: number): number => ((deg % 360) + 360) % 360
+/**
+ * 把任意度数归一化到 [0, 360)。
+ *
+ * ⚠️ 历史别名：此函数与 `utils/geometry.ts::normalizeAngle` 是同一个公式，
+ * 保留 `normalizeDegree` 名称以兼容既有 import 路径，实现直接 re-export。
+ * 新代码请直接消费 `normalizeAngle`。
+ */
+import { normalizeAngle } from './geometry'
+export const normalizeDegree = normalizeAngle
 
 /**
  * 计算太阳的真实黄经

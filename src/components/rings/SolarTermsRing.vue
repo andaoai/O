@@ -3,6 +3,7 @@ import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
 import { twentyFourSolarTerms } from '@/data/rings/twentyFourSolarTerms'
 import { sunLongitude } from '@/utils/celestial'
+import { currentLichunIndex, SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
 
 /**
  * 二十四节气环组件（传统罗盘版本 · 时间驱动高亮）
@@ -39,20 +40,15 @@ const props = withDefaults(defineProps<Props>(), {
 /** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
-/** 角度归一化到 [0,360) */
-const norm = (a: number) => ((a % 360) + 360) % 360
-
 /** 二十四节气环数据（角度固定，仅高亮随时间变化） */
 const ringData = computed(() => {
-  // 当前太阳所在节气（黄经从立春 315° 起、每 15° 一气）
-  const sunLon = sunLongitude(timeRef.value)
-  const currentIndex = Math.floor(norm(sunLon - 315) / 15)
+  // 当前太阳所在节气（黄经从立春 315° 起、每 15° 一气，收敛于 constants/solarTerms）
+  const currentIndex = currentLichunIndex(sunLongitude(timeRef.value))
 
   return {
     ...twentyFourSolarTerms,
     items: twentyFourSolarTerms.items.map((item, i) => {
-      const isSpecial = item.label === '春分' || item.label === '夏至' ||
-                        item.label === '秋分' || item.label === '冬至'
+      const isSpecial = SOLAR_TERM_CARDINALS.has(item.label ?? '')
       const isCurrent = i === currentIndex
       return {
         ...item,

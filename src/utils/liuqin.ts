@@ -20,16 +20,22 @@
 import { najiaLines } from './najia'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName, getUnicodeHexagram } from '@/data/sixtyFourGua'
+import { BRANCHES } from './constants/ganzhi'
+import { WUXING_COLORS, BRANCH_ELEMENTS } from './wuxing'
 
 export type WuXing = '木' | '火' | '土' | '金' | '水'
 export type LiuQin = '父母' | '子孙' | '官鬼' | '妻财' | '兄弟'
 
-/** 十二地支 → 五行（与 twelveShichen.ts 配色对齐同一份逻辑） */
-const BRANCH_TO_ELEMENT: Readonly<Record<string, WuXing>> = {
-  子: '水', 丑: '土', 寅: '木', 卯: '木',
-  辰: '土', 巳: '火', 午: '火', 未: '土',
-  申: '金', 酉: '金', 戌: '土', 亥: '水'
-}
+/**
+ * 十二地支 → 五行（派生自 utils/wuxing.ts::BRANCH_ELEMENTS，
+ * 只是 Record 形态便于按地支字面量查询；单点漂移风险已消除）。
+ */
+const BRANCH_TO_ELEMENT: Readonly<Record<string, WuXing>> = Object.freeze(
+  BRANCHES.reduce((acc, name, i) => {
+    acc[name] = BRANCH_ELEMENTS[i]!
+    return acc
+  }, {} as Record<string, WuXing>)
+)
 
 /** 五行相生环：木→火→土→金→水→木 */
 const SHENG_NEXT: Readonly<Record<WuXing, WuXing>> = {
@@ -41,10 +47,11 @@ const KE_NEXT: Readonly<Record<WuXing, WuXing>> = {
   木: '土', 土: '水', 水: '火', 火: '金', 金: '木'
 }
 
-/** 五行主色（与 NajiaRing.vue / ganzhi.md 保持一致） */
-export const ELEMENT_COLORS: Readonly<Record<WuXing, string>> = {
-  木: '#2ECC71', 火: '#E74C3C', 土: '#D35400', 金: '#F1C40F', 水: '#3498DB'
-}
+/**
+ * 五行主色（re-export from utils/wuxing.ts，历史名字 ELEMENT_COLORS
+ * 保留以兼容 NajiaRing 等现有 import；新代码请直接消费 WUXING_COLORS）。
+ */
+export const ELEMENT_COLORS = WUXING_COLORS
 
 /**
  * 依「爻五行 vs 本宫五行」判定六亲。

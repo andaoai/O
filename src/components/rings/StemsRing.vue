@@ -2,7 +2,8 @@
 import { computed, unref, type MaybeRef } from 'vue'
 import DataRing from './DataRing.vue'
 import { twelveShichen } from '@/data/rings'
-import { getJiaziIndices, xunInfo, STEMS } from '@/utils/liushiJiazi'
+import { getJiaziIndices, xunInfo, STEMS, type PillarId } from '@/utils/liushiJiazi'
+import { colorOfStem } from '@/utils/wuxing'
 
 /**
  * 天干空亡环组件
@@ -12,19 +13,6 @@ import { getJiaziIndices, xunInfo, STEMS } from '@/utils/liushiJiazi'
  * 根据传入的时间自动计算当前旬的天干分布，标出空亡位置，
  * 并高亮当前柱所在地支的天干。
  */
-type PillarId = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
-
-/** 五行配色（与纳音环同款色值，保证全盘一致） */
-const WUXING_COLORS: Record<string, string> = {
-  木: '#2ECC71',
-  火: '#E74C3C',
-  土: '#D35400',
-  金: '#F1C40F',
-  水: '#3498DB'
-}
-
-/** 十天干五行：甲乙木、丙丁火、戊己土、庚辛金、壬癸水 */
-const STEM_ELEMENTS = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水']
 
 /** 空亡格底色 */
 const KONGWANG_COLOR = '#777'
@@ -72,12 +60,6 @@ const jiaziIndex = computed(() => currentIndices.value[props.pillarId])
 /** 当前旬的天干分布和空亡位置 */
 const xunData = computed(() => xunInfo(jiaziIndex.value))
 
-/** 获取某天干的五行高亮色 */
-function stemColorOf(stemIndex: number): string {
-  if (props.highlightColor) return props.highlightColor
-  return WUXING_COLORS[STEM_ELEMENTS[stemIndex]!]!
-}
-
 /** 非当前格统一灰色 */
 const GREY = '#555'
 
@@ -96,7 +78,7 @@ const ringData = computed(() => ({
     return {
       ...item,
       label: stem,
-      color: isActive ? WUXING_COLORS[STEM_ELEMENTS[stemIndex!]!]! : isKongWang ? KONGWANG_COLOR : GREY,
+      color: isActive ? (props.highlightColor ?? colorOfStem(stemIndex!)) : isKongWang ? KONGWANG_COLOR : GREY,
       fontSize: isActive ? 14 : 11,
       highlight: isActive
     }

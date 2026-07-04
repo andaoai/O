@@ -2,7 +2,8 @@
 import { computed, unref, type MaybeRef } from 'vue'
 import DataRing from './DataRing.vue'
 import { sixtyJiazi } from '@/data/rings'
-import { getJiaziIndices, branchOf, xunInfo, STEMS } from '@/utils/liushiJiazi'
+import { getJiaziIndices, branchOf, xunInfo, STEMS, type PillarId } from '@/utils/liushiJiazi'
+import { colorOfStem } from '@/utils/wuxing'
 
 /**
  * 六十甲子环组件
@@ -12,19 +13,6 @@ import { getJiaziIndices, branchOf, xunInfo, STEMS } from '@/utils/liushiJiazi'
  * 根据传入的时间自动计算当前柱（年/月/日/时/分/秒）所在的甲子位置，
  * 并高亮该格。支持竖排标签（用于内圈窄环）。
  */
-type PillarId = 'year' | 'month' | 'day' | 'hour' | 'minute' | 'second'
-
-/** 五行配色（与纳音环同款色值，保证全盘一致） */
-const WUXING_COLORS: Record<string, string> = {
-  木: '#2ECC71',
-  火: '#E74C3C',
-  土: '#D35400',
-  金: '#F1C40F',
-  水: '#3498DB'
-}
-
-/** 十天干五行：甲乙木、丙丁火、戊己土、庚辛金、壬癸水 */
-const STEM_ELEMENTS = ['木', '木', '火', '火', '土', '土', '金', '金', '水', '水']
 
 interface Props {
   /** 时间源（支持 ref 或 plain value） */
@@ -75,7 +63,7 @@ const activeStem = computed(() => activeIndex.value % 10)
 /** 当前柱的高亮色（按天干五行自动配色） */
 const activeColor = computed(() => {
   if (props.highlightColor) return props.highlightColor
-  return WUXING_COLORS[STEM_ELEMENTS[activeStem.value]!]!
+  return colorOfStem(activeStem.value)
 })
 
 /** 非当前格统一灰色 */

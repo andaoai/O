@@ -3,7 +3,7 @@ import { computed, unref, type MaybeRef } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import { radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import { getDayOfYear, getSolarTermPositions } from '@/utils/chineseCalendar'
+import { getYaoIndexInJingFangYear } from '@/utils/jingFangYao'
 import { JING_FANG_SIXTY_GUA, JING_FANG_GUA_STEP } from '@/data/rings/jingFangSixtyGua'
 
 /**
@@ -131,23 +131,8 @@ const polarToCartesian = usePolar(
   () => props.rotationDirection
 )
 
-/** 当前爻位索引 0-359（与 LiuRiQiFenScaleRing 算法完全一致） */
-const currentYaoIndex = computed(() => {
-  const time = timeRef.value
-  const year = time.getFullYear()
-  const currentDayOfYear = getDayOfYear(time)
-
-  const solarTerms = getSolarTermPositions(year)
-  const winterSolstice = solarTerms.find(p => p.name === '冬至')
-  const winterSolsticeDay = winterSolstice?.dayOfYear ?? 355
-
-  let daysSinceWinterSolstice = currentDayOfYear - winterSolsticeDay
-  if (daysSinceWinterSolstice < 0) {
-    daysSinceWinterSolstice += 365.25
-  }
-  const yaoPosition = (daysSinceWinterSolstice * 360) / 365.25
-  return Math.floor(yaoPosition) % 360
-})
+/** 当前爻位索引 0-359（收敛于 utils/jingFangYao） */
+const currentYaoIndex = computed(() => getYaoIndexInJingFangYear(timeRef.value))
 
 /** 当前卦序 0-59 */
 const currentGuaIndex = computed(() => Math.floor(currentYaoIndex.value / 6))

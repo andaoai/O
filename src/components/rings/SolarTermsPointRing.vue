@@ -3,6 +3,7 @@ import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
 import { sunLongitude } from '@/utils/celestial'
 import { getSolarTermPositions, isGregorianLeapYear } from '@/utils/chineseCalendar'
+import { currentLichunIndex, SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
@@ -48,7 +49,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
-const norm = (a: number) => ((a % 360) + 360) % 360
 
 const ringData = computed((): PointRingData => {
   const time = timeRef.value
@@ -66,13 +66,10 @@ const ringData = computed((): PointRingData => {
     originDayOfYear = winterSolsticePos?.dayOfYear ?? 355
   }
 
-  // 当前节气检测（基于太阳黄经，立春=0 起序）
-  const sunLon = sunLongitude(time)
-  const currentLichunIndex = Math.floor(norm(sunLon - 315) / 15)
+  // 当前节气检测（基于太阳黄经，立春=0 起序，收敛于 constants/solarTerms）
+  const currentLichunIdx = currentLichunIndex(sunLongitude(time))
 
   const ringWidth = props.radius - props.innerRadius
-
-  const specialNames = new Set(['春分', '夏至', '秋分', '冬至'])
 
   // 刻度长度（从外缘向内）
   const baseLen = ringWidth * 0.35     // 普通节气
@@ -88,8 +85,8 @@ const ringData = computed((): PointRingData => {
     const angle = (daysFromOrigin * anglePerDay) % 360
 
     const isZhongQi = pos.isMidTerm
-    const isCurrent = pos.lichunIndex === currentLichunIndex
-    const isSpecial = specialNames.has(pos.name)
+    const isCurrent = pos.lichunIndex === currentLichunIdx
+    const isSpecial = SOLAR_TERM_CARDINALS.has(pos.name)
 
     const len = isCurrent ? currentLen : (isSpecial ? specialLen : baseLen)
     const tickInnerRatio = 1 - len / ringWidth

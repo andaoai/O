@@ -4,6 +4,11 @@ import DataPointRing from './DataPointRing.vue'
 import { sunLongitude } from '@/utils/celestial'
 import { eclipticToEquatorial } from '@/utils/skyProjection'
 import { normalizeAngle } from '@/utils/geometry'
+import {
+  SOLAR_TERMS_LICHUN_ORDER,
+  SOLAR_TERM_CARDINALS,
+  currentLichunIndex
+} from '@/utils/constants/solarTerms'
 
 /**
  * 二十四节气环组件（天星盘版本 · 时间驱动）
@@ -37,24 +42,13 @@ const props = withDefaults(defineProps<Props>(), {
 /** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
-/** 角度归一化到 [0,360) */
-const norm = normalizeAngle
 /** 赤经 → DataPointRing 顺时针角度 */
-const raToAngle = (ra: number) => norm(360 - ra)
-
-/** 二十四节气标签 */
-const SOLAR_TERMS = [
-  '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
-  '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
-  '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
-  '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'
-]
+const raToAngle = (ra: number) => normalizeAngle(360 - ra)
 
 /** 二十四节气环数据（随时间动态变化） */
 const ringData = computed(() => {
-  // 当前太阳所在节气（黄经从立春 315° 起、每 15° 一气）用于高亮
-  const sunLon = sunLongitude(timeRef.value)
-  const currentIndex = Math.floor(norm(sunLon - 315) / 15)
+  // 当前太阳所在节气（收敛于 constants/solarTerms）
+  const currentIndex = currentLichunIndex(sunLongitude(timeRef.value))
 
   return {
     startDegree: 0,
@@ -65,10 +59,10 @@ const ringData = computed(() => {
     pointSymbol: 'tick' as const,
     circleColor: '#444444',
     circleWidth: 0.5,
-    items: SOLAR_TERMS.map((label, i) => {
+    items: SOLAR_TERMS_LICHUN_ORDER.map((label, i) => {
       // 二分二至特殊高亮
-      const isSpecial = label === '春分' || label === '夏至' || label === '秋分' || label === '冬至'
-      const eclLon = norm(315 + i * 15) // 每个节气的精确黄经
+      const isSpecial = SOLAR_TERM_CARDINALS.has(label)
+      const eclLon = normalizeAngle(315 + i * 15) // 每个节气的精确黄经
       const ra = eclipticToEquatorial(eclLon).ra
       return {
         label,

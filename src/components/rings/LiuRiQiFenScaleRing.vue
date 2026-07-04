@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
-import { getDayOfYear, getSolarTermPositions, isGregorianLeapYear } from '@/utils/chineseCalendar'
+import { getYaoIndexInJingFangYear } from '@/utils/jingFangYao'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
@@ -47,24 +47,8 @@ const props = withDefaults(defineProps<Props>(), {
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
 const ringData = computed((): PointRingData => {
-  const time = timeRef.value
-  const year = time.getFullYear()
-  const currentDayOfYear = getDayOfYear(time)
-  const daysInYear = isGregorianLeapYear(year) ? 366 : 365
-
-  // 🔑 获取冬至日序，以此为 0° 基准
-  const solarTerms = getSolarTermPositions(year)
-  const winterSolstice = solarTerms.find(p => p.name === '冬至')
-  const winterSolsticeDay = winterSolstice?.dayOfYear ?? 355
-
-  // 🔑 计算当日在六日七分 360 爻位中的位置
-  // 公式：(当日与冬至日差 / 365.25) × 360 = 爻位角度
-  let daysSinceWinterSolstice = currentDayOfYear - winterSolsticeDay
-  if (daysSinceWinterSolstice < 0) {
-    daysSinceWinterSolstice += 365.25 // 固定使用回归年长度做跨年调整
-  }
-  const yaoPosition = (daysSinceWinterSolstice * 360) / 365.25
-  const currentYaoIndex = Math.floor(yaoPosition) % 360
+  // 🔑 当日在六日七分 360 爻位中的位置（收敛于 utils/jingFangYao）
+  const currentYaoIndex = getYaoIndexInJingFangYear(timeRef.value)
 
   const ringWidth = props.radius - props.innerRadius
 
