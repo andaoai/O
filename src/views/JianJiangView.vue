@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, markRaw } from 'vue'
+import { ref, computed, markRaw } from 'vue'
 import { withBase } from 'vitepress'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
@@ -11,6 +11,7 @@ import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import BeidouCenter from '../components/centers/BeidouCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 /**
  * 建将盘（斗建 × 月将 × 时辰）
@@ -91,6 +92,30 @@ const { controlledTime, hasUrlTime } = useUrlTime()
 // 实时时钟：每秒推进 controlledTime
 const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime })
 
+/**
+ * 观测者位置：优先用浏览器 geolocation，回退到洛阳（乙巳观默认锚点）。
+ *
+ * · 首次挂载时自动向浏览器请求一次定位（会弹权限框）
+ * · 用户拒绝 / 无 GPS / 超时 ⇒ 继续用洛阳 34.65°N / 112.45°E
+ * · 授权成功后 latitude/longitude 会响应式更新，地平圈自动偏心到新位置，
+ *   斗柄相位（LST）也跟着换算——罗盘瞬间"锚到你脚下"
+ *
+ * ⚠️ 只影响：
+ *   1. BeidouCenter 的地平圈形状与四方位标注
+ *   2. 北斗七星与紫微垣的旋转相位（换个经度 = 换个时区的观星视角）
+ * 不影响月建/月将/节气/七曜——这些是天球本身的定义，与观测点无关。
+ */
+const { latitude, longitude, status: geoStatus } = useGeolocation({
+  lat: 34.65,      // 洛阳
+  lon: 112.45,
+  autoRequest: true
+})
+
+/** 观测点显示名：授权成功显示"当前位置"，否则显示"洛阳（默认）" */
+const locationLabel = computed(() =>
+  geoStatus.value === 'success' ? '当前位置' : '洛阳（默认）'
+)
+
 // 视图控制
 const zoomLevel = ref(1)
 const offsetX = ref(0)
@@ -160,12 +185,16 @@ const rings = [
           :rings="rings"
           :rotation-direction="rotationDirection"
         >
-          <!-- 圆心区：北斗七星（斗柄物理指向自然读出，不画辅助射线） -->
+          <!-- 圆心区：北斗七星（斗柄物理指向自然读出，不画辅助射线）
+               观测点跟随浏览器定位，未授权时回退到洛阳 -->
           <template #center="{ innerRadius }">
             <BeidouCenter
               :radius="innerRadius"
               :time="controlledTime"
               :rotation-direction="rotationDirection"
+              :observer-lat="latitude"
+              :observer-lon="longitude"
+              :location-label="locationLabel"
             />
           </template>
         </RingStack>
