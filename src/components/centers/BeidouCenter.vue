@@ -73,7 +73,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 200,
-  scale: 0.85,
+  scale: 0.98,
   rotationDirection: 'clockwise',
   showLabels: true,
   showPole: true,
@@ -108,8 +108,8 @@ const ziwei = computed(() => ({
  * 投影平面 → SVG 坐标缩放系数（工厂函数）
  *
  * 七星在投影平面上的极径 (90-δ)/90 约 0.31 ~ 0.45（赤纬 49°–62°）。
- * 让最远的一颗（摇光，δ≈49°）落在 actualRadius 的 60% 处，星图整体
- * 视觉舒适、且中心留出足够空间显示天极标记。
+ * 让最远的一颗（摇光，δ≈49°）落在 actualRadius 的 85% 处，
+ * 星图充分利用圆心区，同时留一小圈给最外那颗星的中文标签不被裁掉。
  *
  * ⚠️ 由于 BeidouCenter 通过 BaseCenter `#default="{ actualRadius }"` 拿到
  * 已缩放的半径（消除重复 clamp），此函数需接收 actualRadius 参数。
@@ -117,7 +117,7 @@ const ziwei = computed(() => ({
 const computeProjectionScale = (actualRadius: number): number => {
   const rs = stars.value.map((s) => Math.hypot(s.plane.x, s.plane.y))
   const maxR = Math.max(...rs)
-  return (actualRadius * 0.6) / maxR
+  return (actualRadius * 0.85) / maxR
 }
 
 /**
@@ -156,7 +156,7 @@ const computeStarPoints = (actualRadius: number) => {
   return stars.value.map((s) => ({
     ...s,
     ...toSvg(s.plane),
-    r: magnitudeToRadius(s.mag, 3.2)
+    r: magnitudeToRadius(s.mag, 4.6)
   }))
 }
 
@@ -176,7 +176,7 @@ const computeZiweiPoint = (
 ) => {
   const projectionScale = computeProjectionScale(actualRadius)
   const toSvg = makeToSvg(projectionScale)
-  return { ...z, ...toSvg(z.plane), r: magnitudeToRadius(z.mag, 2.4) }
+  return { ...z, ...toSvg(z.plane), r: magnitudeToRadius(z.mag, 3.4) }
 }
 
 const computeZiweiWall = (
@@ -455,11 +455,11 @@ const computeHorizonCardinals = (actualRadius: number) => {
               :x="s.x + s.r + 3"
               :y="s.y + 3"
               fill="#C8AEE6"
-              font-size="9"
+              font-size="12"
               text-anchor="start"
               paint-order="stroke"
               stroke="#000"
-              stroke-width="1.6"
+              stroke-width="1.8"
             >{{ s.cnName }}</text>
           </g>
 
@@ -472,11 +472,11 @@ const computeHorizonCardinals = (actualRadius: number) => {
               :x="s.x - s.r - 3"
               :y="s.y + 3"
               fill="#A6BADD"
-              font-size="9"
+              font-size="12"
               text-anchor="end"
               paint-order="stroke"
               stroke="#000"
-              stroke-width="1.6"
+              stroke-width="1.8"
             >{{ s.cnName }}</text>
           </g>
 
@@ -522,11 +522,11 @@ const computeHorizonCardinals = (actualRadius: number) => {
               :x="zw.polaris.x + zw.polaris.r + 6"
               :y="zw.polaris.y - zw.polaris.r - 2"
               fill="#F4D580"
-              font-size="10"
+              font-size="13"
               text-anchor="start"
               paint-order="stroke"
               stroke="#000"
-              stroke-width="2"
+              stroke-width="2.2"
             >勾陈一</text>
           </g>
         </template>
@@ -574,12 +574,12 @@ const computeHorizonCardinals = (actualRadius: number) => {
               :x="s.x"
               :y="s.y - s.r - 6"
               fill="#DDDDDD"
-              font-size="11"
+              font-size="14"
               text-anchor="middle"
               dominant-baseline="baseline"
               paint-order="stroke"
               stroke="#000"
-              stroke-width="2"
+              stroke-width="2.2"
             >{{ s.cnName }}</text>
           </g>
         </template>

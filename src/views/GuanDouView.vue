@@ -133,12 +133,14 @@ const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
-const OUTER_RADIUS = 480
+const OUTER_RADIUS = 570
 
 /**
  * 同心环配置（由外到内 —— 越靠圆心越接近北斗本体）
  *
- * 节气 26 → 七曜 32 → 月将 46 → 月建 50 → 时辰 40 → 日周 32 → 圆心北斗
+ * 节气 22 → 七曜 28 → 月将 40 → 月建 42 → 时辰 34 → 日周 28 → 圆心北斗
+ *   环厚合计 194，加 5×gap(4)=20 → 内径 356（占外径 62%），
+ *   北斗七星 + 紫微垣有充足空间伸展。
  *
  * 分层意图：
  *   · 最外三环（节气/七曜/月将）都是【黄道】视角 —— 看太阳系在哪
@@ -166,12 +168,12 @@ const OUTER_RADIUS = 480
 const rings = computed(() => [
   {
     component: markRaw(GuanDouSolarTermsRing),
-    thickness: 26,
+    thickness: 22,
     props: { time: controlledTime }
   },
   {
     component: markRaw(SevenLuminariesRing),
-    thickness: 32,
+    thickness: 28,
     props: {
       time: controlledTime,
       coordinateSystem: 'ecliptic-facing-north',
@@ -181,22 +183,22 @@ const rings = computed(() => [
   },
   {
     component: markRaw(MonthGeneralRing),
-    thickness: 46,
-    props: { time: controlledTime }
-  },
-  {
-    component: markRaw(MonthEstablishRing),
-    thickness: 50,
-    props: { time: controlledTime }
-  },
-  {
-    component: markRaw(HourShichenRing),
     thickness: 40,
     props: { time: controlledTime }
   },
   {
+    component: markRaw(MonthEstablishRing),
+    thickness: 42,
+    props: { time: controlledTime }
+  },
+  {
+    component: markRaw(HourShichenRing),
+    thickness: 34,
+    props: { time: controlledTime }
+  },
+  {
     component: markRaw(SunDiurnalRing),
-    thickness: 32,
+    thickness: 28,
     props: {
       time: controlledTime,
       observerLat: latitude.value,

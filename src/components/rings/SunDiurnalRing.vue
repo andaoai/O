@@ -194,7 +194,7 @@ const bodyRingData = computed<BodyRingData>(() => {
       symbolColor: '#fff',
       kind: 'sun',
       angle: sun.screenAngle,
-      size: 14,
+      size: 8,
       highlightLevel: levelByAltitude(sun.alt),
       haloLevel: levelByAltitude(sun.alt)
     }
@@ -209,7 +209,7 @@ const bodyRingData = computed<BodyRingData>(() => {
       symbolColor: '#fff',
       kind: 'moon',
       angle: moon.screenAngle,
-      size: 12,
+      size: 7,
       highlightLevel: levelByAltitude(moon.alt),
       haloLevel: levelByAltitude(moon.alt)
     })
