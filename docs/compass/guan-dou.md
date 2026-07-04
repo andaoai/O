@@ -1,8 +1,8 @@
 ---
 layout: compass
-title: 建将盘
+title: 观斗盘
 ---
 
 <ClientOnly>
-  <JianJiangView />
+  <GuanDouView />
 </ClientOnly>

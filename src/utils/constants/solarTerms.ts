@@ -3,7 +3,7 @@
  *
  * ═══════════════════════════════════════════════════════════════
  *  历史上 24 节气名字数组以不同起序散落多处：
- *    - 立春起序：JianJiangSolarTermsRing / SolarTermsSkyRing
+ *    - 立春起序：GuanDouSolarTermsRing / SolarTermsSkyRing
  *    - 冬至起序：utils/chineseCalendar.ts（tyme4ts 索引约定）
  *  这里统一收敛并同时导出两套顺序 + 元数据（节/中气 判定、二分二至集合）。
  *
@@ -22,7 +22,7 @@ import { normalizeAngle } from '../geometry'
 /**
  * 立春起序（黄经 315° 起、每 15° 一气）
  *
- * 用途：三个环组件（JianJiang / SolarTermsSky / 建将节气）直接消费。
+ * 用途：三个环组件（GuanDou / SolarTermsSky / 观斗节气）直接消费。
  * 索引 i ∈ [0, 23]：立春=0、雨水=1、惊蛰=2…大寒=23
  * 偶数 = 节；奇数 = 中气。
  */

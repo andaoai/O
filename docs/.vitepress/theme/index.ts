@@ -52,7 +52,7 @@ import SixtyFourGuaView from '@/views/SixtyFourGuaView.vue'
 import JingFangView from '@/views/JingFangView.vue'
 import PlanetMansionView from '@/views/PlanetMansionView.vue'
 import TropicalYearView from '@/views/TropicalYearView.vue'
-import JianJiangView from '@/views/JianJiangView.vue'
+import GuanDouView from '@/views/GuanDouView.vue'
 
 export default {
   extends: DefaultTheme,
@@ -102,7 +102,7 @@ export default {
     app.component('JingFangView', JingFangView)
     app.component('PlanetMansionView', PlanetMansionView)
     app.component('TropicalYearView', TropicalYearView)
-    app.component('JianJiangView', JianJiangView)
+    app.component('GuanDouView', GuanDouView)
   },
 } satisfies Theme
 

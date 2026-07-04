@@ -15,7 +15,7 @@ import type { BodyRingData, LuminaryKey } from '@/data/rings/types'
  *   - ecliptic: 黄道坐标（黄经直接作为屏幕角，SkyChart 内部专用）
  *   - ecliptic-facing-north: 黄道坐标 × 面朝北仰望约定
  *     公式 `(360 - lon) % 360`：春分点在右、夏至点在上、秋分点在左、冬至点在下
- *     ⚠️ 与建将盘的月将环 / 24 节气环同用此约定，太阳符号会精确落在
+ *     ⚠️ 与观斗盘的月将环 / 24 节气环同用此约定，太阳符号会精确落在
  *     当前节气刻度点上、月将格中央上，形成"三重锁定"。
  *
  * 可直接放入 RingStack，与 DataRing / DataPointRing 平级混用。

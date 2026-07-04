@@ -6,7 +6,7 @@ import RingStack from '../components/base/RingStack.vue'
 import MonthEstablishRing from '../components/rings/MonthEstablishRing.vue'
 import HourShichenRing from '../components/rings/HourShichenRing.vue'
 import MonthGeneralRing from '../components/rings/MonthGeneralRing.vue'
-import JianJiangSolarTermsRing from '../components/rings/JianJiangSolarTermsRing.vue'
+import GuanDouSolarTermsRing from '../components/rings/GuanDouSolarTermsRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import BeidouCenter from '../components/centers/BeidouCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
@@ -14,11 +14,12 @@ import { useLiveClock } from '@/composables/useLiveClock'
 import { useGeolocation } from '@/composables/useGeolocation'
 
 /**
- * 建将盘（斗建 × 月将 × 时辰）
+ * 观斗盘（GuanDou · Watching the Big Dipper）
  *
  * ═══════════════════════════════════════════════════════════════
- *  「建月」看北斗（赤道视角）、「月将」看太阳（黄道视角）
- *  两套坐标系一北一南共同标记月序；「时辰」看斗柄实时物理指向
+ *  模拟古人观察北斗——所有环都是"读北斗方位"的辅助刻度盘。
+ *  由外向内：先看太阳在哪里（黄道），再看北斗指到哪里（赤道），
+ *  最后落到圆心真实的北斗七星本体。
  *  ─────────────────────────────────────────────────────────────
  *
  *  🧭 盘面方位约定：面朝北仰望星空
@@ -31,52 +32,50 @@ import { useGeolocation } from '@/composables/useGeolocation'
  *     └──────────────────────────────┘
  *
  *  ─────────────────────────────────────────────────────────────
- *   外环 · 月建环   ┃ 【赤道】十二辰
- *                    北斗七星斗柄在赤道天球上的指向，一年转一圈。
- *                    高亮 = 当前月柱地支（tyme4ts 按节气分月）。
- *                    古人「初昏斗柄所指」= 月建 = 季节。
+ *  环序：外圈黄道（看太阳） → 内圈赤道（看北斗） → 圆心北斗本体
  *
- *   中环 · 时辰环   ┃ 【赤道】十二辰（与月建环同构对齐）
- *                    北斗七星斗柄的实时物理指向，一日转一圈。
- *                    高亮 = 当前时柱地支。
- *                    正是本环让"初昏观察"成立：戌时锁定观测点，
- *                    斗柄的"时辰指向"才被折算成"月建（季节）"。
+ *   最外 · 24 节气环   ┃ 【黄道】太阳黄经每 15° 一气
+ *                       高亮 = 当前太阳所在节气
+ *                       · 节（立春/惊蛰/清明…）冷蓝：月建切换点
+ *                       · 中气（雨水/春分/谷雨…）暖金：月将切换点
+ *                       把"月建用节、月将用中气"的 15° 相位差直接可视化。
  *
- *   内环 · 月将环   ┃ 【黄道】十二次
- *                    太阳在黄道十二星次中的位置，一年转一圈。
- *                    每格与其对应月建地支同轴（娵訾↔寅、降娄↔卯…）。
- *                    高亮 = 当前太阳所在星次（sunLongitude）。
+ *   ✨ 七曜环          ┃ 【黄道】日月五星按黄经排布
+ *                       · 太阳符号永远精确落在当日节气刻度点上，
+ *                         同时压在当前月将高亮格中央 → 三重锁定
+ *                       · 月亮沿黄道每天推进约 13°，一月绕盘一圈
+ *                       · 五星按黄经排布，逆行/迟守以运动状态环显示
  *
- *   最内 · 节气环   ┃ 【黄道】24 节气刻度
- *                    太阳黄经每 15° 一气，刻在盘上。
- *                    高亮 = 当前太阳所在节气。
- *                    · 节（立春/惊蛰/清明…）冷蓝：月建切换点
- *                    · 中气（雨水/春分/谷雨…）暖金：月将切换点
- *                    这一环把"月建用节、月将用中气"的固有 15° 错位
- *                    直接可视化——同一时刻可见斗柄和日缠的相位差。
+ *   中 · 月将环        ┃ 【黄道】十二次（太阳所在星次）
+ *                       太阳在黄道十二星次中的位置，一年转一圈。
+ *                       每格与其对应月建地支同轴（娵訾↔寅、降娄↔卯…）。
+ *                       高亮 = 当前太阳所在星次（sunLongitude）。
  *
- *   ✨ 七曜环       ┃ 【黄道】日月五星，压在月将环与节气环之间
- *                    面朝北仰望约定的黄经→屏幕角（春分点在右）。
- *                    · 太阳符号永远精确落在当日节气刻度点上，
- *                      同时压在当前月将高亮格中央 → 三重锁定。
- *                    · 月亮沿黄道每天推进约 13°，一月绕盘一圈，
- *                      从其相对太阳的角距可读朔望。
- *                    · 五星按黄经排布，逆行/迟守以运动状态环显示，
- *                      与月将（日缠）体系直接呼应。
+ *  ─────────────── 黄道 ↑ 转赤道 ↓ ───────────────
  *
- *   圆心 · 北斗七星 ┃ 【赤道】天极等距方位投影
- *                    J2000 星表 + 岁差 + 恒星时实时驱动，
- *                    斗柄一日绕天极旋转 360°，
- *                    斗柄物理指向自然落在时辰环 / 月建环高亮格。
+ *   中 · 时辰环        ┃ 【赤道】十二辰 · 北斗斗柄"一日转一圈"
+ *                       高亮 = 当前时柱地支。
+ *                       正是本环让"初昏观察"成立：戌时锁定观测点，
+ *                       斗柄的"时辰指向"才被折算成"月建（季节）"。
+ *
+ *   最内 · 月建环      ┃ 【赤道】十二辰 · 北斗斗柄"一年转一圈"
+ *                       高亮 = 当前月柱地支（tyme4ts 按节气分月）。
+ *                       古人「初昏斗柄所指」= 月建 = 季节。
+ *
+ *   圆心 · 北斗七星    ┃ 【赤道】天极等距方位投影
+ *                       · J2000 星表 + 岁差 + 恒星时实时驱动
+ *                       · 紫微垣东西两藩 + 勾陈一（北极星）
+ *                       · 地平圈（浏览器定位得到观测者纬度）
+ *                       · 内接/外接赤纬圈揭示投影本质
+ *                       斗柄物理指向自然落在时辰环 / 月建环高亮格。
  *
  *  ─────────────────────────────────────────────────────────────
- *   赤道 vs 黄道 —— 为什么外/中环是赤道、内环是黄道？
- *     · 斗建是"北斗斗柄指向"：北斗是拱极星（绕天极转），
- *       其运动由地球自转决定 → 赤道坐标系。
- *     · 月将是"太阳位置"：太阳在恒星背景下的年周运动是黄道，
- *       黄道与赤道交角 23.44° → 黄道坐标系。
+ *   为什么这样分层？
+ *     · 越靠圆心 = 越接近"观测对象本身"（北斗七星实体）
+ *     · 赤道环紧贴北斗（月建/时辰都是斗柄在赤道天球上的指向）
+ *     · 黄道环远离北斗（太阳的位置是另一套天球坐标）
  *     · 二者在同一月序上对偶（斗柄指寅 ⇄ 日在娵訾），
- *       但它们分属"赤道视角"与"黄道视角"两套天球坐标。
+ *       但分属"赤道视角"与"黄道视角"两套天球坐标。
  *
  *  ─────────────────────────────────────────────────────────────
  *   ✨ 纯实时驱动：controlledTime 每秒推进
@@ -126,8 +125,15 @@ const rotationAngle = ref(0)
 const OUTER_RADIUS = 480
 
 /**
- * 同心环配置（由外到内）
- * 月建 50 → 时辰 40 → 月将 50 → 七曜 32 → 节气 26；圆心区约 260px 容纳七星
+ * 同心环配置（由外到内 —— 越靠圆心越接近北斗本体）
+ *
+ * 节气 26 → 七曜 32 → 月将 50 → 时辰 40 → 月建 50；圆心区约 260px 容纳七星
+ *
+ * 分层意图：
+ *   · 最外三环（节气/七曜/月将）都是【黄道】视角 —— 看太阳系在哪
+ *   · 内两环（时辰/月建）是【赤道】视角 —— 看北斗指向哪
+ *   · 圆心是【北斗本体】—— 观测对象
+ * 视线由外向内 = 由天到地 = 由太阳到北斗，正是古人读盘的路径。
  *
  * ⚠️ 七曜与月将/节气三环协同：
  *   月将环高亮格中心 ↔ 七曜环太阳符号 ↔ 节气环当前节气刻度点
@@ -137,18 +143,8 @@ const OUTER_RADIUS = 480
  */
 const rings = [
   {
-    component: markRaw(MonthEstablishRing),
-    thickness: 50,
-    props: { time: controlledTime }
-  },
-  {
-    component: markRaw(HourShichenRing),
-    thickness: 40,
-    props: { time: controlledTime }
-  },
-  {
-    component: markRaw(MonthGeneralRing),
-    thickness: 50,
+    component: markRaw(GuanDouSolarTermsRing),
+    thickness: 26,
     props: { time: controlledTime }
   },
   {
@@ -162,8 +158,18 @@ const rings = [
     }
   },
   {
-    component: markRaw(JianJiangSolarTermsRing),
-    thickness: 26,
+    component: markRaw(MonthGeneralRing),
+    thickness: 50,
+    props: { time: controlledTime }
+  },
+  {
+    component: markRaw(HourShichenRing),
+    thickness: 40,
+    props: { time: controlledTime }
+  },
+  {
+    component: markRaw(MonthEstablishRing),
+    thickness: 50,
     props: { time: controlledTime }
   }
 ]
