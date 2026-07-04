@@ -25,6 +25,7 @@ import {
   Equator,
   Observer,
   DefineStar,
+  SiderealTime,
   Body,
   type NodeEventInfo
 } from 'astronomy-engine'
@@ -595,4 +596,208 @@ export const formatAspect = (e: AspectEvent): string => {
     return `${base}（${e.kind === 'conjunction' ? '朔' : '望'}）`
   }
   return base
+}
+
+/* ────────────────────────────────────────────────────────────
+ * 日周运动（地球自转视角 · 观测者本地时角）
+ *
+ * ⚠️ 与"黄道 / 赤道位置"完全正交的另一维度：
+ *   · 黄道/赤道 = 天体在恒星背景中的位置（年尺度慢变）
+ *   · 日周 = 天体相对观测者头顶的方向（日尺度快变，一天转 360°）
+ *
+ * 核心公式：
+ *   LST (本地恒星时) = GST (格林尼治恒星时) + 观测者经度
+ *   LHA (地方时角)  = LST - RA (天体赤经)
+ *     · LHA = 0    → 天体在正南（上中天）
+ *     · LHA = 90°  → 天体在西方地平
+ *     · LHA = 180° → 天体在正北（下中天，若北半球高纬则不落）
+ *     · LHA = 270° → 天体在东方地平（即将升起）
+ *
+ * 「面朝北仰望」坐标下的屏幕角度约定：
+ *   午（南、上）    → SVG 270°
+ *   酉（西、左）    → SVG 180°
+ *   子（北、下）    → SVG 90°
+ *   卯（东、右）    → SVG 0°
+ *
+ * 太阳时角 → 屏幕角度：
+ *   sunScreen = (270 - LHA + 360) % 360
+ *   · 正午 LHA=0    → SVG 270°（正上、南）
+ *   · 酉时 LHA=90°  → SVG 180°（正左、西）✓ 日落
+ *   · 子夜 LHA=180° → SVG 90°（正下、北）
+ *   · 卯时 LHA=-90° → SVG 0°  （正右、东）✓ 日出
+ * ──────────────────────────────────────────────────────────── */
+
+/**
+ * 计算天体的地方时角 LHA（Local Hour Angle，度）
+ *
+ * @param time 观测时刻
+ * @param raDeg 天体赤经（度，当前历元 ofdate）
+ * @param observerLon 观测者经度（度，东经为正、西经为负）
+ * @returns LHA ∈ [-180, 180]：0=上中天南，正=向西已过中天，负=向东尚未中天
+ */
+export const localHourAngle = (time: Date, raDeg: number, observerLon: number): number => {
+  // SiderealTime 返回格林尼治视恒星时（GAST，单位小时），× 15 转成度
+  const gastDeg = SiderealTime(new AstroTime(time)) * 15
+  const lstDeg = normalizeDegree(gastDeg + observerLon)
+  // 归一化到 (-180, 180]，让南天正上 LHA=0，向西为正、向东为负更直观
+  return ((lstDeg - raDeg) % 360 + 540) % 360 - 180
+}
+
+/**
+ * 计算天体的地平高度角 alt（度）
+ *
+ * alt > 0 = 地平线以上（可见），alt < 0 = 地平线以下（在地下、被大地遮挡）。
+ * 用于判定日出日落、可见性。
+ *
+ * @param decDeg 天体赤纬（度）
+ * @param lhaDeg 天体地方时角（度，见 localHourAngle）
+ * @param observerLat 观测者纬度（度，北纬为正）
+ */
+export const altitude = (decDeg: number, lhaDeg: number, observerLat: number): number => {
+  const φ = observerLat * Math.PI / 180
+  const δ = decDeg * Math.PI / 180
+  const H = lhaDeg * Math.PI / 180
+  const sinAlt = Math.sin(φ) * Math.sin(δ) + Math.cos(φ) * Math.cos(δ) * Math.cos(H)
+  return Math.asin(Math.min(1, Math.max(-1, sinAlt))) * 180 / Math.PI
+}
+
+/**
+ * 太阳的日周方位（LHA + alt + 屏幕角度）
+ *
+ * 一站式输出"太阳当下相对观测者头顶的位置"，供 SunDiurnalRing 直接消费。
+ * 地球自转视角，一天转 360°；不同于 sunLongitude 的"太阳在黄道恒星背景中的位置（一年）"。
+ *
+ * @param time 观测时刻
+ * @param observerLon 观测者经度
+ * @param observerLat 观测者纬度
+ */
+export interface SunDiurnalPosition {
+  /** 太阳赤经（度，当前历元） */
+  ra: number
+  /** 太阳赤纬（度） */
+  dec: number
+  /** 太阳地方时角（度）；0=正南上中天，90=西地平，-90=东地平 */
+  lha: number
+  /** 太阳地平高度角（度）；正=白昼，负=夜晚 */
+  alt: number
+  /** 面朝北仰望坐标下的屏幕角度（0=右/东，90=下/北，180=左/西，270=上/南） */
+  screenAngle: number
+}
+
+export const sunDiurnal = (
+  time: Date,
+  observerLon: number,
+  observerLat: number
+): SunDiurnalPosition => {
+  const { ra, dec } = sunEquatorial(time)
+  const lha = localHourAngle(time, ra, observerLon)
+  const alt = altitude(dec, lha, observerLat)
+  // 面朝北仰望：LHA=0 (南)→上=SVG 270°；LHA=90 (西)→左=SVG 180°
+  const screenAngle = ((270 - lha) % 360 + 360) % 360
+  return { ra, dec, lha, alt, screenAngle }
+}
+
+/**
+ * 月亮的日周方位（同 sunDiurnal，但取月亮赤经赤纬）
+ *
+ * 月亮日周方位与太阳的相对差 ≈ 农历相位：
+ *   · 朔 → 月亮 LHA ≈ 太阳 LHA（同起同落）
+ *   · 望 → 月亮 LHA ≈ 太阳 LHA + 180°（日落时月出）
+ *   · 上弦 → 月亮比太阳晚 6 小时（正午月出，午夜月落）
+ * 供 SunDiurnalRing 同时渲染日/月，一眼看出日月相位。
+ */
+export const moonDiurnal = (
+  time: Date,
+  observerLon: number,
+  observerLat: number
+): SunDiurnalPosition => {
+  const { ra, dec } = moonEquatorial(time)
+  const lha = localHourAngle(time, ra, observerLon)
+  const alt = altitude(dec, lha, observerLat)
+  const screenAngle = ((270 - lha) % 360 + 360) % 360
+  return { ra, dec, lha, alt, screenAngle }
+}
+
+/* ────────────────────────────────────────────────────────────
+ * 昼夜弧长（季节性可视化）
+ *
+ * 由太阳赤纬 δ 与观测者纬度 φ 联合决定当日昼夜比例：
+ *   · 春/秋分 δ=0    → 昼夜各半（12h/12h）
+ *   · 夏至    δ=+23° → 北半球白昼长（洛阳约 14.3h）
+ *   · 冬至    δ=-23° → 北半球白昼短（洛阳约 9.7h）
+ *
+ * 核心公式（球面三角）：
+ *   日出/日落时角:   cos H₀ = -tan φ × tan δ
+ *   民用曙暮光时角:  cos H₆ = (sin(-6°) - sin φ sin δ) / (cos φ cos δ)
+ *
+ * H₀ 定义了「太阳高度 = 0」的时角边界：
+ *   LHA ∈ [-H₀, +H₀]  → 白昼（太阳在地平线以上）
+ *   LHA ∈ [-H₆, -H₀]  → 民用晨光（曙）
+ *   LHA ∈ [+H₀, +H₆]  → 民用昏光（暮·初昏 ★）
+ *   其余               → 夜
+ *
+ * 极端情况：
+ *   |tan φ × tan δ| > 1 时:
+ *     RHS <-1 → 极昼（H₀ = 180°，整日不落）
+ *     RHS >+1 → 极夜（H₀ = 0°，整日不升）
+ * ──────────────────────────────────────────────────────────── */
+
+/** 当日昼夜弧长信息 */
+export interface DayNightArc {
+  /** 太阳赤纬（度，± 23.44 范围内摆动） */
+  dec: number
+  /** 日出/日落地方时角（度，正值）；`LHA ∈ [-H₀,+H₀]` 为白昼 */
+  sunriseHourAngle: number
+  /** 民用晨/昏地方时角（度，正值 ≥ H₀）；`LHA ∈ [-H₆,+H₆]` 为白昼+曙暮 */
+  civilTwilightHourAngle: number
+  /** 白昼时长（小时，= 2 × H₀ / 15） */
+  dayLengthHours: number
+  /** 极昼：整日太阳不落（高纬夏日） */
+  polarDay: boolean
+  /** 极夜：整日太阳不升（高纬冬日） */
+  polarNight: boolean
+}
+
+/**
+ * 计算当日昼夜弧长
+ *
+ * ⚠️ 只需要观测者纬度 φ；不需要经度（经度只决定"哪一刻是正午"，
+ *    不影响"白昼总长"）。故仅接收 observerLat 一个参数。
+ *
+ * @param time 观测时刻（取当日太阳赤纬）
+ * @param observerLat 观测者纬度（度，北纬为正）
+ */
+export const dayNightArc = (time: Date, observerLat: number): DayNightArc => {
+  const { dec } = sunEquatorial(time)
+  const φ = observerLat * Math.PI / 180
+  const δ = dec * Math.PI / 180
+
+  // 日出/日落时角
+  const cosH0 = -Math.tan(φ) * Math.tan(δ)
+  let polarDay = false
+  let polarNight = false
+  let h0Deg: number
+  if (cosH0 <= -1) { polarDay = true; h0Deg = 180 }
+  else if (cosH0 >= 1) { polarNight = true; h0Deg = 0 }
+  else { h0Deg = Math.acos(cosH0) * 180 / Math.PI }
+
+  // 民用曙暮光时角（alt = -6°）
+  const civilAltSin = Math.sin(-6 * Math.PI / 180)
+  const cosH6 = (civilAltSin - Math.sin(φ) * Math.sin(δ)) / (Math.cos(φ) * Math.cos(δ))
+  let h6Deg: number
+  if (cosH6 <= -1) h6Deg = 180
+  else if (cosH6 >= 1) h6Deg = 0
+  else h6Deg = Math.acos(cosH6) * 180 / Math.PI
+
+  // 曙暮时角必须 ≥ 日出时角（极端边界处理）
+  const h6Final = Math.max(h6Deg, h0Deg)
+
+  return {
+    dec,
+    sunriseHourAngle: h0Deg,
+    civilTwilightHourAngle: h6Final,
+    dayLengthHours: (2 * h0Deg) / 15,
+    polarDay,
+    polarNight
+  }
 }

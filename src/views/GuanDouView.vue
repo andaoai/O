@@ -5,6 +5,7 @@ import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import MonthEstablishRing from '../components/rings/MonthEstablishRing.vue'
 import HourShichenRing from '../components/rings/HourShichenRing.vue'
+import SunDiurnalRing from '../components/rings/SunDiurnalRing.vue'
 import MonthGeneralRing from '../components/rings/MonthGeneralRing.vue'
 import GuanDouSolarTermsRing from '../components/rings/GuanDouSolarTermsRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
@@ -53,14 +54,24 @@ import { useGeolocation } from '@/composables/useGeolocation'
  *
  *  ─────────────── 黄道 ↑ 转赤道 ↓ ───────────────
  *
+ *   中 · 月建环        ┃ 【赤道】十二辰 · 北斗斗柄"一年转一圈"
+ *                       高亮 = 当前月柱地支（tyme4ts 按节气分月）。
+ *                       古人「初昏斗柄所指」= 月建 = 季节。
+ *
  *   中 · 时辰环        ┃ 【赤道】十二辰 · 北斗斗柄"一日转一圈"
  *                       高亮 = 当前时柱地支。
  *                       正是本环让"初昏观察"成立：戌时锁定观测点，
  *                       斗柄的"时辰指向"才被折算成"月建（季节）"。
  *
- *   最内 · 月建环      ┃ 【赤道】十二辰 · 北斗斗柄"一年转一圈"
- *                       高亮 = 当前月柱地支（tyme4ts 按节气分月）。
- *                       古人「初昏斗柄所指」= 月建 = 季节。
+ *   最内 · 日周环      ┃ 【赤道·日周】太阳相对头顶的方位（一天一圈）
+ *                       · 与七曜环正交：七曜=一年一圈（恒星背景），
+ *                         日周环=一天一圈（观测者本地时角）
+ *                       · 卯时☉在正右（东升）、午时☉在正上（南中天）、
+ *                         酉时☉在正左（西没）—— 初昏就是☉压左时的一瞬
+ *                       · 高度角 alt 决定符号饱和度：
+ *                         alt>0 昼、-6°<alt<0 曙暮（初昏窗口）、alt<-6° 夜
+ *                       · 紧贴北斗——☉ 与斗柄的相对角度即为"太阳-北斗夹角"，
+ *                         古人"初昏"时刻这个夹角固定，才让斗柄读月建成立
  *
  *   圆心 · 北斗七星    ┃ 【赤道】天极等距方位投影
  *                       · J2000 星表 + 岁差 + 恒星时实时驱动
@@ -127,21 +138,32 @@ const OUTER_RADIUS = 480
 /**
  * 同心环配置（由外到内 —— 越靠圆心越接近北斗本体）
  *
- * 节气 26 → 七曜 32 → 月将 50 → 时辰 40 → 月建 50；圆心区约 260px 容纳七星
+ * 节气 26 → 七曜 32 → 月将 46 → 月建 50 → 时辰 40 → 日周 32 → 圆心北斗
  *
  * 分层意图：
  *   · 最外三环（节气/七曜/月将）都是【黄道】视角 —— 看太阳系在哪
- *   · 内两环（时辰/月建）是【赤道】视角 —— 看北斗指向哪
+ *   · 内三环（月建/时辰/日周）是【赤道·观测者本地】视角 —— 由粗到细的时间维度：
+ *       月建（年 · 斗柄年转） → 时辰（日 · 12 等分一日） → 日周（时 · 太阳当下方位）
  *   · 圆心是【北斗本体】—— 观测对象
- * 视线由外向内 = 由天到地 = 由太阳到北斗，正是古人读盘的路径。
+ * 视线由外向内 = 由天到地 = 由年到时 = 由太阳到北斗，正是古人读盘的路径。
+ *
+ * 🎯 日周环紧贴北斗（最内圈）：☉ 与斗柄形成"太阳-北斗夹角"，
+ *    这个夹角就是古人观星的读法本身——初昏时刻 (☉压酉/戌) 定住这个夹角，
+ *    然后斗柄读到的地支才等于"月建"。
  *
  * ⚠️ 七曜与月将/节气三环协同：
  *   月将环高亮格中心 ↔ 七曜环太阳符号 ↔ 节气环当前节气刻度点
  *   三者必须精确对齐（黄道 × 面朝北仰望 × (360-lon) 转换）。
  *   SevenLuminariesRing 必须传 coordinate-system="ecliptic-facing-north"
  *   否则太阳会与月将/节气错位（默认 equatorial 使用赤经，与黄道体系不同）。
+ *
+ * ⚠️ 用 computed 包裹，让 latitude/longitude 显式 .value：
+ *   这是普通 JS 对象里的 ref 传给子组件的场景（v-bind="obj"），
+ *   Vue 3 不会自动解包（只 template 里直接引用 ref 才解包）。
+ *   若用静态数组直传 ref，子组件收到 RefImpl 对象，数值计算 NaN，
+ *   太阳符号会被画在圆心 (NaN → 0)。
  */
-const rings = [
+const rings = computed(() => [
   {
     component: markRaw(GuanDouSolarTermsRing),
     thickness: 26,
@@ -159,6 +181,11 @@ const rings = [
   },
   {
     component: markRaw(MonthGeneralRing),
+    thickness: 46,
+    props: { time: controlledTime }
+  },
+  {
+    component: markRaw(MonthEstablishRing),
     thickness: 50,
     props: { time: controlledTime }
   },
@@ -168,11 +195,16 @@ const rings = [
     props: { time: controlledTime }
   },
   {
-    component: markRaw(MonthEstablishRing),
-    thickness: 50,
-    props: { time: controlledTime }
+    component: markRaw(SunDiurnalRing),
+    thickness: 32,
+    props: {
+      time: controlledTime,
+      observerLat: latitude.value,
+      observerLon: longitude.value,
+      showMoon: false
+    }
   }
-]
+])
 </script>
 
 <template>
