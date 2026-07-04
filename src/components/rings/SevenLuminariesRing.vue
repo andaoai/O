@@ -10,13 +10,17 @@ import type { BodyRingData, LuminaryKey } from '@/data/rings/types'
  * ⚠️ 使用统一架构：内部调用 useSevenLuminaries composable
  * 自动计算日月五星的位置、逆行、黄纬偏移、入宿等状态
  *
- * 两种坐标体系：
- *   - equatorial: 赤道坐标（赤经，与二十八宿对齐，与 RingStack 对齐）
- *   - ecliptic: 黄道坐标（黄经）
+ * 三种坐标体系：
+ *   - equatorial: 赤道坐标（赤经 → 面朝北仰望屏幕角，与二十八宿对齐）
+ *   - ecliptic: 黄道坐标（黄经直接作为屏幕角，SkyChart 内部专用）
+ *   - ecliptic-facing-north: 黄道坐标 × 面朝北仰望约定
+ *     公式 `(360 - lon) % 360`：春分点在右、夏至点在上、秋分点在左、冬至点在下
+ *     ⚠️ 与建将盘的月将环 / 24 节气环同用此约定，太阳符号会精确落在
+ *     当前节气刻度点上、月将格中央上，形成"三重锁定"。
  *
  * 可直接放入 RingStack，与 DataRing / DataPointRing 平级混用。
  */
-type CoordinateSystem = 'ecliptic' | 'equatorial'
+type CoordinateSystem = 'ecliptic' | 'ecliptic-facing-north' | 'equatorial'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -63,9 +67,13 @@ const bodyRingData = computed<BodyRingData>(() => {
       .filter(x => filterKeys.includes(x.key))
       .map((luminary) => {
         // 根据坐标体系选择角度
-        const angle = props.coordinateSystem === 'equatorial'
-          ? raToScreenAngle(luminary.equatorial.ra)
-          : luminary.ecliptic.longitude
+        const lon = luminary.ecliptic.longitude
+        const angle =
+          props.coordinateSystem === 'equatorial'
+            ? raToScreenAngle(luminary.equatorial.ra)
+            : props.coordinateSystem === 'ecliptic-facing-north'
+              ? ((360 - lon) % 360 + 360) % 360
+              : lon
 
         // 高亮等级按运动状态分级，提供更细腻的视觉反馈
         // 逆行/留守 = 3，疾行/迟行 = 2，正常顺行 = 1
