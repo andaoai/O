@@ -59,21 +59,25 @@ npm run preview     # 预览生产产物
 │  │     └─ components/
 │  │        └─ CompassFigure.vue  # md 内嵌罗盘插图外壳
 │  ├─ index.md                    # 站点首页
-│  ├─ books/                      # 古籍笔记（示例：乙巳占·卷一·天说）
-│  ├─ concepts/                   # 通用概念索引
+│  ├─ books/                      # 古籍笔记
+│  │  ├─ yisizhan/                # 乙巳占（唐·李淳风）
+│  │  └─ 京氏易傳/                # 京氏易传（汉·京房）— 每卦一页，配 SingleGuaChart
+│  ├─ concepts/                   # 通用概念索引（岁差、纳甲、卦气、世应、七曜……）
+│  ├─ dev/                        # 站内开发文档（组件 API / astronomy-engine 集成）
 │  └─ compass/                    # 六个罗盘页 + 一览页（layout: compass）
 │
 └─ src/                           # 组件库（被 VitePress 通过 @ alias 消费）
    ├─ compasses/index.ts          # 罗盘注册表（元数据，驱动一览页）
    ├─ views/                      # Layer 2 组合层：6 个罗盘 View + HomeView
    ├─ components/
-   │  ├─ base/                    # Layer 4 基础渲染层（PolarCanvas/CircleRing/PointRing/RingStack）
-   │  ├─ rings/                   # 领域圆环组件（26 个）
+   │  ├─ base/                    # Layer 4 基础渲染层（PolarCanvas/CircleRing/PointRing/RingStack/BaseCenter）
+   │  ├─ rings/                   # 领域圆环组件（22 个）+ 3 个 Data* 数据包装器
    │  ├─ centers/                 # 领域圆心组件（4 个）
+   │  ├─ gua/                     # 单卦静态图（SingleGuaChart，供古籍笔记内嵌）
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
-   ├─ composables/                # useRingBase / useUrlTime / useTimePlayback / …
-   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / …）
+   ├─ composables/                # useRingBase / useUrlTime / useTimePlayback / useLiveClock / …
+   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / liuqin / …）
 ```
 
 ## 📚 深入了解
