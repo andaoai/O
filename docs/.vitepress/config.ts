@@ -141,6 +141,7 @@ export default defineConfig({
             { text: '京房卦气 · 六日七分', link: '/concepts/jingfang-guaqi' },
             { text: '纳甲', link: '/concepts/najia' },
             { text: '世应爻位', link: '/concepts/shi-ying' },
+            { text: '飞伏 · 显隐互藏', link: '/concepts/feifu' },
           ],
         },
       ],

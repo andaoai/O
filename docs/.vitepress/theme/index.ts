@@ -53,6 +53,10 @@ import JingFangView from '@/views/JingFangView.vue'
 import PlanetMansionView from '@/views/PlanetMansionView.vue'
 import TropicalYearView from '@/views/TropicalYearView.vue'
 import GuanDouView from '@/views/GuanDouView.vue'
+import FeifuView from '@/views/FeifuView.vue'
+
+// 飞伏箭头叠加层（供概念页内嵌）
+import FeifuArrowOverlay from '@/components/feifu/FeifuArrowOverlay.vue'
 
 export default {
   extends: DefaultTheme,
@@ -103,6 +107,8 @@ export default {
     app.component('PlanetMansionView', PlanetMansionView)
     app.component('TropicalYearView', TropicalYearView)
     app.component('GuanDouView', GuanDouView)
+    app.component('FeifuView', FeifuView)
+    app.component('FeifuArrowOverlay', FeifuArrowOverlay)
   },
 } satisfies Theme
 
