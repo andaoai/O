@@ -269,8 +269,10 @@ svg {
 }
 
 .compass-svg {
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
+  /* SVG 元素填满容器，viewBox + preserveAspectRatio 自动等比居中，
+     放大 / 平移时不再被短边正方形裁出黑边 */
+  width: 100%;
+  height: 100%;
 }
 
 .back-link {

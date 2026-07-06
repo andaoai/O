@@ -225,9 +225,10 @@ const outerRings = [
 
 .sky-svg {
   display: block;
-  /* 按视口最短边自适应，正方形保持星图不变形；viewBox 不变，内部坐标无需调整 */
-  width: min(100vw, 100vh);
-  height: min(100vw, 100vh);
+  /* SVG 元素填满容器，viewBox + preserveAspectRatio 自动等比居中；
+     放大 / 平移时不再被短边正方形裁出黑边 */
+  width: 100%;
+  height: 100%;
 }
 
 .back-link {
