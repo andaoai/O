@@ -1,25 +1,15 @@
 <script setup lang="ts">
 /**
- * 控制面板统一按钮基元
- *
- * 替代旧 Control.vue 里 8 种散落按钮样式：
- *   .step-btn / .zoom-btn / .offset-btn / .rotation-btn / .rotation-angle-btn
- *   .header-btn / .control-btn / .preset-btn
- * 通过 size × variant 组合表达所有需求，样式集中在这里。
+ * 侧栏统一按钮基元（取代 control/ControlButton）
+ * 保持功能等价，样式适配竖栏窄宽度。
  */
 
 interface Props {
-  /** 尺寸预设 */
   size?: 'xs' | 'sm' | 'md'
-  /** 视觉变体：default 灰底、accent 金字（月/年）、negative 红字（后退）、danger 红边、highlight 金底 */
   variant?: 'default' | 'accent' | 'negative' | 'highlight'
-  /** active 态（黄底黑字） */
   active?: boolean
-  /** 快捷键提示（右下角） */
   keyHint?: string
-  /** button HTML title */
   title?: string
-  /** button 类型 */
   type?: 'button' | 'submit'
 }
 
@@ -37,23 +27,23 @@ defineEmits<{ click: [event: MouseEvent] }>()
   <button
     :type="type"
     :title="title"
-    class="cbtn"
-    :class="[`cbtn--${size}`, `cbtn--${variant}`, { 'cbtn--active': active }]"
+    class="sbtn"
+    :class="[`sbtn--${size}`, `sbtn--${variant}`, { 'sbtn--active': active }]"
     @click="$emit('click', $event)"
   >
-    <span class="cbtn__label"><slot /></span>
-    <span v-if="keyHint" class="cbtn__hint">{{ keyHint }}</span>
+    <span class="sbtn__label"><slot /></span>
+    <span v-if="keyHint" class="sbtn__hint">{{ keyHint }}</span>
   </button>
 </template>
 
 <style scoped>
-.cbtn {
+.sbtn {
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 4px;
-  color: #fff;
+  color: #ddd;
   cursor: pointer;
-  transition: background 0.2s, border-color 0.2s, color 0.2s;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -61,70 +51,71 @@ defineEmits<{ click: [event: MouseEvent] }>()
   gap: 1px;
   font-family: inherit;
   line-height: 1.2;
+  min-width: 0; /* 允许 grid 内部收缩 */
 }
 
-.cbtn:hover {
+.sbtn:hover {
   background: #2a2a2a;
-  border-color: #444;
+  border-color: #555;
+  color: #fff;
 }
 
-/* ─── 尺寸 ─── */
-.cbtn--xs {
+/* 尺寸 */
+.sbtn--xs {
   padding: 3px 2px;
-  font-size: 8px;
+  font-size: 9px;
 }
-.cbtn--sm {
-  padding: 4px 6px;
+.sbtn--sm {
+  padding: 5px 4px;
   font-size: 10px;
 }
-.cbtn--md {
-  padding: 6px 10px;
+.sbtn--md {
+  padding: 7px 10px;
   font-size: 11px;
 }
 
-/* ─── 变体 ─── */
-.cbtn--accent {
-  background: #2a2a2a;
-  border-color: #444;
+/* 变体 */
+.sbtn--accent {
   color: #ffcc00;
 }
-.cbtn--negative {
+.sbtn--negative {
   color: #ff6666;
 }
-.cbtn--highlight {
+.sbtn--highlight {
   background: #1f1f1f;
   border-color: #3a3a3a;
   color: #ffcc00;
 }
 
-.cbtn--active {
+.sbtn--active {
   background: #ffcc00;
   color: #000;
   border-color: #ffcc00;
 }
-.cbtn--active:hover {
+.sbtn--active:hover {
   background: #ffcc00;
   border-color: #ffcc00;
+  color: #000;
 }
 
-/* ─── 快捷键提示 ─── */
-.cbtn__hint {
+.sbtn__hint {
   font-size: 7px;
   color: #ffcc00;
   font-weight: bold;
   background: rgba(0, 0, 0, 0.35);
-  padding: 1px 2px;
+  padding: 1px 3px;
   border-radius: 2px;
   margin-top: 1px;
 }
-.cbtn--active .cbtn__hint {
+.sbtn--active .sbtn__hint {
   color: #000;
   background: rgba(255, 255, 255, 0.25);
 }
 
-.cbtn__label {
+.sbtn__label {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  white-space: nowrap;
 }
 </style>

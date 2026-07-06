@@ -1,19 +1,18 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import { withBase } from 'vitepress'
 import SkyChart from '../components/rings/SkyChart.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
 import SiXiangRing from '../components/rings/SiXiangRing.vue'
 import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
-import Control from '../components/control/Control.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 
 /**
  * 七曜入宿天象盘（五层架构 · 纯时间驱动）
@@ -61,6 +60,8 @@ const { zoom, offsetX, offsetY, rotationAngle } = viewport
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
+
+provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
 
 /**
  * 🔹 唯一配置常量：全圆盘外缘半径
@@ -159,9 +160,6 @@ const outerRings = [
 
 <template>
   <div class="container">
-    <!-- 返回首页 -->
-    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
-
     <svg
       ref="svgRef"
       viewBox="0 0 1200 1200"
@@ -208,20 +206,13 @@ const outerRings = [
         </RingStack>
       </g>
     </svg>
-
-    <!-- 控制面板 -->
-    <Control
-      v-model:time="controlledTime"
-      :viewport="viewport"
-      @user-time-change="onUserTimeChange"
-    />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -243,24 +234,5 @@ const outerRings = [
 }
 .sky-svg.alt-dragging {
   cursor: grabbing;
-}
-
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
 }
 </style>

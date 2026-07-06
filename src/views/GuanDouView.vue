@@ -1,7 +1,5 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
-import { withBase } from 'vitepress'
-import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import MonthEstablishRing from '../components/rings/MonthEstablishRing.vue'
 import HourShichenRing from '../components/rings/HourShichenRing.vue'
@@ -15,6 +13,7 @@ import { useLiveClock } from '@/composables/useLiveClock'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 
 /**
  * 观斗盘（GuanDou · Watching the Big Dipper）
@@ -137,6 +136,8 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
+provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
+
 const OUTER_RADIUS = 570
 
 /**
@@ -215,8 +216,6 @@ const rings = computed(() => [
 
 <template>
   <div class="container">
-    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
-
     <svg
       ref="svgRef"
       class="compass-svg"
@@ -246,19 +245,13 @@ const rings = computed(() => [
         </RingStack>
       </g>
     </svg>
-
-    <Control
-      v-model:time="controlledTime"
-      :viewport="viewport"
-      @user-time-change="onUserTimeChange"
-    />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -283,24 +276,5 @@ svg {
 }
 .compass-svg.alt-dragging {
   cursor: grabbing;
-}
-
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
 }
 </style>

@@ -8,27 +8,18 @@ import {
 } from '@/utils/eraCalendar'
 import { useTimeController } from '@/composables/useTimeController'
 import { useTimeShortcuts } from '@/composables/useTimeShortcuts'
-import PanelSection from './PanelSection.vue'
-import ControlButton from './ControlButton.vue'
+import SidebarSection from './SidebarSection.vue'
+import SidebarButton from './SidebarButton.vue'
 
 /**
- * 时间控制面板：信息 / 播放 / 步进 / 输入选择
+ * 时间控制面板（Sidebar 版）
  *
- * ════════════════════════════════════════════════════════════════
- *  受控组件：time 由父组件（Control → View）拥有，通过 v-model 双向绑定。
- *  内部不再有 currentTime 副本 —— 修复旧 Control.vue "v-model 断链" bug。
- *
- *  子模块（4 个折叠区）：
- *    · time       时间信息（公历 / 朝代 / 干支 / 农历节气）
- *    · playback   播放控制（播放/暂停/回到当下 + 速度）
- *    · step       时间步进（±秒/分/时/日/月/年）
- *    · input      日期时间输入
- * ════════════════════════════════════════════════════════════════
+ * 受控组件：time 由父组件（Sidebar → View）拥有，v-model 双向绑定。
+ * 4 个折叠 section：信息 / 播放 / 步进 / 输入。
  */
 
 interface Props {
   time: Date
-  /** 折叠状态由外部（useControlPanel）统一管理 */
   collapsed: Record<'time' | 'playback' | 'step' | 'input', boolean>
 }
 
@@ -39,8 +30,6 @@ const emit = defineEmits<{
   'toggle-section': [key: 'time' | 'playback' | 'step' | 'input']
 }>()
 
-// ─── 受控时间 ref：内部包装以便直接被 useTimeController 修改 ───────
-// 用 computed { get/set } 桥接 props.time ↔ emit('update:time')
 const timeRef = computed<Date>({
   get: () => props.time,
   set: (v) => emit('update:time', v)
@@ -60,22 +49,13 @@ const {
   applyTime
 } = useTimeController(timeRef, { onUserChange: notifyUserChange })
 
-// ─── 时间快捷键 ────────────────────────────────────────────────
-useTimeShortcuts({
-  togglePlayPause,
-  resetToNow,
-  stepYear,
-  stepMonth,
-  stepTime
-})
+useTimeShortcuts({ togglePlayPause, resetToNow, stepYear, stepMonth, stepTime })
 
-// ─── 时间信息派生 ──────────────────────────────────────────────
 const chineseCalendar = computed(() => getChineseCalendarInfo(props.time))
 const dynastyInfo = computed(() => getDynastyInfo(props.time))
 const universalGanzhi = computed(() => getUniversalGanzhi(props.time))
 const eraDate = computed(() => formatEraDate(props.time))
 
-// ─── 日期/时间输入框：本地字符串状态，随 props.time 更新 ────────
 const dateInput = ref('')
 const timeInput = ref('')
 
@@ -83,7 +63,8 @@ const syncInputs = (d: Date) => {
   const jsYear = d.getFullYear()
   const displayYear = jsYear > 0 ? jsYear : jsYear - 1
   const pad = (n: number) => String(n).padStart(2, '0')
-  const yStr = displayYear < 0 ? '-' + pad(Math.abs(displayYear)) : String(displayYear).padStart(4, '0')
+  const yStr =
+    displayYear < 0 ? '-' + pad(Math.abs(displayYear)) : String(displayYear).padStart(4, '0')
   dateInput.value = `${yStr}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
   timeInput.value = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
 }
@@ -94,10 +75,8 @@ const applyInputTime = () => {
   if (!dateInput.value || !timeInput.value) return
   const dateParts = dateInput.value.split('-').map(Number)
   const timeParts = timeInput.value.split(':').map(Number)
-  // 支持 "-221-05-01"：分离前导负号
   let inputYear: number
   if (dateInput.value.startsWith('-')) {
-    // 形如 "-221-05-01" → dateParts = [NaN, 221, ..., ..] 取巧不可靠，改手动切
     const m = dateInput.value.match(/^(-?\d+)-(\d+)-(\d+)$/)
     if (!m) return
     inputYear = Number(m[1])
@@ -121,7 +100,7 @@ const applyInputTime = () => {
 
 <template>
   <!-- ═══════ 时间信息 ═══════ -->
-  <PanelSection
+  <SidebarSection
     title="时间信息"
     :collapsed="collapsed.time"
     @toggle="emit('toggle-section', 'time')"
@@ -129,13 +108,18 @@ const applyInputTime = () => {
     <div class="time-display">
       <div class="era-date">{{ eraDate }}</div>
 
-      <div v-if="dynastyInfo" class="dynasty-display">
-        <span class="dynasty-name" :style="{ color: dynastyInfo.color }">{{ dynastyInfo.name }}</span>
-        <span class="dynasty-range">（{{ dynastyInfo.rangeText }}）</span>
+      <div v-if="dynastyInfo" class="dynasty">
+        <span class="dynasty__name" :style="{ color: dynastyInfo.color }">
+          {{ dynastyInfo.name }}
+        </span>
+        <span class="dynasty__range">（{{ dynastyInfo.rangeText }}）</span>
       </div>
 
-      <div class="ganzhi-display">
-        <span class="gz-year" :title="universalGanzhi.year.element + '·' + universalGanzhi.year.animal">
+      <div class="ganzhi">
+        <span
+          class="gz-year"
+          :title="universalGanzhi.year.element + '·' + universalGanzhi.year.animal"
+        >
           {{ universalGanzhi.year.full }}年
         </span>
         <span class="gz-month">{{ universalGanzhi.month.full }}月</span>
@@ -151,16 +135,16 @@ const applyInputTime = () => {
       </div>
       <div v-else class="lunar-unavailable">农历 / 节气：历不可考</div>
     </div>
-  </PanelSection>
+  </SidebarSection>
 
   <!-- ═══════ 播放控制 ═══════ -->
-  <PanelSection
+  <SidebarSection
     title="播放控制"
     :collapsed="collapsed.playback"
     @toggle="emit('toggle-section', 'playback')"
   >
-    <div class="row row--center">
-      <ControlButton
+    <div class="row-center">
+      <SidebarButton
         size="md"
         :active="isPlaying"
         key-hint="空格"
@@ -168,10 +152,10 @@ const applyInputTime = () => {
         @click="togglePlayPause"
       >
         {{ isPlaying ? '⏸ 暂停' : '▶ 播放' }}
-      </ControlButton>
-      <ControlButton size="md" key-hint="R" title="R 键" @click="resetToNow">
+      </SidebarButton>
+      <SidebarButton size="md" key-hint="R" title="R 键" @click="resetToNow">
         ⟲ 现在
-      </ControlButton>
+      </SidebarButton>
     </div>
     <div class="speed-select">
       <select v-model="playSpeed" @change="updatePlaySpeed()">
@@ -183,32 +167,42 @@ const applyInputTime = () => {
         <option :value="2592000">1个月/秒</option>
       </select>
     </div>
-  </PanelSection>
+  </SidebarSection>
 
   <!-- ═══════ 时间步进 ═══════ -->
-  <PanelSection
+  <SidebarSection
     title="时间步进"
     :collapsed="collapsed.step"
     @toggle="emit('toggle-section', 'step')"
   >
     <div class="step-grid">
-      <ControlButton variant="accent" key-hint="⇧Y" title="Shift+Y" @click="stepYear(-1)">-1年</ControlButton>
-      <ControlButton variant="negative" key-hint="⇧M" title="Shift+M" @click="stepMonth(-1)">-1月</ControlButton>
-      <ControlButton key-hint="⇧D" title="Shift+D" @click="stepTime(-86400)">-1天</ControlButton>
-      <ControlButton key-hint="⇧H" title="Shift+H" @click="stepTime(-3600)">-1时</ControlButton>
-      <ControlButton variant="negative" key-hint="⇧N" title="Shift+N" @click="stepTime(-60)">-1分</ControlButton>
-      <ControlButton variant="negative" key-hint="⇧S" title="Shift+S" @click="stepTime(-1)">-1秒</ControlButton>
-      <ControlButton key-hint="S" title="S 键" @click="stepTime(1)">+1秒</ControlButton>
-      <ControlButton key-hint="N" title="N 键" @click="stepTime(60)">+1分</ControlButton>
-      <ControlButton key-hint="H" title="H 键" @click="stepTime(3600)">+1时</ControlButton>
-      <ControlButton key-hint="D" title="D 键" @click="stepTime(86400)">+1天</ControlButton>
-      <ControlButton key-hint="M" title="M 键" @click="stepMonth(1)">+1月</ControlButton>
-      <ControlButton variant="accent" key-hint="Y" title="Y 键" @click="stepYear(1)">+1年</ControlButton>
+      <SidebarButton variant="accent" key-hint="⇧Y" title="Shift+Y" @click="stepYear(-1)">
+        -1年
+      </SidebarButton>
+      <SidebarButton variant="negative" key-hint="⇧M" title="Shift+M" @click="stepMonth(-1)">
+        -1月
+      </SidebarButton>
+      <SidebarButton key-hint="⇧D" title="Shift+D" @click="stepTime(-86400)">-1天</SidebarButton>
+      <SidebarButton key-hint="⇧H" title="Shift+H" @click="stepTime(-3600)">-1时</SidebarButton>
+      <SidebarButton variant="negative" key-hint="⇧N" title="Shift+N" @click="stepTime(-60)">
+        -1分
+      </SidebarButton>
+      <SidebarButton variant="negative" key-hint="⇧S" title="Shift+S" @click="stepTime(-1)">
+        -1秒
+      </SidebarButton>
+      <SidebarButton key-hint="S" title="S 键" @click="stepTime(1)">+1秒</SidebarButton>
+      <SidebarButton key-hint="N" title="N 键" @click="stepTime(60)">+1分</SidebarButton>
+      <SidebarButton key-hint="H" title="H 键" @click="stepTime(3600)">+1时</SidebarButton>
+      <SidebarButton key-hint="D" title="D 键" @click="stepTime(86400)">+1天</SidebarButton>
+      <SidebarButton key-hint="M" title="M 键" @click="stepMonth(1)">+1月</SidebarButton>
+      <SidebarButton variant="accent" key-hint="Y" title="Y 键" @click="stepYear(1)">
+        +1年
+      </SidebarButton>
     </div>
-  </PanelSection>
+  </SidebarSection>
 
   <!-- ═══════ 时间选择 ═══════ -->
-  <PanelSection
+  <SidebarSection
     title="时间选择"
     :collapsed="collapsed.input"
     @toggle="emit('toggle-section', 'input')"
@@ -237,9 +231,7 @@ const applyInputTime = () => {
         />
       </div>
     </div>
-  </PanelSection>
-
-  <!-- 顶部折叠态时用来展示的短日期串（Control 直接读，通过 defineExpose 暴露） -->
+  </SidebarSection>
 </template>
 
 <style scoped>
@@ -250,26 +242,26 @@ const applyInputTime = () => {
 .era-date {
   font-size: 13px;
   font-weight: bold;
-  color: #00ff00;
+  color: #00ff88;
   margin-bottom: 5px;
   font-family: 'Courier New', monospace;
   line-height: 1.4;
 }
 
-.dynasty-display {
+.dynasty {
   margin-bottom: 5px;
   font-size: 11px;
 }
-.dynasty-name {
+.dynasty__name {
   font-weight: bold;
   margin-right: 2px;
 }
-.dynasty-range {
+.dynasty__range {
   color: #888;
   font-size: 9px;
 }
 
-.ganzhi-display {
+.ganzhi {
   margin-bottom: 5px;
   padding: 4px 0;
   border-top: 1px solid #222;
@@ -303,13 +295,13 @@ const applyInputTime = () => {
   font-style: italic;
 }
 
-/* 播放控制 */
-.row {
+.row-center {
   display: flex;
   gap: 6px;
-}
-.row--center {
   justify-content: center;
+}
+.row-center > * {
+  flex: 1;
 }
 
 .speed-select {
@@ -317,23 +309,22 @@ const applyInputTime = () => {
 }
 .speed-select select {
   width: 100%;
-  padding: 4px;
+  padding: 5px;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   font-size: 11px;
   font-family: inherit;
+  cursor: pointer;
 }
 
-/* 步进网格 */
 .step-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 3px;
 }
 
-/* 时间输入 */
 .time-inputs {
   display: flex;
   flex-direction: column;
@@ -350,20 +341,19 @@ const applyInputTime = () => {
 }
 .time-input {
   width: 100%;
-  padding: 4px 6px;
+  padding: 5px 8px;
   background: #1a1a1a;
   border: 1px solid #333;
   border-radius: 4px;
   color: #fff;
   font-size: 11px;
   font-family: 'Courier New', monospace;
-  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+  transition: border-color 0.15s, background 0.15s;
   box-sizing: border-box;
 }
 .time-input:focus {
   outline: none;
   border-color: #ffcc00;
   background: #2a2a2a;
-  box-shadow: 0 0 4px rgba(255, 204, 0, 0.3);
 }
 </style>

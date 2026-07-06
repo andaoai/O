@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import { withBase } from 'vitepress'
 import SixtyJiaziRing from '../components/rings/SixtyJiaziRing.vue'
 import BranchesRing from '../components/rings/BranchesRing.vue'
 import SolarTermsRing from '../components/rings/SolarTermsRing.vue'
@@ -8,12 +7,12 @@ import DataRing from '../components/rings/DataRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import SolarEcliptic from '../components/centers/SolarEcliptic.vue'
 import TaiChi from '../components/centers/TaiChi.vue'
-import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import BaseCenter from '../components/base/BaseCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 import {
   twentyEightConstellations,
   sixtyJiaziNayin,
@@ -50,6 +49,9 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
+
+// 向 CompassLayout 里的 <CompassSidebar> 暴露时间/视口状态
+provideCompassContext({ time: controlledTime, viewport })
 
 /* ──────────────────────────────────────────────────────────────
  * 同心圆环自动布局配置（由外到内）
@@ -117,9 +119,6 @@ const rings = [
 
 <template>
   <div class="container">
-    <!-- 返回首页 -->
-    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
-
     <svg
       ref="svgRef"
       class="compass-svg"
@@ -184,16 +183,13 @@ const rings = [
         </RingStack>
       </g>
     </svg>
-
-    <!-- 控制面板 -->
-    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -218,24 +214,5 @@ svg {
 }
 .compass-svg.alt-dragging {
   cursor: grabbing;
-}
-
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
 }
 </style>

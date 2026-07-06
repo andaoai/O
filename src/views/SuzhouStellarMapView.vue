@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { withBase } from 'vitepress'
 import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
-import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 
 /**
  * 苏州石刻天文图(五层架构 · 时间驱动 · 初版)
@@ -44,6 +43,8 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
+provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
+
 // 唯一配置常量:全圆盘外缘半径
 const DISK_OUTER_RADIUS = 580
 
@@ -65,33 +66,29 @@ const outerRings: never[] = []
 
 <template>
   <div class="container">
-    <!-- 左上工具栏:返回 + 朝向切换 -->
-    <div class="topbar">
-      <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
-      <div class="orientation-toggle">
-        <button
-          :class="{ active: orientation === 'fixed-ground' }"
-          @click="orientation = 'fixed-ground'"
-          title="观测者视角:头顶朝上,星宿旋转,地平线固定"
-        >固定地平</button>
-        <button
-          :class="{ active: orientation === 'fixed-sky-coord' }"
-          @click="orientation = 'fixed-sky-coord'"
-          title="坐标视角:春分点 RA=0 朝上,东在右西在左"
-        >赤道·坐标</button>
-        <button
-          :class="{ active: orientation === 'fixed-sky-suzhou' }"
-          @click="orientation = 'fixed-sky-suzhou'"
-          title="苏图视角:心宿二(大火)朝上,与《尧典》「日永星火」南中天约定一致"
-        >赤道·苏图</button>
+    <!-- 朝向切换：通过 Teleport 传入 Sidebar 的"视图选项"区块 -->
+    <Teleport to="#sidebar-view-tools">
+      <div class="view-tool-group">
+        <label class="view-tool-label">观察坐标系</label>
+        <div class="orientation-toggle">
+          <button
+            :class="{ active: orientation === 'fixed-ground' }"
+            @click="orientation = 'fixed-ground'"
+            title="观测者视角：头顶朝上，星宿旋转，地平线固定"
+          >固定地平</button>
+          <button
+            :class="{ active: orientation === 'fixed-sky-coord' }"
+            @click="orientation = 'fixed-sky-coord'"
+            title="坐标视角：春分点 RA=0 朝上，东在右西在左"
+          >赤道·坐标</button>
+          <button
+            :class="{ active: orientation === 'fixed-sky-suzhou' }"
+            @click="orientation = 'fixed-sky-suzhou'"
+            title="苏图视角：心宿二（大火）朝上，与《尧典》「日永星火」南中天约定一致"
+          >赤道·苏图</button>
+        </div>
       </div>
-    </div>
-
-    <!-- 标题浮层 -->
-    <!-- <div class="title-overlay">
-      <div class="title-main">苏州石刻天文图</div>
-      <div class="title-sub">南宋淳祐七年(1247) · 观察北斗与二十八宿</div>
-    </div> -->
+    </Teleport>
 
     <svg
       ref="svgRef"
@@ -120,20 +117,13 @@ const outerRings: never[] = []
         </RingStack>
       </g>
     </svg>
-
-    <!-- 控制面板 -->
-    <Control
-      v-model:time="controlledTime"
-      :viewport="viewport"
-      @user-time-change="onUserTimeChange"
-    />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -157,87 +147,50 @@ const outerRings: never[] = []
   cursor: grabbing;
 }
 
-.topbar {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
+/* ─── Teleport 到 Sidebar 的朝向切换 ─── */
+.view-tool-group {
   display: flex;
-  gap: 10px;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.back-link {
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: inline-flex;
-  align-items: center;
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
+.view-tool-label {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 1px;
+  padding-left: 2px;
 }
 
 .orientation-toggle {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
+  gap: 3px;
   padding: 3px;
-  border: 1px solid #444;
+  border: 1px solid #333;
   border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.4);
 }
 
 .orientation-toggle button {
   color: #aaa;
   background: transparent;
   border: none;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 6px 8px;
+  font-size: 11px;
   cursor: pointer;
   border-radius: 3px;
   letter-spacing: 1px;
   transition: color 0.15s, background-color 0.15s;
+  font-family: inherit;
 }
 
 .orientation-toggle button:hover {
   color: #eee;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .orientation-toggle button.active {
   color: #d4af37;
-  background-color: rgba(212, 175, 55, 0.12);
-}
-
-.title-overlay {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 10;
-  text-align: center;
-  color: #ddd;
-  pointer-events: none;
-  user-select: none;
-  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
-}
-
-.title-main {
-  font-size: 18px;
-  font-weight: 600;
-  letter-spacing: 3px;
-  color: #d4af37;
-}
-
-.title-sub {
-  font-size: 11px;
-  color: #8899aa;
-  margin-top: 2px;
-  letter-spacing: 1px;
+  background: rgba(212, 175, 55, 0.15);
 }
 </style>

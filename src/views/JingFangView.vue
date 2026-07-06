@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import { withBase } from 'vitepress'
 import SolarTermsPointRing from '../components/rings/SolarTermsPointRing.vue'
 import DayScaleRing from '../components/rings/DayScaleRing.vue'
 import LiuRiQiFenScaleRing from '../components/rings/LiuRiQiFenScaleRing.vue'
 import JingFangGuaRing from '../components/rings/JingFangGuaRing.vue'
 import NajiaRing from '../components/rings/NajiaRing.vue'
-import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 
 /**
  * 京房十二消息卦盘（重构中）
@@ -55,6 +54,8 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
+provideCompassContext({ time: controlledTime, viewport })
+
 /**
  * 同心环配置（由外到内）
  * 🔑 所有环统一使用 originMode='winterSolstice' 确保冬至=0° 对齐
@@ -97,9 +98,6 @@ const rings = [
 
 <template>
   <div class="container">
-    <!-- 返回首页 -->
-    <a :href="withBase('/compass/')" class="back-link">罗盘列表</a>
-
     <svg
       ref="svgRef"
       class="compass-svg"
@@ -116,16 +114,13 @@ const rings = [
         />
       </g>
     </svg>
-
-    <!-- 控制面板 -->
-    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -150,24 +145,5 @@ svg {
 }
 .compass-svg.alt-dragging {
   cursor: grabbing;
-}
-
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
 }
 </style>

@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
-import { withBase } from 'vitepress'
 import GuaRing from '../components/rings/GuaRing.vue'
 import JingFangEightPalaceRing from '../components/rings/JingFangEightPalaceRing.vue'
 import ShiYingRing from '../components/rings/ShiYingRing.vue'
 import RingStack from '../components/base/RingStack.vue'
-import Control from '../components/control/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 
 /**
@@ -35,6 +34,8 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
+
+provideCompassContext({ time: controlledTime, viewport })
 
 // 三层同心环（外→内）
 //   GuaRing (先天卦符 + 卦名，隐藏爻线) → thickness 42
@@ -99,8 +100,6 @@ const gridLines = computed(() => {
 
 <template>
   <div class="container">
-    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
-
     <svg
       ref="svgRef"
       class="compass-svg"
@@ -158,16 +157,13 @@ const gridLines = computed(() => {
         </RingStack>
       </g>
     </svg>
-
-    <!-- 控制面板 -->
-    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -192,24 +188,5 @@ svg {
 }
 .compass-svg.alt-dragging {
   cursor: grabbing;
-}
-
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
 }
 </style>

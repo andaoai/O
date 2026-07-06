@@ -1,11 +1,10 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { withBase } from 'vitepress'
 import FeifuArrowOverlay from '../components/feifu/FeifuArrowOverlay.vue'
-import Control from '../components/control/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 import { PALACES } from '@/data/rings/jingFangEightPalaces'
 import type { FeifuLayout } from '@/utils/feifu'
@@ -28,6 +27,8 @@ const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
+
+provideCompassContext({ time: controlledTime, viewport })
 
 // 世位筛选：默认全部（空数组表示不筛）
 const selectedShiying = ref<ShiyingType[]>([])
@@ -83,71 +84,78 @@ function selectPalace(palace: string) {
 
 <template>
   <div class="container">
-    <a :href="withBase('/compass/')" class="back-link">罗盘列表</a>
+    <!-- 筛选器 Teleport 到 Sidebar 的"视图选项"区块 -->
+    <Teleport to="#sidebar-view-tools">
+      <div class="view-tool-group">
+        <label class="view-tool-label">卦象排列</label>
+        <div class="filter-row">
+          <button
+            class="filter-btn"
+            :class="{ active: layout === 'houtian' }"
+            :style="{ '--btn-color': '#F1C40F' }"
+            @click="layout = 'houtian'"
+          >
+            后天八卦
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: layout === 'xiantian' }"
+            :style="{ '--btn-color': '#66CCFF' }"
+            @click="layout = 'xiantian'"
+          >
+            先天八卦
+          </button>
+        </div>
+      </div>
 
-    <!-- 布局切换按钮 -->
-    <div class="layout-toggle">
-      <button
-        class="filter-btn"
-        :class="{ active: layout === 'houtian' }"
-        :style="{ '--btn-color': '#F1C40F' }"
-        @click="layout = 'houtian'"
-      >
-        后天八卦
-      </button>
-      <button
-        class="filter-btn"
-        :class="{ active: layout === 'xiantian' }"
-        :style="{ '--btn-color': '#66CCFF' }"
-        @click="layout = 'xiantian'"
-      >
-        先天八卦
-      </button>
-    </div>
+      <div v-if="layout === 'houtian'" class="view-tool-group">
+        <label class="view-tool-label">八宫筛选</label>
+        <div class="filter-row filter-row--wrap">
+          <button
+            class="filter-btn filter-btn--sm"
+            :class="{ active: palaceFilter.length === 0 }"
+            :style="{ '--btn-color': '#FFD700' }"
+            @click="palaceFilter = []"
+          >
+            全部
+          </button>
+          <button
+            v-for="p in PALACES"
+            :key="p.palace"
+            class="filter-btn filter-btn--sm"
+            :class="{ active: palaceFilter.includes(p.palace) }"
+            :style="{
+              '--btn-color': p.color,
+              borderColor: palaceFilter.includes(p.palace) ? p.color : '#444',
+              color: palaceFilter.includes(p.palace) ? p.color : '#aaa'
+            }"
+            @click="selectPalace(p.palace)"
+          >
+            {{ p.palace }}
+          </button>
+        </div>
+      </div>
 
-    <!-- 宫位筛选按钮组（仅后天八卦序下显示） -->
-    <div v-if="layout === 'houtian'" class="palace-bar">
-      <button
-        class="filter-btn"
-        :class="{ active: palaceFilter.length === 0 }"
-        :style="{ '--btn-color': '#FFD700' }"
-        @click="palaceFilter = []"
-      >
-        全部宫
-      </button>
-      <button
-        v-for="p in PALACES"
-        :key="p.palace"
-        class="filter-btn"
-        :class="{ active: palaceFilter.includes(p.palace) }"
-        :style="{
-          '--btn-color': p.color,
-          borderColor: palaceFilter.includes(p.palace) ? p.color : '#444',
-          color: palaceFilter.includes(p.palace) ? p.color : '#aaa'
-        }"
-        @click="selectPalace(p.palace)"
-      >
-        {{ p.palace }}
-      </button>
-    </div>
-
-    <!-- 世位筛选按钮组 -->
-    <div class="filter-bar">
-      <button
-        v-for="opt in shiyingOptions"
-        :key="opt.type"
-        class="filter-btn"
-        :class="{ active: activeType === opt.type }"
-        :style="{
-          '--btn-color': opt.color,
-          borderColor: activeType === opt.type ? opt.color : '#444',
-          color: activeType === opt.type ? opt.color : '#aaa'
-        }"
-        @click="selectShiying(opt.type)"
-      >
-        {{ opt.label }}
-      </button>
-    </div>
+      <div class="view-tool-group">
+        <label class="view-tool-label">世位筛选</label>
+        <div class="filter-row filter-row--wrap">
+          <button
+            v-for="opt in shiyingOptions"
+            :key="opt.type"
+            class="filter-btn filter-btn--sm"
+            :class="{ active: activeType === opt.type }"
+            :style="{
+              '--btn-color': opt.color,
+              borderColor: activeType === opt.type ? opt.color : '#444',
+              color: activeType === opt.type ? opt.color : '#aaa'
+            }"
+            @click="selectShiying(opt.type)"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+      </div>
+    </Teleport>
 
     <svg
       ref="svgRef"
@@ -166,15 +174,13 @@ function selectPalace(palace: string) {
         />
       </g>
     </svg>
-
-    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 
 <style scoped>
 .container {
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background-color: black;
   display: flex;
   justify-content: center;
@@ -201,71 +207,47 @@ svg {
   cursor: grabbing;
 }
 
-.back-link {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  z-index: 10;
-  color: #aaa;
-  text-decoration: none;
-  font-size: 14px;
-  padding: 6px 12px;
-  border: 1px solid #444;
-  border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-}
-
-.back-link:hover {
-  color: #fff;
-  border-color: #888;
-}
-
-/* 布局切换（左上角） */
-.layout-toggle {
-  position: absolute;
-  top: 56px;
-  left: 16px;
-  z-index: 10;
+/* ─── Teleport 到 Sidebar 的筛选器 ─── */
+.view-tool-group {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-/* 宫位筛选（布局下方） */
-.palace-bar {
-  position: absolute;
-  top: 96px;
-  left: 16px;
-  z-index: 10;
+.view-tool-label {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 1px;
+  padding-left: 2px;
+}
+
+.filter-row {
   display: flex;
+  gap: 4px;
+}
+.filter-row > .filter-btn:not(.filter-btn--sm) {
+  flex: 1;
+}
+.filter-row--wrap {
   flex-wrap: wrap;
-  gap: 5px;
-  max-width: calc(100vw - 32px);
-}
-
-/* 世位筛选（右上角） */
-.filter-bar {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 10;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  max-width: calc(100vw - 32px);
-  justify-content: flex-end;
 }
 
 .filter-btn {
-  font-size: 13px;
-  padding: 6px 12px;
-  background-color: rgba(0, 0, 0, 0.6);
+  font-size: 12px;
+  padding: 5px 8px;
+  background-color: rgba(0, 0, 0, 0.5);
   border: 1px solid #444;
   border-radius: 4px;
   color: #aaa;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: color 0.15s, border-color 0.15s, background-color 0.15s;
   font-family: inherit;
-  min-width: 48px;
+}
+
+.filter-btn--sm {
+  font-size: 11px;
+  padding: 4px 8px;
+  min-width: 34px;
 }
 
 .filter-btn:hover {
