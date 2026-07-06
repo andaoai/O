@@ -2,9 +2,10 @@
 import { ref, computed } from 'vue'
 import { withBase } from 'vitepress'
 import FeifuArrowOverlay from '../components/feifu/FeifuArrowOverlay.vue'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 import { PALACES } from '@/data/rings/jingFangEightPalaces'
 import type { FeifuLayout } from '@/utils/feifu'
@@ -19,15 +20,14 @@ import type { FeifuLayout } from '@/utils/feifu'
  */
 const { controlledTime } = useUrlTime()
 
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视口控制（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 // 世位筛选：默认全部（空数组表示不筛）
 const selectedShiying = ref<ShiyingType[]>([])
@@ -156,7 +156,7 @@ function selectPalace(palace: string) {
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <FeifuArrowOverlay
           :inner-radius="500"
           :rotation-direction="rotationDirection"
@@ -167,14 +167,7 @@ function selectPalace(palace: string) {
       </g>
     </svg>
 
-    <Control
-      v-model="controlledTime"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
-    />
+    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 

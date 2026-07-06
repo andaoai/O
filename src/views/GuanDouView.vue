@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import { withBase } from 'vitepress'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import MonthEstablishRing from '../components/rings/MonthEstablishRing.vue'
 import HourShichenRing from '../components/rings/HourShichenRing.vue'
@@ -14,6 +14,7 @@ import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 
 /**
  * 观斗盘（GuanDou · Watching the Big Dipper）
@@ -127,16 +128,14 @@ const locationLabel = computed(() =>
   geoStatus.value === 'success' ? '当前位置' : '洛阳（默认）'
 )
 
-// 视图控制
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视图控制（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 const OUTER_RADIUS = 570
 
@@ -225,7 +224,7 @@ const rings = computed(() => [
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <RingStack
           :outer-radius="OUTER_RADIUS"
           :gap="4"
@@ -249,13 +248,9 @@ const rings = computed(() => [
     </svg>
 
     <Control
-      v-model="controlledTime"
-      @time-change="onUserTimeChange"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
+      v-model:time="controlledTime"
+      :viewport="viewport"
+      @user-time-change="onUserTimeChange"
     />
   </div>
 </template>

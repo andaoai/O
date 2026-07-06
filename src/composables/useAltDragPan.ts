@@ -1,4 +1,5 @@
 import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
+import type { UseViewportReturn } from './useViewport'
 
 /**
  * Alt + 鼠标拖拽平移
@@ -7,30 +8,27 @@ import { onBeforeUnmount, onMounted, ref, watch, type Ref } from 'vue'
  * 屏幕像素通过 SVG 的显示比例换算为 viewBox 单位，与当前 zoomLevel 独立
  * （因为在 View 模板中，translate 位于 scale 之外，offset 使用 viewBox 单位）
  *
- * 用法：
+ * 用法（新，推荐）：
  * ```ts
- * const svgRef = ref<SVGSVGElement | null>(null)
- * const { isDragging, isAltPressed } = useAltDragPan({
- *   svgRef, offsetX, offsetY
- * })
+ * const viewport = useViewport()
+ * const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
  * ```
  *
- * 在模板中：
- * ```html
- * <svg ref="svgRef" ... />
+ * 兼容旧签名（散 ref）：
+ * ```ts
+ * useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
  * ```
- *
- * @author Generated with Claude Code
- * @since 2026-07-06
  */
 export interface AltDragPanOptions {
   /** SVG 元素 ref */
   svgRef: Ref<SVGSVGElement | null>
-  /** 平移 X 状态（viewBox 单位） */
-  offsetX: Ref<number>
-  /** 平移 Y 状态（viewBox 单位） */
-  offsetY: Ref<number>
-  /** 缩放级别（可选：传入后即启用 Alt + 滚轮缩放） */
+  /** 首选：整套视口状态（useViewport 返回值） */
+  viewport?: UseViewportReturn
+  /** 兼容：单独的平移 X 状态（viewBox 单位） */
+  offsetX?: Ref<number>
+  /** 兼容：单独的平移 Y 状态（viewBox 单位） */
+  offsetY?: Ref<number>
+  /** 兼容：缩放级别（可选：传入后即启用 Alt + 滚轮缩放） */
   zoomLevel?: Ref<number>
   /** SVG viewBox 正方形边长（默认 1200，与所有罗盘 View 一致） */
   viewBoxSize?: number
@@ -45,14 +43,20 @@ export interface AltDragPanOptions {
 export function useAltDragPan(opts: AltDragPanOptions) {
   const {
     svgRef,
-    offsetX,
-    offsetY,
-    zoomLevel,
+    viewport,
     viewBoxSize = 1200,
     zoomMin = 0.1,
     zoomMax = 3,
     zoomStep = 0.1
   } = opts
+
+  // 兼容层：viewport 优先，回退到旧散 ref 参数
+  const offsetX = viewport?.offsetX ?? opts.offsetX
+  const offsetY = viewport?.offsetY ?? opts.offsetY
+  const zoomLevel = viewport?.zoom ?? opts.zoomLevel
+  if (!offsetX || !offsetY) {
+    throw new Error('useAltDragPan: must supply either viewport or {offsetX, offsetY}')
+  }
 
   const isDragging = ref(false)
   const isAltPressed = ref(false)

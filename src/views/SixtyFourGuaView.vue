@@ -5,9 +5,10 @@ import GuaRing from '../components/rings/GuaRing.vue'
 import JingFangEightPalaceRing from '../components/rings/JingFangEightPalaceRing.vue'
 import ShiYingRing from '../components/rings/ShiYingRing.vue'
 import RingStack from '../components/base/RingStack.vue'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 
 /**
@@ -26,16 +27,14 @@ import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 // 时间控制（仅供面板显示，盘面结构与时间无关）
 const { controlledTime } = useUrlTime()
 
-// 视图控制：缩放 / 平移 / 旋转
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视图控制：缩放 / 平移 / 旋转（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 // 三层同心环（外→内）
 //   GuaRing (先天卦符 + 卦名，隐藏爻线) → thickness 42
@@ -109,7 +108,7 @@ const gridLines = computed(() => {
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <RingStack
           :outer-radius="560"
           :gap="3"
@@ -161,14 +160,7 @@ const gridLines = computed(() => {
     </svg>
 
     <!-- 控制面板 -->
-    <Control
-      v-model="controlledTime"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
-    />
+    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 

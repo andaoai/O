@@ -8,11 +8,12 @@ import DataRing from '../components/rings/DataRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import SolarEcliptic from '../components/centers/SolarEcliptic.vue'
 import TaiChi from '../components/centers/TaiChi.vue'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import BaseCenter from '../components/base/BaseCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 import {
   twentyEightConstellations,
   sixtyJiaziNayin,
@@ -41,16 +42,14 @@ import {
 // 唯一时间源（由 URL 参数驱动，无 URL 参数则用当前时间）
 const { controlledTime } = useUrlTime()
 
-// 视图控制
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视口控制：缩放 / 平移 / 旋转（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用（Vue 3 只对 setup 顶层变量自动解包）
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 /* ──────────────────────────────────────────────────────────────
  * 同心圆环自动布局配置（由外到内）
@@ -128,7 +127,7 @@ const rings = [
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <!-- ═══════════════════════════════════════════════════════════════
              🔑 五层架构 · 圆环 + 圆心 二分规范 【范例】
              ──────────────────────────────────────────────────────────────
@@ -187,14 +186,7 @@ const rings = [
     </svg>
 
     <!-- 控制面板 -->
-    <Control
-      v-model="controlledTime"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
-    />
+    <Control v-model:time="controlledTime" :viewport="viewport" />
   </div>
 </template>
 

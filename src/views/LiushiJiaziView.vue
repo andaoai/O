@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
 import { withBase } from 'vitepress'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import SixtyJiaziRing from '../components/rings/SixtyJiaziRing.vue'
 import StemsRing from '../components/rings/StemsRing.vue'
@@ -9,6 +9,7 @@ import BranchesRing from '../components/rings/BranchesRing.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 import { type PillarId } from '../utils/liushiJiazi'
 
 // ═══════════════════════════════════════════════════════════════
@@ -27,16 +28,14 @@ const { controlledTime, hasUrlTime } = useUrlTime()
 // 一旦用户用控制面板播放/手动调时/选时，onUserTimeChange 触发退出 liveMode。
 const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime })
 
-// 视图控制：缩放 / 平移 / 旋转
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视图控制：缩放 / 平移 / 旋转（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用（Vue 3 只对 setup 顶层变量自动解包）
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 // ═══════════════════════════════════════════════════════════════
 //  六柱元信息：由外到内，每环径向厚度交给 RingStack 自动分配半径。
@@ -233,7 +232,7 @@ const rings = [
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
 
         <!-- 六十甲子六环：由外到内，年月日时分秒；半径由 RingStack 自动分配 -->
         <RingStack
@@ -247,13 +246,9 @@ const rings = [
 
     <!-- 控制面板 -->
     <Control
-      v-model="controlledTime"
-      @time-change="onUserTimeChange"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
+      v-model:time="controlledTime"
+      :viewport="viewport"
+      @user-time-change="onUserTimeChange"
     />
   </div>
 </template>

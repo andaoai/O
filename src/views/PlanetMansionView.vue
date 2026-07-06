@@ -7,12 +7,13 @@ import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
 import SiXiangRing from '../components/rings/SiXiangRing.vue'
 import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
-import Control from '../components/Control.vue'
+import Control from '../components/control/Control.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useAltDragPan } from '@/composables/useAltDragPan'
+import { useViewport } from '@/composables/useViewport'
 
 /**
  * 七曜入宿天象盘（五层架构 · 纯时间驱动）
@@ -52,16 +53,14 @@ const { controlledTime, hasUrlTime } = useUrlTime()
 // URL 带 t 时不进入 live 模式（用户明确指定了时刻）
 const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime })
 
-// 视口控制
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
+// 视口控制（单一 composable 打包）
+const viewport = useViewport()
+// 解构顶层 refs 给模板使用
+const { zoom, offsetX, offsetY, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
-const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 /**
  * 🔹 唯一配置常量：全圆盘外缘半径
@@ -170,7 +169,7 @@ const outerRings = [
       class="sky-svg"
       :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <!-- ═══════════════════════════════════════════════════════════════
              🔑 五层架构 · 圆环 + 圆心 二分规范
              ──────────────────────────────────────────────────────────────
@@ -195,7 +194,7 @@ const outerRings = [
           rotation-direction="clockwise"
         >
           <!-- 🔹 圆心区：自动接收最内环的 innerRadius -->
-          <template #center="{ innerRadius }">
+          <template #center>
             <!--
               圆心组件使用规范：
               1. radius = innerRadius * 缩放系数 (0.7 ~ 0.9 推荐)
@@ -212,13 +211,9 @@ const outerRings = [
 
     <!-- 控制面板 -->
     <Control
-      v-model="controlledTime"
-      @time-change="onUserTimeChange"
-      v-model:zoom="zoomLevel"
-      v-model:offsetX="offsetX"
-      v-model:offsetY="offsetY"
-      v-model:rotation-direction="rotationDirection"
-      v-model:rotation-angle="rotationAngle"
+      v-model:time="controlledTime"
+      :viewport="viewport"
+      @user-time-change="onUserTimeChange"
     />
   </div>
 </template>
