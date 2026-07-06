@@ -4,6 +4,7 @@ import { withBase } from 'vitepress'
 import FeifuArrowOverlay from '../components/feifu/FeifuArrowOverlay.vue'
 import Control from '../components/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 import { PALACES } from '@/data/rings/jingFangEightPalaces'
 import type { FeifuLayout } from '@/utils/feifu'
@@ -23,6 +24,10 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
+
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
 
 // 世位筛选：默认全部（空数组表示不筛）
 const selectedShiying = ref<ShiyingType[]>([])
@@ -144,7 +149,13 @@ function selectPalace(palace: string) {
       </button>
     </div>
 
-    <svg class="compass-svg" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet">
+    <svg
+      ref="svgRef"
+      class="compass-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
+      viewBox="0 0 1200 1200"
+      preserveAspectRatio="xMidYMid meet"
+    >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <FeifuArrowOverlay
           :inner-radius="500"
@@ -187,6 +198,14 @@ svg {
      放大 / 平移时不再被短边正方形裁出黑边 */
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.compass-svg.alt-hover {
+  cursor: grab;
+}
+.compass-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {

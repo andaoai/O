@@ -12,6 +12,7 @@ import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 
 /**
  * 七曜入宿天象盘（五层架构 · 纯时间驱动）
@@ -57,6 +58,10 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
+
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
 
 /**
  * 🔹 唯一配置常量：全圆盘外缘半径
@@ -158,7 +163,13 @@ const outerRings = [
     <!-- 返回首页 -->
     <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
-    <svg viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet" class="sky-svg">
+    <svg
+      ref="svgRef"
+      viewBox="0 0 1200 1200"
+      preserveAspectRatio="xMidYMid meet"
+      class="sky-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
+    >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <!-- ═══════════════════════════════════════════════════════════════
              🔑 五层架构 · 圆环 + 圆心 二分规范
@@ -229,6 +240,14 @@ const outerRings = [
      放大 / 平移时不再被短边正方形裁出黑边 */
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.sky-svg.alt-hover {
+  cursor: grab;
+}
+.sky-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {

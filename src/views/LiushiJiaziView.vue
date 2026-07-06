@@ -8,6 +8,7 @@ import StemsRing from '../components/rings/StemsRing.vue'
 import BranchesRing from '../components/rings/BranchesRing.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 import { type PillarId } from '../utils/liushiJiazi'
 
 // ═══════════════════════════════════════════════════════════════
@@ -32,6 +33,10 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
+
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
 
 // ═══════════════════════════════════════════════════════════════
 //  六柱元信息：由外到内，每环径向厚度交给 RingStack 自动分配半径。
@@ -222,7 +227,9 @@ const rings = [
     <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
+      ref="svgRef"
       class="compass-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -271,6 +278,14 @@ svg {
 .compass-svg {
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.compass-svg.alt-hover {
+  cursor: grab;
+}
+.compass-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {

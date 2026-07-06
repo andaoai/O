@@ -13,6 +13,7 @@ import BeidouCenter from '../components/centers/BeidouCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useGeolocation } from '@/composables/useGeolocation'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 
 /**
  * 观斗盘（GuanDou · Watching the Big Dipper）
@@ -133,6 +134,10 @@ const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
 
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
+
 const OUTER_RADIUS = 570
 
 /**
@@ -214,7 +219,9 @@ const rings = computed(() => [
     <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
+      ref="svgRef"
       class="compass-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -273,6 +280,14 @@ svg {
      放大 / 平移时不再被短边正方形裁出黑边 */
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.compass-svg.alt-hover {
+  cursor: grab;
+}
+.compass-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {

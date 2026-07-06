@@ -9,6 +9,7 @@ import LeapInfoCenter from '../components/centers/LeapInfoCenter.vue'
 import Control from '../components/Control.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 
 /**
  * 回归年 × 农历闰月 可视化罗盘
@@ -38,6 +39,10 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
+
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
 
 /**
  * 同心环配置（由外到内）
@@ -82,7 +87,9 @@ const rings = [
     <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
     <svg
+      ref="svgRef"
       class="compass-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
       viewBox="0 0 1200 1200"
       preserveAspectRatio="xMidYMid meet"
     >
@@ -138,6 +145,14 @@ svg {
 .compass-svg {
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.compass-svg.alt-hover {
+  cursor: grab;
+}
+.compass-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {

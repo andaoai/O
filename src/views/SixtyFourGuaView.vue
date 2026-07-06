@@ -7,6 +7,7 @@ import ShiYingRing from '../components/rings/ShiYingRing.vue'
 import RingStack from '../components/base/RingStack.vue'
 import Control from '../components/Control.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 import { XIANTIAN_64_GUA } from '../data/sixtyFourGua'
 
 /**
@@ -31,6 +32,10 @@ const offsetX = ref(0)
 const offsetY = ref(0)
 const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
 const rotationAngle = ref(0)
+
+// Alt + 拖拽平移
+const svgRef = ref<SVGSVGElement | null>(null)
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, offsetX, offsetY, zoomLevel })
 
 // 三层同心环（外→内）
 //   GuaRing (先天卦符 + 卦名，隐藏爻线) → thickness 42
@@ -97,7 +102,13 @@ const gridLines = computed(() => {
   <div class="container">
     <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
 
-    <svg class="compass-svg" viewBox="0 0 1200 1200" preserveAspectRatio="xMidYMid meet">
+    <svg
+      ref="svgRef"
+      class="compass-svg"
+      :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
+      viewBox="0 0 1200 1200"
+      preserveAspectRatio="xMidYMid meet"
+    >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
         <RingStack
           :outer-radius="560"
@@ -181,6 +192,14 @@ svg {
 .compass-svg {
   width: 100%;
   height: 100%;
+}
+
+/* Alt 按下 → grab；拖拽中 → grabbing */
+.compass-svg.alt-hover {
+  cursor: grab;
+}
+.compass-svg.alt-dragging {
+  cursor: grabbing;
 }
 
 .back-link {
