@@ -96,6 +96,9 @@ export default defineConfig({
               items: [
                 { text: '乾', link: '/books/京氏易傳/乾卦' },
                 { text: '姤', link: '/books/京氏易傳/姤卦' },
+                { text: '遯', link: '/books/京氏易傳/遯卦' },
+                { text: '否', link: '/books/京氏易傳/否卦' },
+                { text: '觀', link: '/books/京氏易傳/觀卦' },
               ],
             },
           ],
