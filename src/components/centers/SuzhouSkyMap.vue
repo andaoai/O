@@ -14,8 +14,20 @@ import {
 } from '@/utils/ziwei'
 import { MANSION_ASTERISMS } from '@/data/mansionStars'
 import { getMansionSpans } from '@/utils/planetMansion'
-import { project } from '@/utils/skyProjection'
-import { fixedStarEquatorial } from '@/utils/celestial'
+import {
+  project,
+  eclipticToEquatorial,
+  moonPointToEquatorial
+} from '@/utils/skyProjection'
+import {
+  fixedStarEquatorial,
+  sunEquatorial,
+  moonEquatorial,
+  planetEquatorial,
+  lunarOrbit,
+  PLANETS_CONFIG,
+  type PlanetKey
+} from '@/utils/celestial'
 import { normalizeAngle } from '@/utils/geometry'
 
 /**
@@ -81,6 +93,25 @@ interface Props {
   showBeidou?: boolean
   /** 显示天极十字 */
   showPole?: boolean
+  /** 显示黄道 */
+  showEcliptic?: boolean
+  /** 显示白道 */
+  showWhiteWay?: boolean
+  /** 显示地平线 */
+  showHorizon?: boolean
+  /** 显示太阳 */
+  showSun?: boolean
+  /** 显示月亮 */
+  showMoon?: boolean
+  /** 显示五星（水金火木土） */
+  showPlanets?: boolean
+  /**
+   * 盘面朝向模式:
+   *   · 'fixed-ground'      观测者视角:头顶固定朝上,星宿随时间旋转,地平线不动
+   *   · 'fixed-sky-coord'   坐标视角:春分点(RA=0)固定朝上,星宿静止,地平线绕极旋转
+   *   · 'fixed-sky-suzhou'  苏图视角:井宿朝上 + 东西镜像,复原南宋石刻实物布局
+   */
+  orientation?: 'fixed-ground' | 'fixed-sky-coord' | 'fixed-sky-suzhou'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -95,11 +126,61 @@ const props = withDefaults(defineProps<Props>(), {
   showMansionStars: true,
   showZiwei: true,
   showBeidou: true,
-  showPole: true
+  showPole: true,
+  showEcliptic: true,
+  showWhiteWay: true,
+  showHorizon: true,
+  showSun: true,
+  showMoon: true,
+  showPlanets: true,
+  orientation: 'fixed-ground'
 })
 
 /** ⚠️ 五层架构范式:确保 time 始终是响应式的 */
 const timeRef = computed(() => unref(props.time) ?? new Date())
+
+/**
+ * 盘面朝向偏移量(度)。
+ *
+ * 关键机制:所有天体的 projAngle 统一 `减去 orientOffset` 完成整盘旋转。
+ * 由于 LST 是自转周期的相位,把它减掉即等价于"以某个赤经为方位角零点"。
+ *
+ *   · fixed-ground     : offset = 0
+ *       → projAngle = LST − RA + 90        → 观测者视角:头顶朝上,星宿旋转
+ *   · fixed-sky-coord  : offset = LST
+ *       → projAngle = −RA + 90              → 现代星图:春分点(RA=0)朝上
+ *   · fixed-sky-suzhou : offset = LST − SUZHOU_TOP_RA
+ *       → projAngle = SUZHOU_TOP_RA − RA + 90 → 苏图起点:心宿二(大火)朝上
+ *
+ * 两个"固定赤道"模式只差一个常量旋转;方向都是东在右、西在左(观测者视角),
+ * 不做镜像 —— 单纯把"朝上的赤经零点"从春分点换成苏图约定的南中天。
+ *
+ * 地平线原公式为 (HA + 90),减去 offset 后:
+ *   · fixed-ground     : HA + 90                       → 静止(仅依赖 φ 与 A)
+ *   · fixed-sky-coord  : HA + 90 − LST                 → 绕极旋转
+ *   · fixed-sky-suzhou : HA + 90 − LST + TOP_RA        → 绕极旋转(相位差 95°)
+ */
+
+/**
+ * 苏图石刻"顶部"对应的赤经(度)。
+ *
+ * 定位基准:心宿二(大火,α Sco / Antares) —— 中国古代夏至南中天的标志。
+ *   《尚书·尧典》「日永星火,以正仲夏」即以"火"(心宿二)昏中定夏至,
+ *   《诗·豳风》「七月流火,九月授衣」亦以此星每岁的南中偏移作农时刻度。
+ *   苏图以此为图顶,把大火星心作为南方朱雀方位的锚,对应 SVG 顶部。
+ *
+ * ⚠️ 数值经用户实测调整为 −25°(≡ 335°):该值使心宿二实际落到盘面顶部,
+ *    与心宿二当前历元赤经的原始值不同 —— 差值来自"图顶对应昏中时角相位"
+ *    这一约定(非天极子午圈,而是黄昏正南),另含苏图石刻自身的相位偏置。
+ */
+const SUZHOU_TOP_RA = -25
+
+const orientOffset = computed(() => {
+  if (props.orientation === 'fixed-ground') return 0
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  if (props.orientation === 'fixed-sky-suzhou') return lst - SUZHOU_TOP_RA
+  return lst // fixed-sky-coord
+})
 
 /* ═══════════════════════════════════════════════════════════════
  *  数据层:所有派生自 timeRef
@@ -153,6 +234,102 @@ const mansionAsterisms = computed(() => {
 /** 28 宿区间(用于辐条位置:距星赤经边界) */
 const spans = computed(() => getMansionSpans(timeRef.value))
 
+/**
+ * 黄道采样点（黄经 0-360°,每 3° 一点,共 120 点）
+ * 用 eclipticToEquatorial 转赤道,再走统一投影管道
+ */
+const eclipticSamples = computed(() => {
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  const out: { ra: number; dec: number }[] = []
+  for (let lon = 0; lon <= 360; lon += 3) {
+    const eq = eclipticToEquatorial(lon, 0)
+    out.push({ ra: normalizeAngle(lst - eq.ra + 90), dec: eq.dec })
+  }
+  return out
+})
+
+/**
+ * 白道采样点（沿升交点起 u ∈ [0,360),每 3°）
+ * lunarOrbit 提供当前时刻升交点黄经 + 交角
+ */
+const whiteWaySamples = computed(() => {
+  const orbit = lunarOrbit(timeRef.value)
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  const out: { ra: number; dec: number }[] = []
+  for (let u = 0; u <= 360; u += 3) {
+    const eq = moonPointToEquatorial(u, orbit.ascendingNodeLongitude, orbit.inclination)
+    out.push({ ra: normalizeAngle(lst - eq.ra + 90), dec: eq.dec })
+  }
+  return out
+})
+
+/** 太阳赤道 + 投影角 */
+const sunProj = computed(() => {
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  const eq = sunEquatorial(timeRef.value)
+  return { ra: eq.ra, dec: eq.dec, projAngle: normalizeAngle(lst - eq.ra + 90) }
+})
+
+/** 月亮赤道 + 投影角 */
+const moonProj = computed(() => {
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  const eq = moonEquatorial(timeRef.value)
+  return { ra: eq.ra, dec: eq.dec, projAngle: normalizeAngle(lst - eq.ra + 90) }
+})
+
+/** 五星（水金火木土）赤道 + 投影角 */
+const planetsProj = computed(() => {
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  const keys: PlanetKey[] = ['mercury', 'venus', 'mars', 'jupiter', 'saturn']
+  return keys.map((key) => {
+    const eq = planetEquatorial(timeRef.value, key)
+    const cfg = PLANETS_CONFIG[key]
+    return {
+      key,
+      name: cfg.name,
+      symbol: cfg.symbol,
+      color: cfg.color,
+      ra: eq.ra,
+      dec: eq.dec,
+      projAngle: normalizeAngle(lst - eq.ra + 90)
+    }
+  })
+})
+
+/**
+ * 地平线采样点（观测者固定曲线,不随时间旋转）
+ *
+ * 在"面朝北仰望"投影下,地平线相对 SVG 坐标是静态的（仅依赖 φ）。
+ * 参数化：方位角 A ∈ [0°=北, 90°=东, 180°=南, 270°=西],每 2° 一采样。
+ *
+ * 天文公式：
+ *   δ   = asin(cos φ · cos A)                       // alt=0 时的赤纬
+ *   |H| = acos(−tan φ · tan δ)                      // alt=0 时的时角绝对值
+ *   H   = −|H|（东侧 sin A>0,未过中天） / +|H|（西侧,已过中天）
+ *
+ * projAngle = H + 90° 因为 projAngle = LST − RA + 90 且 H = LST − RA。
+ * 关键节点：A=0(北) → δ=+55° H=+180° → 内规下方
+ *          A=180(南) → δ=−55° H=0° → 外规上方
+ */
+const horizonSamples = computed(() => {
+  const phi = (props.observerLat * Math.PI) / 180
+  const out: { ra: number; dec: number }[] = []
+  for (let A = 0; A <= 360; A += 2) {
+    const a = (A * Math.PI) / 180
+    const cosDec = Math.cos(phi) * Math.cos(a)
+    const dec = Math.asin(Math.max(-1, Math.min(1, cosDec)))
+    let cosH = -Math.tan(phi) * Math.tan(dec)
+    cosH = Math.max(-1, Math.min(1, cosH))
+    let H = Math.acos(cosH)
+    // 东半(sin A > 0)时角 H<0（未过中天）,西半 H>0
+    if (Math.sin(a) > 0) H = -H
+    const decDeg = (dec * 180) / Math.PI
+    const projAngle = normalizeAngle((H * 180) / Math.PI + 90)
+    out.push({ ra: projAngle, dec: decDeg })
+  }
+  return out
+})
+
 /* ═══════════════════════════════════════════════════════════════
  *  投影→SVG 坐标(与 BeidouCenter 完全一致的口径)
  * ═══════════════════════════════════════════════════════════════ */
@@ -175,11 +352,29 @@ const dirSign = computed(() =>
  */
 const projectionScale = (actualRadius: number): number => actualRadius * 0.6
 
-/** 数学平面 → SVG 坐标 */
-const makeToSvg = (scale: number) => (p: { x: number; y: number }) => ({
-  x: p.x * scale,
-  y: -p.y * scale * dirSign.value
-})
+/**
+ * 数学平面 → SVG 坐标
+ *
+ * 中间插入 orientOffset 的旋转变换：把整盘绕天极转 −orientOffset,
+ * 使 fixed-sky-* 模式下把指定 RA 转到盘面顶部。
+ * fixed-ground 模式 orientOffset=0,退化为纯 y 取反。
+ *
+ * 三档模式全部保持"东在右、西在左"的观测者视角,不做镜像。
+ */
+const makeToSvg = (scale: number) => {
+  const theta = (orientOffset.value * Math.PI) / 180
+  const cos = Math.cos(theta)
+  const sin = Math.sin(theta)
+  return (p: { x: number; y: number }) => {
+    // 数学平面旋转 −θ:x' = x cos θ + y sin θ,y' = −x sin θ + y cos θ
+    const xr = p.x * cos + p.y * sin
+    const yr = -p.x * sin + p.y * cos
+    return {
+      x: xr * scale,
+      y: -yr * scale * dirSign.value
+    }
+  }
+}
 
 /* ═══════════════════════════════════════════════════════════════
  *  派生视图数据(接收 actualRadius 参数,由 BaseCenter slot 提供)
@@ -208,16 +403,18 @@ const computeRegulae = (actualRadius: number) => {
 const computeSpokes = (actualRadius: number) => {
   const scale = projectionScale(actualRadius)
   const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
-  // 外规半径 (δ=−(90−φ)) —— 辐条从北极画到这里
+  const toSvg = makeToSvg(1) // 单位平面,后面自己乘 outerR
+  // 外规半径 (δ=−(90−φ)) —— 辐条从北极画到这里(乘 scale 前)
   const outerR = (scale * (180 - props.observerLat)) / 90
   return spans.value.map((s) => {
     const projAngle = normalizeAngle(lst - s.startRa + 90)
-    // 数学平面 (cos·r, sin·r) → SVG y 取反 × dirSign
     const rad = (projAngle * Math.PI) / 180
+    // 单位方向向量 → 经 makeToSvg 旋转 → 乘 outerR
+    const dir = toSvg({ x: Math.cos(rad), y: Math.sin(rad) })
     return {
       label: s.label,
-      x: Math.cos(rad) * outerR,
-      y: -Math.sin(rad) * outerR * dirSign.value
+      x: dir.x * outerR,
+      y: dir.y * outerR
     }
   })
 }
@@ -291,6 +488,48 @@ const computeZiweiWall = (
 const polyPoints = (pts: { x: number; y: number }[]): string =>
   pts.map((p) => `${p.x.toFixed(2)},${p.y.toFixed(2)}`).join(' ')
 
+/** 采样点 ({ projAngle, dec }) → SVG 路径 d 字符串 */
+const curvePathD = (
+  samples: { ra: number; dec: number }[],
+  scale: number,
+  _dir: number
+): string => {
+  const toSvg = makeToSvg(scale)
+  return samples
+    .map((s) => {
+      const p = toSvg(project(s.ra, s.dec))
+      return `${p.x.toFixed(2)},${p.y.toFixed(2)}`
+    })
+    .join(' ')
+}
+
+/** 黄道 SVG 坐标 */
+const computeEclipticPath = (actualRadius: number) => {
+  const scale = projectionScale(actualRadius)
+  return curvePathD(eclipticSamples.value, scale, dirSign.value)
+}
+/** 白道 SVG 坐标 */
+const computeWhiteWayPath = (actualRadius: number) => {
+  const scale = projectionScale(actualRadius)
+  return curvePathD(whiteWaySamples.value, scale, dirSign.value)
+}
+/** 地平线 SVG 坐标 */
+const computeHorizonPath = (actualRadius: number) => {
+  const scale = projectionScale(actualRadius)
+  return curvePathD(horizonSamples.value, scale, dirSign.value)
+}
+
+/** 单个天体的 SVG 坐标:投影平面 → (x,y) */
+const bodySvg = (
+  projAngle: number,
+  dec: number,
+  scale: number,
+  _dir: number
+): { x: number; y: number } => {
+  const toSvg = makeToSvg(scale)
+  return toSvg(project(projAngle, dec))
+}
+
 /** 天极十字大小 —— 与三规圆同尺度,标识几何天极 */
 const poleCrossSize = 6
 </script>
@@ -325,69 +564,111 @@ const poleCrossSize = 6
 
         <!-- ═════════════════════════════════════════════════════
              ① 三规圆(苏图骨架:内规/赤道/外规)
-             ═════════════════════════════════════════════════════ -->
+             ═════════════════════════════════════════════════════
+             每规独立 group,包含:实线圆 + 透明厚 stroke(hit area) + text
+             hover 命中 hit area 时 text 才亮 -->
         <template
           v-if="showThreeRegulae"
           v-for="reg in [computeRegulae(actualRadius)]"
           :key="'regulae'"
         >
-          <g :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`">
-            <!-- 内规(恒显圈,金色实线) -->
+          <!-- 内规(恒显圈,金色细实线) -->
+          <g class="regula">
             <circle
               cx="0"
               cy="0"
               :r="reg.inner"
               fill="none"
               stroke="#D4AF37"
-              stroke-width="1.2"
-              opacity="0.85"
+              stroke-width="0.8"
+              opacity="0.5"
             />
-            <!-- 赤道(天中规,白色粗实线) -->
+            <circle
+              cx="0"
+              cy="0"
+              :r="reg.inner"
+              fill="none"
+              stroke="transparent"
+              stroke-width="12"
+              pointer-events="stroke"
+            />
+            <text
+              v-if="showLabels"
+              :x="0"
+              :y="-reg.inner - 4"
+              fill="#D4AF37"
+              font-size="9"
+              text-anchor="middle"
+              paint-order="stroke"
+              stroke="#000"
+              stroke-width="1.6"
+            >内规 δ+{{ (90 - observerLat).toFixed(0) }}°</text>
+          </g>
+
+          <!-- 赤道(天中规,白色细实线) -->
+          <g class="regula">
             <circle
               cx="0"
               cy="0"
               :r="reg.equator"
               fill="none"
               stroke="#EAEAEA"
-              stroke-width="1.8"
-              opacity="0.9"
+              stroke-width="0.9"
+              opacity="0.5"
             />
-            <!-- 外规(恒隐圈,金色细线,通常超出可视被裁剪) -->
+            <circle
+              cx="0"
+              cy="0"
+              :r="reg.equator"
+              fill="none"
+              stroke="transparent"
+              stroke-width="12"
+              pointer-events="stroke"
+            />
+            <text
+              v-if="showLabels"
+              :x="0"
+              :y="-reg.equator - 4"
+              fill="#EAEAEA"
+              font-size="9"
+              text-anchor="middle"
+              paint-order="stroke"
+              stroke="#000"
+              stroke-width="1.6"
+            >赤道 δ0°</text>
+          </g>
+
+          <!-- 外规(恒隐圈,金色细实线) -->
+          <g class="regula">
             <circle
               cx="0"
               cy="0"
               :r="reg.outer"
               fill="none"
               stroke="#D4AF37"
-              stroke-width="1.0"
-              opacity="0.7"
+              stroke-width="0.8"
+              opacity="0.5"
             />
-          </g>
-
-          <!-- 三规标签(小字在顶端) -->
-          <g v-if="showLabels" class="regulae-labels">
+            <circle
+              cx="0"
+              cy="0"
+              :r="reg.outer"
+              fill="none"
+              stroke="transparent"
+              stroke-width="12"
+              pointer-events="stroke"
+            />
             <text
+              v-if="showLabels"
               :x="0"
-              :y="-reg.inner - 4"
+              :y="-reg.outer - 4"
               fill="#D4AF37"
               font-size="9"
               text-anchor="middle"
-              opacity="0.85"
               paint-order="stroke"
               stroke="#000"
               stroke-width="1.6"
-            >内规 δ+{{ (90 - observerLat).toFixed(0) }}°</text>
-            <text
-              :x="0"
-              :y="-reg.equator - 4"
-              fill="#EAEAEA"
-              font-size="9"
-              text-anchor="middle"
-              opacity="0.85"
-              paint-order="stroke"
-              stroke="#000"
-              stroke-width="1.6"
-            >赤道 δ0°</text>
+            >外规 δ−{{ (90 - observerLat).toFixed(0) }}°</text>
           </g>
         </template>
 
@@ -438,7 +719,7 @@ const poleCrossSize = 6
               stroke-linecap="round"
             />
 
-            <!-- 每颗星:星等控制大小,四象色系上色 -->
+            <!-- 每颗星:星等控制大小,四象色系上色,hover 亮出"XX宿几" -->
             <g v-for="(s, i) in asterism.stars" :key="'st-' + asterism.label + '-' + i" class="star">
               <!-- 淡光晕 -->
               <circle :cx="s.x" :cy="s.y" :r="s.r + 2" :fill="asterism.color" opacity="0.22" />
@@ -455,22 +736,172 @@ const poleCrossSize = 6
                 stroke-width="0.6"
                 opacity="0.85"
               />
+              <!-- hit area:透明大圆便于 hover 命中 -->
+              <circle
+                :cx="s.x"
+                :cy="s.y"
+                :r="Math.max(s.r + 4, 6)"
+                fill="transparent"
+                pointer-events="all"
+              />
+              <!-- 具体星名(如"角宿一"),默认隐藏,hover 亮出 -->
+              <text
+                v-if="showLabels"
+                :x="s.x + s.r + 4"
+                :y="s.y - s.r - 2"
+                :fill="asterism.color"
+                font-size="12"
+                font-weight="600"
+                text-anchor="start"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="2.2"
+              >{{ s.cnName }}</text>
             </g>
-
-            <!-- 宿名(标在距星旁,大字醒目) -->
-            <text
-              v-if="showLabels && asterism.distStar"
-              :x="asterism.distStar.x + asterism.distStar.r + 4"
-              :y="asterism.distStar.y - asterism.distStar.r - 2"
-              :fill="asterism.color"
-              font-size="14"
-              font-weight="600"
-              text-anchor="start"
-              paint-order="stroke"
-              stroke="#000"
-              stroke-width="2.2"
-            >{{ asterism.label }}</text>
           </g>
+        </g>
+
+        <!-- ═════════════════════════════════════════════════════
+             ③b 黄道 + 白道(与三规同 clip,外规裁剪)
+             ═════════════════════════════════════════════════════ -->
+        <g :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`">
+          <!-- 黄道(赭黄色,细虚线) -->
+          <polyline
+            v-if="showEcliptic"
+            class="ecliptic"
+            :points="computeEclipticPath(actualRadius)"
+            fill="none"
+            stroke="#E9B949"
+            stroke-width="0.9"
+            stroke-dasharray="2,6"
+            opacity="0.5"
+          />
+          <!-- 白道(月银色,细虚线) -->
+          <polyline
+            v-if="showWhiteWay"
+            class="white-way"
+            :points="computeWhiteWayPath(actualRadius)"
+            fill="none"
+            stroke="#BFD5E8"
+            stroke-width="0.8"
+            stroke-dasharray="1.5,6"
+            opacity="0.45"
+          />
+          <!-- 地平线(青灰色,实线,只依赖 φ,不随时间旋转) -->
+          <polyline
+            v-if="showHorizon"
+            class="horizon"
+            :points="computeHorizonPath(actualRadius)"
+            fill="none"
+            stroke="#7EA8B8"
+            stroke-width="1.0"
+            opacity="0.55"
+          />
+        </g>
+
+        <!-- ═════════════════════════════════════════════════════
+             ③c 太阳 · 月亮 · 五星(hover 亮出名字)
+             ═════════════════════════════════════════════════════ -->
+        <g :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`">
+          <!-- 太阳:金色实心 + 光芒环 -->
+          <template
+            v-if="showSun"
+            v-for="sun in [bodySvg(sunProj.projAngle, sunProj.dec, projectionScale(actualRadius), dirSign)]"
+            :key="'sun'"
+          >
+            <g class="body sun">
+              <circle :cx="sun.x" :cy="sun.y" :r="12" fill="#FFB84D" opacity="0.22" />
+              <circle :cx="sun.x" :cy="sun.y" :r="6" fill="#FFC94A" />
+              <circle :cx="sun.x" :cy="sun.y" :r="3.2" fill="#FFF3B0" />
+              <circle
+                :cx="sun.x"
+                :cy="sun.y"
+                :r="14"
+                fill="transparent"
+                pointer-events="all"
+              />
+              <text
+                v-if="showLabels"
+                :x="sun.x + 10"
+                :y="sun.y - 8"
+                fill="#FFC94A"
+                font-size="12"
+                font-weight="600"
+                text-anchor="start"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="2.2"
+              >☉ 日</text>
+            </g>
+          </template>
+
+          <!-- 月亮:银白色 + 光晕 -->
+          <template
+            v-if="showMoon"
+            v-for="moon in [bodySvg(moonProj.projAngle, moonProj.dec, projectionScale(actualRadius), dirSign)]"
+            :key="'moon'"
+          >
+            <g class="body moon">
+              <circle :cx="moon.x" :cy="moon.y" :r="10" fill="#DCE6F0" opacity="0.22" />
+              <circle :cx="moon.x" :cy="moon.y" :r="5" fill="#EAF0F5" />
+              <circle :cx="moon.x" :cy="moon.y" :r="2.4" fill="#B7C4D0" />
+              <circle
+                :cx="moon.x"
+                :cy="moon.y"
+                :r="12"
+                fill="transparent"
+                pointer-events="all"
+              />
+              <text
+                v-if="showLabels"
+                :x="moon.x + 8"
+                :y="moon.y - 6"
+                fill="#DCE6F0"
+                font-size="12"
+                font-weight="600"
+                text-anchor="start"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="2.2"
+              >☽ 月</text>
+            </g>
+          </template>
+
+          <!-- 五星（水金火木土） -->
+          <template v-if="showPlanets">
+            <g
+              v-for="planet in planetsProj"
+              :key="'p-' + planet.key"
+              class="body planet"
+            >
+              <template
+                v-for="p in [bodySvg(planet.projAngle, planet.dec, projectionScale(actualRadius), dirSign)]"
+                :key="planet.key"
+              >
+                <circle :cx="p.x" :cy="p.y" :r="6" :fill="planet.color" opacity="0.25" />
+                <circle :cx="p.x" :cy="p.y" :r="3" :fill="planet.color" />
+                <circle
+                  :cx="p.x"
+                  :cy="p.y"
+                  :r="9"
+                  fill="transparent"
+                  pointer-events="all"
+                />
+                <text
+                  v-if="showLabels"
+                  :x="p.x + 6"
+                  :y="p.y - 4"
+                  :fill="planet.color"
+                  font-size="12"
+                  font-weight="600"
+                  text-anchor="start"
+                  paint-order="stroke"
+                  stroke="#000"
+                  stroke-width="2.2"
+                >{{ planet.symbol }} {{ planet.name }}</text>
+              </template>
+            </g>
+          </template>
         </g>
 
         <!-- ═════════════════════════════════════════════════════
@@ -614,7 +1045,7 @@ const poleCrossSize = 6
           </g>
 
           <!-- 七星本体 + 中文名 -->
-          <g v-for="s in beidouPts" :key="s.key" class="star">
+          <g v-for="s in beidouPts" :key="s.key" class="beidou-star">
             <circle
               :cx="s.x"
               :cy="s.y"
@@ -652,5 +1083,25 @@ const poleCrossSize = 6
   font-family: 'Microsoft YaHei', 'STHeiti', sans-serif;
   pointer-events: none;
   user-select: none;
+}
+
+/* 默认隐藏所有可 hover 标签,鼠标悬停时淡入 */
+.suzhou-sky-map .regula text,
+.suzhou-sky-map .mansion-asterism .star text,
+.suzhou-sky-map .ziwei-star text,
+.suzhou-sky-map .polaris text,
+.suzhou-sky-map .beidou-star text,
+.suzhou-sky-map .body text {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+}
+
+.suzhou-sky-map .regula:hover text,
+.suzhou-sky-map .mansion-asterism .star:hover text,
+.suzhou-sky-map .ziwei-star:hover text,
+.suzhou-sky-map .polaris:hover text,
+.suzhou-sky-map .beidou-star:hover text,
+.suzhou-sky-map .body:hover text {
+  opacity: 1;
 }
 </style>

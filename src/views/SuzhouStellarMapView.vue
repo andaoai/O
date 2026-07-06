@@ -47,14 +47,41 @@ const DISK_OUTER_RADIUS = 580
 const OBSERVER_LAT = 35      // 汴京(开封)
 const OBSERVER_LON = 116.4
 
+/**
+ * 盘面朝向模式:
+ *   · fixed-ground     : 观测者头顶朝上,星宿旋转,地平线不动 —— 观星者实感
+ *   · fixed-sky-coord  : 春分点(RA=0)朝上,东在右,星宿静止,地平旋转 —— 现代星图
+ *   · fixed-sky-suzhou : 心宿二(大火)朝上 —— 《尧典》「日永星火,以正仲夏」南中天约定
+ */
+const orientation = ref<'fixed-ground' | 'fixed-sky-coord' | 'fixed-sky-suzhou'>('fixed-ground')
+
 /** 无外圈环:圆心组件 SuzhouSkyMap 直接填满整个可视区 */
 const outerRings: never[] = []
 </script>
 
 <template>
   <div class="container">
-    <!-- 返回首页 -->
-    <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
+    <!-- 左上工具栏:返回 + 朝向切换 -->
+    <div class="topbar">
+      <a :href="withBase('/compass/')" class="back-link">← 罗盘列表</a>
+      <div class="orientation-toggle">
+        <button
+          :class="{ active: orientation === 'fixed-ground' }"
+          @click="orientation = 'fixed-ground'"
+          title="观测者视角:头顶朝上,星宿旋转,地平线固定"
+        >固定地平</button>
+        <button
+          :class="{ active: orientation === 'fixed-sky-coord' }"
+          @click="orientation = 'fixed-sky-coord'"
+          title="坐标视角:春分点 RA=0 朝上,东在右西在左"
+        >赤道·坐标</button>
+        <button
+          :class="{ active: orientation === 'fixed-sky-suzhou' }"
+          @click="orientation = 'fixed-sky-suzhou'"
+          title="苏图视角:心宿二(大火)朝上,与《尧典》「日永星火」南中天约定一致"
+        >赤道·苏图</button>
+      </div>
+    </div>
 
     <!-- 标题浮层 -->
     <!-- <div class="title-overlay">
@@ -77,6 +104,7 @@ const outerRings: never[] = []
               :rotation-direction="rotationDirection"
               :observer-lat="OBSERVER_LAT"
               :observer-lon="OBSERVER_LON"
+              :orientation="orientation"
             />
           </template>
         </RingStack>
@@ -113,11 +141,17 @@ const outerRings: never[] = []
   height: min(100vw, 100vh);
 }
 
-.back-link {
+.topbar {
   position: absolute;
   top: 16px;
   left: 16px;
   z-index: 10;
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.back-link {
   color: #aaa;
   text-decoration: none;
   font-size: 14px;
@@ -125,11 +159,43 @@ const outerRings: never[] = []
   border: 1px solid #444;
   border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.5);
+  display: inline-flex;
+  align-items: center;
 }
 
 .back-link:hover {
   color: #fff;
   border-color: #888;
+}
+
+.orientation-toggle {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid #444;
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.6);
+}
+
+.orientation-toggle button {
+  color: #aaa;
+  background: transparent;
+  border: none;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 1px;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+.orientation-toggle button:hover {
+  color: #eee;
+}
+
+.orientation-toggle button.active {
+  color: #d4af37;
+  background-color: rgba(212, 175, 55, 0.12);
 }
 
 .title-overlay {
