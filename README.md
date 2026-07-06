@@ -16,6 +16,9 @@
 - **京房十二消息卦盘** — 京房卦气：60 卦六日七分 + 四正卦 + 十二消息卦 + 八宫世应 + 浑天纳甲 + 日干支值日环。
 - **七曜入宿天象盘** — 盖天投影，赤道·黄道·白道三道斜交，日月五星实时入二十八宿。
 - **回归年闰月盘** — 365 天回归年对 360 度甲子纪年，节气节/中气区分，农历闰月与月相实时可视化。
+- **观斗盘** — 圆心真实北斗七星（岁差修正）+ 紫微垣东西两藩 + 勾陈一 + 地平圈（浏览器定位），外裹月建/时辰赤道环、月将/七曜/节气黄道环——把北斗的方位读成时辰、季节与年岁。
+- **飞伏图盘** — 京房八宫六十四卦飞伏关系，外圈京房八宫环，中央 64 条有向箭头从各卦指向 8 个纯卦，呈放射状收敛。
+- **苏州石刻天文图** — 南宋淳祐七年（1247）王致远勒石于苏州府学的天文图数字复原：三规圆 + 二十八宿不等宽径向辐条 + 中央拱极北斗，斗柄随本地恒星时旋转。
 
 访问：<https://andaoai.github.io/O/>
 
@@ -64,20 +67,22 @@ npm run preview     # 预览生产产物
 │  │  └─ 京氏易傳/                # 京氏易传（汉·京房）— 每卦一页，配 SingleGuaChart
 │  ├─ concepts/                   # 通用概念索引（岁差、纳甲、卦气、世应、七曜……）
 │  ├─ dev/                        # 站内开发文档（组件 API / astronomy-engine 集成）
-│  └─ compass/                    # 六个罗盘页 + 一览页（layout: compass）
+│  └─ compass/                    # 九个罗盘页 + 一览页（layout: compass）
 │
 └─ src/                           # 组件库（被 VitePress 通过 @ alias 消费）
    ├─ compasses/index.ts          # 罗盘注册表（元数据，驱动一览页）
-   ├─ views/                      # Layer 2 组合层：6 个罗盘 View + HomeView
+   ├─ views/                      # Layer 2 组合层：9 个罗盘 View + HomeView
    ├─ components/
    │  ├─ base/                    # Layer 4 基础渲染层（PolarCanvas/CircleRing/PointRing/RingStack/BaseCenter）
-   │  ├─ rings/                   # 领域圆环组件（22 个）+ 3 个 Data* 数据包装器
-   │  ├─ centers/                 # 领域圆心组件（4 个）
+   │  ├─ rings/                   # 领域圆环组件（27 个）+ 3 个 Data* 数据包装器
+   │  ├─ centers/                 # 领域圆心组件（6 个）
+   │  ├─ sidebar/                 # 罗盘左侧嵌入式 Sidebar（时间/视口/View 专属工具位）
+   │  ├─ feifu/                   # 飞伏图盘专用（64 条飞伏箭头径向叠加）
    │  ├─ gua/                     # 单卦静态图（SingleGuaChart，供古籍笔记内嵌）
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
-   ├─ composables/                # useRingBase / useUrlTime / useTimePlayback / useLiveClock / …
-   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / liuqin / …）
+   ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / …
+   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / liuqin / beidou / ziwei / jianJiang / feifu / …）
 ```
 
 ## 📚 深入了解

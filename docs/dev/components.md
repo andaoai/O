@@ -20,12 +20,18 @@
 - [天文组件](#天文组件)
   - [SolarEcliptic](#solarecliptic-黄道天体组件)
   - [TaiChi](#taichi-太极图组件)
-- [控制组件](#控制组件)
-  - [Control](#control-统一控制面板)
+- [控制面板 · Sidebar](#控制面板--sidebar)
+  - [CompassSidebar](#compasssidebar-罗盘左侧嵌入式-sidebar)
+  - [View 专属工具位（Teleport）](#view-专属工具位teleport)
 - [可复用 Composable](#可复用-composable)
-  - [useTimePlayback](#usetimeplayback-时间播放控制)
-  - [usePanelDrag](#usepaneldrag-面板拖拽)
-  - [useKeyboardShortcuts](#usekeyboardshortcuts-键盘快捷键)
+  - [useTimeController](#usetimecontroller-受控时间控制器)
+  - [useViewport](#useviewport-视口状态)
+  - [useTimeShortcuts / useViewportShortcuts](#usetimeshortcuts--useviewportshortcuts-快捷键)
+  - [useAltDragPan](#usealtdragpan-alt--拖拽平移--滚轮缩放)
+  - [useCompassContext](#usecompasscontext-跨-layoutview-状态桥)
+  - [useSidebarLayout](#usesidebarlayout-侧栏折叠状态)
+  - [useUrlTime](#useurltime-url--受控时间双向绑定)
+  - [useLiveClock](#useliveclock-1hz-实时时钟)
 - [平台层](#平台层)
   - [罗盘注册表与路由](#罗盘注册表与路由)
 - [开发指南](#开发指南)
@@ -614,39 +620,155 @@ const allPlanetsRing = computed(() =>
 
 ---
 
-## 控制组件
+## 控制面板 · Sidebar
 
-### Control 统一控制面板
+罗盘的时间 / 缩放 / 平移 / 旋转控制由左侧嵌入式 **Sidebar** 承载（曾经的 `Control.vue` 已下线）。核心变化：
 
-集成时间、缩放、平移、旋转控制，提供键盘快捷键。所有状态通过 `v-model` 与视图双向绑定。
+- **单点挂载**：`<CompassSidebar>` 挂在 [`CompassLayout.vue`](../../docs/.vitepress/theme/layouts/CompassLayout.vue) 里，9 个罗盘 View 共享一份 Sidebar
+- **状态解耦**：不再走 `v-model` 五联 —— View 只负责 `provideCompassContext({ time, viewport, onUserTimeChange })`
+- **View 专属工具位**：通过 `<Teleport to="#sidebar-view-tools">` 把 View 自己的控件塞进 Sidebar 的「视图选项」区块
+- **折叠形态**：展开态左侧 260px；折叠态整体 `translateX(-100%)`，屏幕左中悬浮一个 40×80 把手可再打开
+- **返回入口**：Sidebar 顶部统一提供「← 罗盘列表」链接，替代 9 个 View 各自复制的 `.back-link`
 
-**最近更新**（commit 9e53e8f / c33f550）：
-- 新增**三条时间线显示**：公历日期 → 朝代信息 → 干支年月日时
-- 支持显示农历和节气
-- 支持公元前年份输入
-- 可折叠模块，状态持久化到 localStorage
-- 面板可拖拽，位置记忆
-- 核心逻辑抽取为三个可复用 composable
+### CompassSidebar 罗盘左侧嵌入式 Sidebar
 
-#### Props（均通过 v-model 绑定）
+**位置**：`src/components/sidebar/CompassSidebar.vue`
 
-| 属性 | 类型 | 说明 |
-|------|------|------|
-| `modelValue` | Date | 当前时间（`v-model`） |
-| `zoom` | number | 缩放级别（`v-model:zoom`） |
-| `offsetX` / `offsetY` | number | 平移偏移（`v-model:offsetX` / `v-model:offsetY`） |
-| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 旋转方向（`v-model:rotation-direction`） |
-| `rotationAngle` | number | 旋转角度（`v-model:rotation-angle`） |
+结构：
+```
+┌─────────────────────┐
+│ SidebarHeader       │  ← 罗盘列表 · 罗盘名 · 折叠按钮
+├─────────────────────┤
+│ 视图选项 [Teleport] │  ← 空则自动隐藏（CSS :has(:empty)）
+├─────────────────────┤
+│ TimePanel           │  ← 时间信息 / 播放 / 步进 / 输入
+├─────────────────────┤
+│ ViewportPanel       │  ← 缩放 / 平移 / 旋转方向 / 旋转角度
+└─────────────────────┘
+```
 
-#### Events
+组件树：
+| 子组件 | 职责 |
+|--------|------|
+| `SidebarHeader.vue` | 顶部品牌区：返回链接 + 当前罗盘中文名 + 折叠按钮 |
+| `SidebarToggleHandle.vue` | 折叠态的左中悬浮把手（`position: fixed; top: 50%`） |
+| `SidebarSection.vue` | 通用可折叠 section 外壳（标题 + 内容 + ▸/▾ 指示） |
+| `SidebarButton.vue` | 侧栏按钮统一样式（取代旧 `ControlButton`） |
+| `TimePanel.vue` | 时间面板：三条时间线（公历/朝代/干支）+ 播放/步进/输入 |
+| `ViewportPanel.vue` | 视口面板：缩放滑条 + 平移四向 + 旋转方向切换 + 旋转角度输入 |
 
-除各 `update:*`（支撑 v-model）外，还额外抛出便于监听的事件：`timeChange`、`zoomChange`、`offsetChange({ x, y })`、`rotationDirectionChange`、`rotationAngleChange`。
+**Props**：无。Sidebar 通过 `useCompassContext()` 读取当前 View 注册的上下文，View 未挂载时时间/视口面板降级隐藏、返回入口仍可用。
 
-#### 键盘快捷键
+**View 侧的四行接入**：
+```typescript
+import { useUrlTime } from '@/composables/useUrlTime'
+import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
+
+const { controlledTime, clearUrlTime } = useUrlTime()
+const viewport = useViewport()
+provideCompassContext({
+  time: controlledTime,
+  viewport,
+  onUserTimeChange: () => { /* 用户改时间时退出 liveMode */ }
+})
+```
+
+### View 专属工具位（Teleport）
+
+Sidebar 的「视图选项」区块本质是一个常驻的挂载点：
+
+```vue
+<!-- CompassSidebar.vue —— 简化 -->
+<div id="sidebar-view-tools" class="view-tools-slot"></div>
+```
+
+**空态自动隐藏**（无需 JS 观察）：
+```css
+.section--auto-hide:has(.view-tools-slot:empty) { display: none; }
+```
+
+**View 侧投递**（示例：`SuzhouStellarMapView` 的三档朝向切换）：
+```vue
+<template>
+  <div class="container">
+    <svg ...>...</svg>
+
+    <Teleport to="#sidebar-view-tools">
+      <div class="orientation-toggle">
+        <button v-for="opt in orientations" @click="orient = opt.key">
+          {{ opt.label }}
+        </button>
+      </div>
+    </Teleport>
+  </div>
+</template>
+```
+
+**优点**：
+- 无侵入 —— Sidebar 不需要知道每个 View 有什么工具
+- 生命周期跟随 View —— View 卸载则 Teleport 内容自动清空 → CSS 自动隐藏 section
+- 样式作用域独立 —— 每个 View 用自己的 scoped CSS，不污染 Sidebar
+
+---
+
+## 可复用 Composable
+
+### useTimeController 受控时间控制器
+
+**位置**：`src/composables/useTimeController.ts`
+
+替代旧 `useTimePlayback`。核心区别：
+- ✅ 接收外部 `time: Ref<Date>` 作为唯一真理源，内部不再有 currentTime 副本
+- ✅ 播放采用 wall-clock 增量差分 + `visibilitychange` 重置 —— 修复"切 tab 后瞬跳几十天"的 bug
+- ✅ 单帧 dt 上限 100ms —— 抑制 tab 冻结/长掉帧导致的瞬跳
+
+```typescript
+import { useUrlTime } from '@/composables/useUrlTime'
+import { useTimeController } from '@/composables/useTimeController'
+
+const { controlledTime, clearUrlTime } = useUrlTime()
+const time = useTimeController(controlledTime, {
+  onUserChange: () => clearUrlTime()  // 用户任何主动操作 → 通知
+})
+// time.isPlaying / playSpeed / togglePlayPause / stepTime / stepMonth / stepYear / applyTime ...
+```
+
+### useViewport 视口状态
+
+**位置**：`src/composables/useViewport.ts`
+
+把 `zoom` / `offsetX` / `offsetY` / `rotationDirection` / `rotationAngle` 五个 ref 折叠成一个对象，同时暴露所有变换动作。
+
+```typescript
+const viewport = useViewport()
+// 模板：
+// <g :transform="`translate(${600 + viewport.offsetX} ${600 + viewport.offsetY})
+//                 scale(${viewport.zoom})
+//                 rotate(${viewport.rotationDirection === 'clockwise'
+//                   ? viewport.rotationAngle
+//                   : -viewport.rotationAngle})`" />
+
+viewport.zoomIn()
+viewport.moveLeft()
+viewport.toggleRotationDirection()
+viewport.rotateLeft()  // -90°
+viewport.resetZoom()
+viewport.resetOffset()
+viewport.resetRotationAngle()
+```
+
+**边界**：zoom clamp 在 `[0.1, 3]`；rotationAngle 归一到 `[0, 360)`。
+
+### useTimeShortcuts / useViewportShortcuts 快捷键
+
+**位置**：`src/composables/useTimeShortcuts.ts` / `useViewportShortcuts.ts`
+
+分离时间和视口两组快捷键。共享 `shouldIgnoreShortcut(e)` 屏蔽输入框 / contenteditable / IME 组合中的按键。
 
 | 快捷键 | 功能 |
 |--------|------|
-| `空格` | 播放 / 暂停 |
+| `Space` | 播放 / 暂停 |
 | `R` | 重置到当前时间 |
 | `Y` / `⇧Y` | +1 / -1 年 |
 | `M` / `⇧M` | +1 / -1 月 |
@@ -662,114 +784,102 @@ const allPlanetsRing = computed(() =>
 | `Q` / `E` | 左转 90° / 右转 90° |
 | `W` | 重置旋转角度 |
 
-#### 使用示例
-
-```vue
-<script setup lang="ts">
-import { ref } from 'vue'
-import Control from '@/components/Control.vue'
-
-const controlledTime = ref(new Date())
-const zoomLevel = ref(1)
-const offsetX = ref(0)
-const offsetY = ref(0)
-const rotationDirection = ref<'clockwise' | 'counterclockwise'>('clockwise')
-const rotationAngle = ref(0)
-</script>
-
-<template>
-  <svg width="1200" height="1200" viewBox="0 0 1200 1200">
-    <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoomLevel}) rotate(${rotationAngle})`">
-      <!-- 盘面内容 -->
-    </g>
-  </svg>
-
-  <Control
-    v-model="controlledTime"
-    v-model:zoom="zoomLevel"
-    v-model:offsetX="offsetX"
-    v-model:offsetY="offsetY"
-    v-model:rotation-direction="rotationDirection"
-    v-model:rotation-angle="rotationAngle"
-  />
-</template>
-```
-
----
-
-## 可复用 Composable
-
-### useTimePlayback 时间播放控制
-
-从 `Control.vue` 抽出的可复用时间播放逻辑：当前时间状态、播放/暂停、倍速推进、步进、重置到现在。
-
 ```typescript
-import { useTimePlayback } from '@/composables/useTimePlayback'
+useTimeShortcuts({
+  togglePlayPause: time.togglePlayPause,
+  resetToNow: time.resetToNow,
+  stepYear: time.stepYear,
+  stepMonth: time.stepMonth,
+  stepTime: time.stepTime
+})
 
-const {
-  currentTime,       // 当前时间 ref
-  isPlaying,         // 是否播放 ref
-  playSpeed,         // 播放速度 ref
-  updateTime,        // 更新时间函数
-  play,              // 开始播放
-  pause,             // 暂停
-  togglePlayPause,   // 切换播放/暂停
-  resetToNow,        // 重置到当前时间
-  updatePlaySpeed,   // 更新播放速度（重启动画）
-  stepTime,          // 步进指定秒数
-  stepMonth,         // 步进指定月份
-  stepYear           // 步进指定年份
-} = useTimePlayback((t: Date) => {
-  // 时间变化回调
-  console.log('Time changed:', t)
+useViewportShortcuts({
+  zoomIn: viewport.zoomIn,
+  zoomOut: viewport.zoomOut,
+  resetZoom: viewport.resetZoom,
+  setZoom: viewport.setZoom,
+  moveUp: viewport.moveUp,
+  moveDown: viewport.moveDown,
+  moveLeft: viewport.moveLeft,
+  moveRight: viewport.moveRight,
+  resetOffset: viewport.resetOffset,
+  toggleRotationDirection: viewport.toggleRotationDirection,
+  rotateLeft: viewport.rotateLeft,
+  rotateRight: viewport.rotateRight,
+  resetRotationAngle: viewport.resetRotationAngle
 })
 ```
 
-### usePanelDrag 面板拖拽
+### useAltDragPan Alt + 拖拽平移 / 滚轮缩放
 
-从 `Control.vue` 抽出的面板拖拽逻辑：支持标题栏拖拽、边界约束（面板保持在视口内）、位置持久化到 localStorage。
+**位置**：`src/composables/useAltDragPan.ts`
+
+- **Alt + 鼠标左键拖拽** → 平移画布（更新 `offsetX` / `offsetY`）
+- **Alt + 滚轮** → 缩放（滚上放大，滚下缩小，`Ctrl` 无关，避免与浏览器缩放冲突）
+
+屏幕像素通过 SVG `preserveAspectRatio="xMidYMid meet"` 的短边比例换算为 viewBox 单位，与当前 zoom 独立。
 
 ```typescript
-import { usePanelDrag } from '@/composables/usePanelDrag'
+import { useAltDragPan } from '@/composables/useAltDragPan'
 
-const {
-  isDragging,        // 是否正在拖拽
-  panelPositionX,    // 面板 X 偏移（right = 20 - X）
-  panelPositionY,    // 面板 Y 偏移（top = 20 + Y）
-  handleMouseDown,   // mousedown 事件处理
-  handleResize,      // 窗口 resize 处理
-  clampPanelPosition // 重新约束面板位置到视口内
-} = usePanelDrag()
+const svgRef = ref<SVGSVGElement | null>(null)
+const viewport = useViewport()
+const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 ```
 
-### useKeyboardShortcuts 键盘快捷键
+`isAltPressed` 可用于切换 cursor 视觉反馈（`grab` / `grabbing`）。
 
-从 `Control.vue` 抽出的全局键盘快捷键绑定：自动忽略输入框聚焦时的按键。
+### useCompassContext 跨 Layout/View 状态桥
+
+**位置**：`src/composables/useCompassContext.ts`
+
+因为 `<CompassSidebar>`（在 Layout）与 View（在 `<Content />`）是兄弟节点，`provide/inject` 传不过去。方案是模块级 `shallowRef` 单例。
 
 ```typescript
-import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
+// View 侧
+provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
 
-useKeyboardShortcuts({
-  togglePlayPause,
-  resetToNow,
-  stepYear,
-  stepMonth,
-  stepTime,
-  zoomIn,
-  zoomOut,
-  resetZoom,
-  setZoom,
-  moveUp,
-  moveDown,
-  moveLeft,
-  moveRight,
-  resetOffset,
-  toggleRotationDirection,
-  rotateLeft,
-  rotateRight,
-  resetRotationAngle
+// Sidebar 侧
+const ctx = useCompassContext()  // Ref<CompassContext | null>
+// ctx.value?.time.value, ctx.value?.viewport.zoom.value ...
+```
+
+**为什么安全**：罗盘页任意时刻只有一个 View 存活，切页面时 `onUnmounted` 清空。
+
+### useSidebarLayout 侧栏折叠状态
+
+**位置**：`src/composables/useSidebarLayout.ts`
+
+管理 Sidebar 的展开/折叠 + 内部各 section 的折叠状态，全部持久化到 `localStorage`（`yisiguan:sidebar:*`，schema v2）。
+
+```typescript
+const { expanded, toggleExpanded, expand, collapse,
+        collapsed, toggleSection } = useSidebarLayout({
+  sectionKeys: ['view-tools', 'time', 'playback', 'step', 'input', 'viewport', 'rotation']
 })
 ```
+
+- `Esc` 键收起侧栏（焦点在输入元素时不触发）
+- 客户端 hydration 完成后再读 localStorage，避免 SSR 与首屏不一致
+
+### useUrlTime URL ↔ 受控时间双向绑定
+
+**位置**：`src/composables/useUrlTime.ts`
+
+- 首次挂载：URL `?t=YYYY-MM-DDTHH:mm` 优先，其次 initialTime，最后 `new Date()`
+- 用户改时间：防抖 500ms 写回 URL（`history.replaceState`，不污染历史栈）
+- 精度到分钟：让每秒推进的实时时钟不会污染 URL
+- 支持古代日期（如 `0665-01-15T12:00`）—— 年份四位前导 0
+
+```typescript
+const { controlledTime, hasUrlTime, clearUrlTime } = useUrlTime()
+```
+
+### useLiveClock 1Hz 实时时钟
+
+**位置**：`src/composables/useLiveClock.ts`
+
+给 `LiushiJiaziView` / `PlanetMansionView` 提供每秒推进的实时时钟。用户主动改时间（或 URL 携带 `?t=`）时自动退出 liveMode。
 
 ---
 
@@ -791,12 +901,15 @@ useKeyboardShortcuts({
 ```typescript
 // src/compasses/index.ts —— 纯元数据，无 component 字段
 export const compasses: CompassMeta[] = [
-  { id: 'astronomy',      name: '中华天文圆环',       description: '360 度刻度、二十四节气……', category: '天文' },
-  { id: 'liushi-jiazi',   name: '六十甲子六环',       description: '年月日时分秒六柱……',       category: '干支历' },
-  { id: 'sixty-four-gua', name: '先天六十四卦盘',     description: '伏羲/邵雍先天圆图……',      category: '易学' },
-  { id: 'jingfang',       name: '京房十二消息卦盘',   description: '365 天刻度 + 60 卦六日七分……', category: '易学' },
-  { id: 'planet-mansion', name: '七曜入宿天象盘',     description: '天极投影盖天图……',         category: '天文' },
-  { id: 'tropical-year',  name: '回归年闰月盘',       description: '365 天回归年 vs 360 度甲子……', category: '天文' },
+  { id: 'astronomy',           name: '中华天文圆环',       description: '360 度刻度、二十四节气……',      category: '天文' },
+  { id: 'liushi-jiazi',        name: '六十甲子六环',       description: '年月日时分秒六柱……',            category: '干支历' },
+  { id: 'sixty-four-gua',      name: '先天六十四卦盘',     description: '伏羲/邵雍先天圆图……',           category: '易学' },
+  { id: 'jingfang',            name: '京房十二消息卦盘',   description: '365 天刻度 + 60 卦六日七分……',  category: '易学' },
+  { id: 'planet-mansion',      name: '七曜入宿天象盘',     description: '天极投影盖天图……',              category: '天文' },
+  { id: 'tropical-year',       name: '回归年闰月盘',       description: '365 天回归年 vs 360 度甲子……', category: '天文' },
+  { id: 'guan-dou',            name: '观斗盘',             description: '圆心真实北斗 + 紫微垣 + 地平圈……', category: '天文' },
+  { id: 'feifu',               name: '飞伏图盘',           description: '京房八宫 64 卦飞伏方向……',      category: '易学' },
+  { id: 'suzhou-stellar-map',  name: '苏州石刻天文图',     description: '南宋 1247 年苏州府学石刻复原……', category: '天文' },
 ]
 ```
 
@@ -819,7 +932,7 @@ export const compasses: CompassMeta[] = [
    </ClientOnly>
    ```
 
-`docs/.vitepress/theme/index.ts` 的 `enhanceApp` 里把 6 个 View + `HomeView` 全局注册；Layout 分派根据 `frontmatter.layout === 'compass'` 切换到 `CompassLayout`（全屏、隐藏 nav/sidebar/aside）。
+`docs/.vitepress/theme/index.ts` 的 `enhanceApp` 里把 9 个 View + `HomeView` 全局注册；Layout 分派根据 `frontmatter.layout === 'compass'` 切换到 `CompassLayout`（全屏、隐藏 nav/sidebar/aside）。
 
 ### URL 时间参数
 
@@ -835,6 +948,38 @@ const { controlledTime } = useUrlTime()
 2. `src/compasses/index.ts` —— 追加一项元数据
 3. `docs/compass/new.md` —— 极简 md（frontmatter + `<ClientOnly><NewView /></ClientOnly>`）
 4. `docs/.vitepress/theme/index.ts` —— `import NewView from '@/views/NewView.vue'` 并全局注册
+
+---
+
+## 新增的领域圆环组件（补录）
+
+以下环随观斗盘 / 飞伏图盘 / 苏州石刻天文图三个罗盘一并加入。它们均遵循「时间驱动统一范式」（`time?: MaybeRef<Date>` + 内部 `timeRef = computed(() => unref(props.time) ?? new Date())`）。
+
+| 组件 | 类型 | 领域 |
+|------|------|------|
+| `MonthEstablishRing.vue` | Segment | 斗建（月建）：12 地支合月建，冬至→子月锚点 |
+| `MonthGeneralRing.vue` | Segment | 月将（大吉/功曹…）：太阳所在宫锚定 |
+| `HourShichenRing.vue` | Segment | 12 时辰赤道环，当前时辰高亮 |
+| `SunDiurnalRing.vue` | Segment | 日周：白昼-曙暮-夜三层弧背景，地轴倾斜驱动 |
+| `GuanDouSolarTermsRing.vue` | Point | 观斗盘节气刻度（黄经→赤道映射） |
+
+新增圆心组件：
+
+| 组件 | 领域 |
+|------|------|
+| `BeidouCenter.vue` | 北斗七星（岁差修正）+ 紫微垣东西两藩 + 勾陈一 + 地平圈（浏览器定位） |
+| `SuzhouSkyMap.vue` | 苏州石刻天文图圆心：拱极北斗 + 斗柄随本地恒星时旋转 + 自动标注所指之宿 |
+
+新增工具函数（Layer 5）：
+
+| 工具 | 职责 |
+|------|------|
+| `beidou.ts` | 北斗七星赤经/赤纬（岁差修正）+ 斗柄指向 |
+| `ziwei.ts` | 紫微垣东西两藩恒星（勾陈一、天皇大帝等） |
+| `jianJiang.ts` | 斗建 / 月将 / 太阳所在 宫位换算 |
+| `jingFangYao.ts` | 京房爻辞 + 飞伏查询 |
+| `feifu.ts` | 京房八宫 64 卦飞伏方向 |
+| `wuxing.ts` | 五行相生相克 + 配色 |
 
 ---
 

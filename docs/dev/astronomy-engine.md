@@ -8,10 +8,10 @@
 - **astronomy-engine**: `^2.1.19`（见 [package.json](https://github.com/andaoai/O/blob/main/package.json)）
 - **集成状态**: ✅ 已深度集成到多环、多工具
 - **覆盖范围**:
-  - 圆心组件：[`centers/SolarEcliptic.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SolarEcliptic.vue)
-  - 圆环组件：[`rings/SevenLuminariesRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SevenLuminariesRing.vue)、[`rings/SkyChart.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SkyChart.vue)、[`rings/MoonPhaseRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/MoonPhaseRing.vue)
+  - 圆心组件：[`centers/SolarEcliptic.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SolarEcliptic.vue)、[`centers/BeidouCenter.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/BeidouCenter.vue)、[`centers/SuzhouSkyMap.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SuzhouSkyMap.vue)
+  - 圆环组件：[`rings/SevenLuminariesRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SevenLuminariesRing.vue)、[`rings/SkyChart.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SkyChart.vue)、[`rings/MoonPhaseRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/MoonPhaseRing.vue)、[`rings/SunDiurnalRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SunDiurnalRing.vue)、[`rings/MonthEstablishRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/MonthEstablishRing.vue)、[`rings/MonthGeneralRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/MonthGeneralRing.vue)、[`rings/GuanDouSolarTermsRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/GuanDouSolarTermsRing.vue)
   - Composable：[`composables/useSevenLuminaries.ts`](https://github.com/andaoai/O/blob/main/src/composables/useSevenLuminaries.ts)
-  - 工具层：[`utils/celestial.ts`](https://github.com/andaoai/O/blob/main/src/utils/celestial.ts)、[`utils/planetMansion.ts`](https://github.com/andaoai/O/blob/main/src/utils/planetMansion.ts)、[`utils/skyProjection.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyProjection.ts)、[`utils/skyEvents.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyEvents.ts)
+  - 工具层：[`utils/celestial.ts`](https://github.com/andaoai/O/blob/main/src/utils/celestial.ts)、[`utils/planetMansion.ts`](https://github.com/andaoai/O/blob/main/src/utils/planetMansion.ts)、[`utils/skyProjection.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyProjection.ts)、[`utils/skyEvents.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyEvents.ts)、[`utils/beidou.ts`](https://github.com/andaoai/O/blob/main/src/utils/beidou.ts)、[`utils/ziwei.ts`](https://github.com/andaoai/O/blob/main/src/utils/ziwei.ts)、[`utils/jianJiang.ts`](https://github.com/andaoai/O/blob/main/src/utils/jianJiang.ts)
 
 ## 🚀 项目中的实际应用
 
@@ -200,33 +200,43 @@ const getSunCoordinates = (longitude: number) => {
 }
 ```
 
-## 🎮 与控制面板的集成
+## 🎮 与 Sidebar 面板的集成
 
-SolarEcliptic 组件与 Control 组件无缝集成：
+SolarEcliptic 组件通过 `time` prop 与视图内的 `controlledTime` 挂钩，Sidebar 面板通过 `useCompassContext` 统一读写这份时间：
 
 ```vue
-<!-- App.vue 中的使用 -->
+<!-- View 侧 -->
+<script setup lang="ts">
+import { useUrlTime } from '@/composables/useUrlTime'
+import { useViewport } from '@/composables/useViewport'
+import { provideCompassContext } from '@/composables/useCompassContext'
+import SolarEcliptic from '@/components/centers/SolarEcliptic.vue'
+
+const { controlledTime, clearUrlTime } = useUrlTime()
+const viewport = useViewport()
+
+provideCompassContext({
+  time: controlledTime,
+  viewport,
+  onUserTimeChange: () => clearUrlTime()
+})
+</script>
+
 <template>
   <SolarEcliptic
     :radius="160"
     :time="controlledTime"
     :enable-animation="true"
-    :animation-speed="0.1"
     :show-sun-label="true"
-  />
-
-  <Control
-    v-model="controlledTime"
-    @time-change="handleTimeChange"
   />
 </template>
 ```
 
-用户可以通过控制面板：
-- 调整时间查看太阳位置变化
-- 播放动画观察太阳运动
+Sidebar（`CompassSidebar.vue`，由 `CompassLayout` 单点挂载）内部通过 `useCompassContext()` 读取当前 View 的 time / viewport，用户可以：
+- 调整时间查看太阳位置变化（TimePanel）
+- 播放动画观察太阳运动（`useTimeController` + Space 快捷键）
 - 调整播放速度
-- 使用键盘快捷键控制
+- 使用键盘快捷键控制（`useTimeShortcuts` / `useViewportShortcuts`）
 
 ## 🔧 安装和配置
 
@@ -379,22 +389,30 @@ const debouncedCalculateSunPosition = debounce(calculateSunPosition, 100)
 
 **圆环 / 圆心**
 - [`centers/SolarEcliptic.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SolarEcliptic.vue)：太阳黄道位置
+- [`centers/BeidouCenter.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/BeidouCenter.vue)：北斗圆心（岁差修正）+ 紫微垣 + 地平圈
+- [`centers/SuzhouSkyMap.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SuzhouSkyMap.vue)：苏州石刻天文图圆心
 - [`rings/SevenLuminariesRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SevenLuminariesRing.vue)：七曜赤经定位
 - [`rings/SkyChart.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SkyChart.vue)：全天投影图
 - [`rings/MoonPhaseRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/MoonPhaseRing.vue)：当日月相
+- [`rings/SunDiurnalRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SunDiurnalRing.vue)：日周白昼-曙暮-夜三层弧
 
 **基础与控制**
 - `PolarCanvas`：提供极坐标系统基础
-- `Control`：时间控制和动画播放
+- `CompassSidebar`：左侧嵌入式 Sidebar（时间/视口/View 专属工具位）
 - `DegreeScale`：显示度数刻度
 - `tyme4ts`：中华传统历法计算（与 astronomy-engine 配合）
 
 **Composable / 工具**
 - [`composables/useSevenLuminaries.ts`](https://github.com/andaoai/O/blob/main/src/composables/useSevenLuminaries.ts)：七曜统一计算
+- [`composables/useTimeController.ts`](https://github.com/andaoai/O/blob/main/src/composables/useTimeController.ts)：受控时间控制（播放/步进/输入）
+- [`composables/useCompassContext.ts`](https://github.com/andaoai/O/blob/main/src/composables/useCompassContext.ts)：View → Sidebar 跨层状态桥
 - [`utils/celestial.ts`](https://github.com/andaoai/O/blob/main/src/utils/celestial.ts)：黄经/赤经坐标转换
 - [`utils/planetMansion.ts`](https://github.com/andaoai/O/blob/main/src/utils/planetMansion.ts)：七曜入宿判定
 - [`utils/skyProjection.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyProjection.ts)：赤道/黄道/白道投影
 - [`utils/skyEvents.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyEvents.ts)：合冲聚事件分级
+- [`utils/beidou.ts`](https://github.com/andaoai/O/blob/main/src/utils/beidou.ts)：北斗七星赤经赤纬（岁差修正）+ 斗柄指向
+- [`utils/ziwei.ts`](https://github.com/andaoai/O/blob/main/src/utils/ziwei.ts)：紫微垣东西两藩恒星
+- [`utils/jianJiang.ts`](https://github.com/andaoai/O/blob/main/src/utils/jianJiang.ts)：斗建 / 月将 / 太阳所在 宫位换算
 
 ## 📖 更多资源
 
