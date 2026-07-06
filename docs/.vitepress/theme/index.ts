@@ -54,6 +54,7 @@ import PlanetMansionView from '@/views/PlanetMansionView.vue'
 import TropicalYearView from '@/views/TropicalYearView.vue'
 import GuanDouView from '@/views/GuanDouView.vue'
 import FeifuView from '@/views/FeifuView.vue'
+import SuzhouStellarMapView from '@/views/SuzhouStellarMapView.vue'
 
 // 飞伏箭头叠加层（供概念页内嵌）
 import FeifuArrowOverlay from '@/components/feifu/FeifuArrowOverlay.vue'
@@ -108,6 +109,7 @@ export default {
     app.component('TropicalYearView', TropicalYearView)
     app.component('GuanDouView', GuanDouView)
     app.component('FeifuView', FeifuView)
+    app.component('SuzhouStellarMapView', SuzhouStellarMapView)
     app.component('FeifuArrowOverlay', FeifuArrowOverlay)
   },
 } satisfies Theme

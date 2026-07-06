@@ -39,3 +39,6 @@ playwright-report/
 # Playwright MCP screenshots
 .playwright-mcp/
 .claude/worktrees/
+
+# 脚本运行时缓存（Stellarium / SIMBAD 拉取的中间产物,数据已生成到 src/data/*.ts）
+scripts/stellarium-data/
