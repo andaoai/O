@@ -99,6 +99,8 @@ export default defineConfig({
                 { text: '遯', link: '/books/京氏易傳/遯卦' },
                 { text: '否', link: '/books/京氏易傳/否卦' },
                 { text: '觀', link: '/books/京氏易傳/觀卦' },
+                { text: '剥', link: '/books/京氏易傳/剥卦' },
+                { text: '𣈆', link: '/books/京氏易傳/𣈆卦' },
               ],
             },
           ],

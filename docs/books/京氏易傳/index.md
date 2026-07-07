@@ -59,11 +59,10 @@ category: 易学占候
 
 ## 校勘底本
 
-- **《四库全书》本**（钦定四库全书·子部·术数类）— 主要参照
-- **《四部丛刊》景印明天一阁刊本**— 校勘参考
+- **《四部丛刊》景印明天一阁刊本**（[识典古籍 SBCK014](https://www.shidianguji.com/book/SBCK014)）— 主要参照，本站正文录入依据
+- **《四库全书》本**（钦定四库全书·子部·术数类）— 校勘参考
 - **张绍仁校宋本《易传》**— 校勘参考
-- 识典古籍电子版（www.shidianguji.com）
-- 中国哲学书电子化计划（ctext.org）
+- [识典古籍电子版](https://www.shidianguji.com/book/SBCK014) · [中国哲学书电子化计划](https://ctext.org/wiki.pl?if=gb&res=546687)
 
 ## 相关罗盘
 
