@@ -101,6 +101,7 @@ export default defineConfig({
                 { text: '觀', link: '/books/京氏易傳/觀卦' },
                 { text: '剥', link: '/books/京氏易傳/剥卦' },
                 { text: '𣈆', link: '/books/京氏易傳/𣈆卦' },
+                { text: '大有', link: '/books/京氏易傳/大有卦' },
               ],
             },
           ],
