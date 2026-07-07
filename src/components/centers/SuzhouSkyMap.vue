@@ -532,6 +532,54 @@ const bodySvg = (
 
 /** 天极十字大小 —— 与三规圆同尺度,标识几何天极 */
 const poleCrossSize = 6
+
+/**
+ * 地平线四方位标注(东南西北)
+ *
+ * 与 horizonSamples 同源,只取四个特殊方位角:
+ *   · 北 A=0°   → δ=+(90−φ) H=180° → projAngle=270° → 内规内侧
+ *   · 南 A=180° → δ=−(90−φ) H=0°   → projAngle=90°  → 外规外侧
+ *   · 东 A=90°  → δ=0       H=−90° → projAngle=0°   → 赤道右
+ *   · 西 A=270° → δ=0       H=+90° → projAngle=180° → 赤道左
+ *
+ * 由于 orientOffset 已经在 makeToSvg 里生效,fixed-ground 视角下四个字静止,
+ * fixed-sky-* 视角下会绕天极转 —— 因为地平线本身在惯性系里就是绕极转的。
+ *
+ * 每个方位标签外推 offset 像素,避免和地平线本身重叠。
+ */
+const CARDINAL_DIRS = [
+  { key: 'N', label: '北', A: 0 },
+  { key: 'E', label: '东', A: 90 },
+  { key: 'S', label: '南', A: 180 },
+  { key: 'W', label: '西', A: 270 }
+] as const
+
+const computeCardinals = (actualRadius: number) => {
+  const scale = projectionScale(actualRadius)
+  const phi = (props.observerLat * Math.PI) / 180
+  return CARDINAL_DIRS.map((d) => {
+    const a = (d.A * Math.PI) / 180
+    // 与 horizonSamples 完全同源:重新算出这个方位在天球的赤经赤纬
+    const cosDec = Math.cos(phi) * Math.cos(a)
+    const dec = Math.asin(Math.max(-1, Math.min(1, cosDec)))
+    let cosH = -Math.tan(phi) * Math.tan(dec)
+    cosH = Math.max(-1, Math.min(1, cosH))
+    let H = Math.acos(cosH)
+    if (Math.sin(a) > 0) H = -H
+    const decDeg = (dec * 180) / Math.PI
+    const projAngle = normalizeAngle((H * 180) / Math.PI + 90)
+
+    // 落到 SVG 的锚点
+    const anchor = bodySvg(projAngle, decDeg, scale, dirSign.value)
+
+    // 沿盘心 → anchor 方向再外推 14px,让文字浮在地平线圈外
+    const len = Math.hypot(anchor.x, anchor.y) || 1
+    const push = 14
+    const x = anchor.x + (anchor.x / len) * push
+    const y = anchor.y + (anchor.y / len) * push
+    return { ...d, x, y }
+  })
+}
 </script>
 
 <template>
@@ -797,6 +845,28 @@ const poleCrossSize = 6
             stroke-width="1.0"
             opacity="0.55"
           />
+          <!-- 地平线四方位标注:东南西北(与地平线同显隐) -->
+          <template v-if="showHorizon">
+            <g
+              v-for="dir in computeCardinals(actualRadius)"
+              :key="'cardinal-' + dir.key"
+              class="cardinal"
+            >
+              <text
+                :x="dir.x"
+                :y="dir.y"
+                fill="#7EA8B8"
+                font-size="14"
+                font-weight="700"
+                text-anchor="middle"
+                dominant-baseline="middle"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="2.6"
+                opacity="0.95"
+              >{{ dir.label }}</text>
+            </g>
+          </template>
         </g>
 
         <!-- ═════════════════════════════════════════════════════

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
+import WorldMapCenter from '../components/centers/WorldMapCenter.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
@@ -60,6 +61,15 @@ const OBSERVER_LON = 116.4
  */
 const orientation = ref<'fixed-ground' | 'fixed-sky-coord' | 'fixed-sky-suzhou'>('fixed-ground')
 
+/** 是否显示世界地图底图(默认开) */
+const showWorldMap = ref(true)
+
+/** 是否显示地平线 + 东南西北四字(默认开) */
+const showHorizon = ref(true)
+
+/** 是否显示子午线 + 「子/午」标签(默认开) */
+const showMeridian = ref(true)
+
 /** 无外圈环:圆心组件 SuzhouSkyMap 直接填满整个可视区 */
 const outerRings: never[] = []
 </script>
@@ -88,6 +98,27 @@ const outerRings: never[] = []
           >赤道·苏图</button>
         </div>
       </div>
+
+      <div class="view-tool-group">
+        <label class="view-tool-label">图层</label>
+        <div class="orientation-toggle">
+          <button
+            :class="{ active: showWorldMap }"
+            @click="showWorldMap = !showWorldMap"
+            :title="showWorldMap ? '关闭底层世界地图海岸线' : '开启底层世界地图海岸线'"
+          >{{ showWorldMap ? '✔ 世界地图' : '  世界地图' }}</button>
+          <button
+            :class="{ active: showHorizon }"
+            @click="showHorizon = !showHorizon"
+            :title="showHorizon ? '关闭地平线及东南西北方位标注' : '开启地平线及东南西北方位标注'"
+          >{{ showHorizon ? '✔ 地平线 · 东南西北' : '  地平线 · 东南西北' }}</button>
+          <button
+            :class="{ active: showMeridian }"
+            @click="showMeridian = !showMeridian"
+            :title="showMeridian ? '关闭子午线及子午标签' : '开启子午线及子午标签'"
+          >{{ showMeridian ? '✔ 子午线 · 子午' : '  子午线 · 子午' }}</button>
+        </div>
+      </div>
     </Teleport>
 
     <svg
@@ -103,8 +134,20 @@ const outerRings: never[] = []
           :rings="outerRings"
           :rotation-direction="rotationDirection"
         >
-          <!-- 🔹 圆心:苏图星图主体 -->
+          <!-- 🔹 圆心:世界地图底图 + 苏图星图主体(两层叠加,共享投影管道) -->
           <template #center="{ innerRadius }">
+            <!-- ⬇ 底层:世界地图海岸线,scale 与 SuzhouSkyMap 完全一致 -->
+            <WorldMapCenter
+              v-if="showWorldMap"
+              :radius="innerRadius"
+              :time="controlledTime"
+              :rotation-direction="rotationDirection"
+              :observer-lat="OBSERVER_LAT"
+              :observer-lon="OBSERVER_LON"
+              :orientation="orientation"
+              :show-meridian="showMeridian"
+            />
+            <!-- ⬆ 上层:三规圆 + 二十八宿 + 北斗紫微 + 日月五星 -->
             <SuzhouSkyMap
               :radius="innerRadius"
               :time="controlledTime"
@@ -112,6 +155,7 @@ const outerRings: never[] = []
               :observer-lat="OBSERVER_LAT"
               :observer-lon="OBSERVER_LON"
               :orientation="orientation"
+              :show-horizon="showHorizon"
             />
           </template>
         </RingStack>
