@@ -1,13 +1,15 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
 import WorldMapCenter from '../components/centers/WorldMapCenter.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
+import { useGeolocation } from '@/composables/useGeolocation'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
+import { reverseGeocode } from '@/utils/reverseGeocode'
 
 /**
  * 苏州石刻天文图(五层架构 · 时间驱动 · 初版)
@@ -49,9 +51,32 @@ provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
 // 唯一配置常量:全圆盘外缘半径
 const DISK_OUTER_RADIUS = 580
 
-// 观测点(苏图底本采汴京观测,不是南宋首都临安)
-const OBSERVER_LAT = 35      // 汴京(开封)
-const OBSERVER_LON = 116.4
+/**
+ * 观测点：优先浏览器定位,失败则回退到苏图底本汴京(北宋首都)。
+ *
+ * 苏图石刻底本采用汴京观测(φ=35°,λ=116.4°),不是南宋首都临安 ——
+ * 因此"默认"用汴京最能还原石刻原图。授权定位后自动切换到当前位置,
+ * 观测者红十字会漂到你所在的经纬度,子午线也跟着重定向。
+ */
+const { latitude, longitude, status: geoStatus } = useGeolocation({
+  lat: 35,         // 汴京(开封) —— 苏图底本
+  lon: 116.4,
+  autoRequest: true
+})
+
+/**
+ * 观测点显示名:
+ *   · 未授权定位 → "汴京(默认)"
+ *   · 授权成功  → 通过离线反向地理编码找到最近城市,分级显示:
+ *       · 城内     → "上海"
+ *       · 城郊     → "上海附近"
+ *       · 省域内   → "上海一带"
+ *       · 极远     → 退回国家名(如"日本")
+ */
+const locationLabel = computed(() => {
+  if (geoStatus.value !== 'success') return '汴京(默认)'
+  return reverseGeocode(latitude.value, longitude.value).label
+})
 
 /**
  * 盘面朝向模式:
@@ -78,6 +103,17 @@ const outerRings: never[] = []
   <div class="container">
     <!-- 朝向切换：通过 Teleport 传入 Sidebar 的"视图选项"区块 -->
     <Teleport to="#sidebar-view-tools">
+      <!-- 观测点信息:显示当前定位状态 + 经纬度 -->
+      <div class="view-tool-group">
+        <label class="view-tool-label">观测点</label>
+        <div class="observer-info">
+          <span class="observer-badge" :class="{ live: geoStatus === 'success' }">{{ locationLabel }}</span>
+          <span class="observer-coord">
+            φ {{ latitude.toFixed(2) }}° · λ {{ longitude.toFixed(2) }}°
+          </span>
+        </div>
+      </div>
+
       <div class="view-tool-group">
         <label class="view-tool-label">观察坐标系</label>
         <div class="orientation-toggle">
@@ -142,8 +178,8 @@ const outerRings: never[] = []
               :radius="innerRadius"
               :time="controlledTime"
               :rotation-direction="rotationDirection"
-              :observer-lat="OBSERVER_LAT"
-              :observer-lon="OBSERVER_LON"
+              :observer-lat="latitude"
+              :observer-lon="longitude"
               :orientation="orientation"
               :show-meridian="showMeridian"
             />
@@ -152,8 +188,8 @@ const outerRings: never[] = []
               :radius="innerRadius"
               :time="controlledTime"
               :rotation-direction="rotationDirection"
-              :observer-lat="OBSERVER_LAT"
-              :observer-lon="OBSERVER_LON"
+              :observer-lat="latitude"
+              :observer-lon="longitude"
               :orientation="orientation"
               :show-horizon="showHorizon"
             />
@@ -236,5 +272,40 @@ const outerRings: never[] = []
 .orientation-toggle button.active {
   color: #d4af37;
   background: rgba(212, 175, 55, 0.15);
+}
+
+/* ─── 观测点信息条(单行:地名 badge + 坐标) ─── */
+.observer-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.observer-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: #aaa;
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.observer-badge.live {
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.15);
+}
+
+.observer-coord {
+  font-size: 10px;
+  color: #888;
+  font-family: 'Consolas', 'Menlo', monospace;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 }
 </style>
