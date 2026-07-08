@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useCompassContext } from '@/composables/useCompassContext'
 import { useSidebarLayout } from '@/composables/useSidebarLayout'
 import SidebarHeader from './SidebarHeader.vue'
@@ -20,6 +20,10 @@ defineOptions({ name: 'CompassSidebar' })
  *
  *  View 专属工具通过 <Teleport to="#sidebar-view-tools"> 塞进"视图选项"区块。
  *  Teleport 目标常驻 DOM；section 外壳用 CSS `:has(:not(:empty))` 自动显隐。
+ *
+ *  交互约定：
+ *    · 侧栏展开 / 收起由左中常驻悬浮把手统一承担，位置不变、图标切换
+ *    · 用户点击罗盘中心区域（Sidebar 外）时自动收起，避免侧栏永久遮挡视觉
  * ════════════════════════════════════════════════════════════════
  */
 
@@ -32,9 +36,10 @@ const ctx = useCompassContext()
 const currentTime = computed<Date | null>(() => ctx.value?.time.value ?? null)
 const currentViewport = computed(() => ctx.value?.viewport ?? null)
 
-const { expanded, expand, collapse, collapsed, toggleSection } = useSidebarLayout<SectionKey>({
-  sectionKeys: SECTION_KEYS
-})
+const { expanded, collapse, toggleExpanded, collapsed, toggleSection } =
+  useSidebarLayout<SectionKey>({
+    sectionKeys: SECTION_KEYS
+  })
 
 const timeCollapsed = computed(() => ({
   time: collapsed.value.time,
@@ -54,11 +59,34 @@ const onTimeUpdate = (v: Date) => {
 const onUserTimeChange = (v: Date) => {
   ctx.value?.onUserTimeChange?.(v)
 }
+
+// ─── 点击罗盘中心区（Sidebar / Handle 之外）自动收起 ───────────────
+const SIDEBAR_SELECTOR = '.sidebar, .handle'
+const onDocClick = (e: MouseEvent) => {
+  if (!expanded.value) return
+  const target = e.target as HTMLElement | null
+  if (!target) return
+  // 允许点在 sidebar 或 handle 上时不收起
+  if (target.closest(SIDEBAR_SELECTOR)) return
+  // 焦点在输入类元素时也不打扰
+  if (target instanceof HTMLInputElement) return
+  if (target instanceof HTMLTextAreaElement) return
+  if (target.isContentEditable) return
+  collapse()
+}
+onMounted(() => {
+  document.addEventListener('mousedown', onDocClick, true)
+})
+onUnmounted(() => {
+  document.removeEventListener('mousedown', onDocClick, true)
+})
+
+const onToggleHandle = () => toggleExpanded()
 </script>
 
 <template>
   <aside class="sidebar" :class="{ 'sidebar--collapsed': !expanded }" aria-label="罗盘控制侧栏">
-    <SidebarHeader @collapse="collapse" />
+    <SidebarHeader />
 
     <div class="sidebar__scroll">
       <!--
@@ -97,7 +125,7 @@ const onUserTimeChange = (v: Date) => {
     </div>
   </aside>
 
-  <SidebarToggleHandle v-if="!expanded" @expand="expand" />
+  <SidebarToggleHandle :expanded="expanded" @toggle="onToggleHandle" />
 </template>
 
 <style scoped>

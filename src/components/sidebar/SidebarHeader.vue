@@ -3,10 +3,11 @@ import { withBase } from 'vitepress'
 import { useCompassMeta } from '@/composables/useCompassMeta'
 
 /**
- * 侧栏顶部：返回入口 + 罗盘名 + 折叠按钮
+ * 侧栏顶部：返回入口 + 罗盘名
+ *
+ * 收起 / 展开由左中常驻悬浮把手 SidebarToggleHandle 承担，
+ * 这里不再重复放置收起按钮，避免"两个按钮两处位置"的割裂感。
  */
-
-defineEmits<{ collapse: [] }>()
 
 const { meta } = useCompassMeta()
 </script>
@@ -18,9 +19,6 @@ const { meta } = useCompassMeta()
         <span class="back-arrow">←</span>
         <span class="back-text">罗盘列表</span>
       </a>
-      <button class="collapse-btn" title="收起侧栏 (Esc)" @click="$emit('collapse')">
-        «
-      </button>
     </div>
     <div v-if="meta" class="s-header__title">
       <div class="compass-name">{{ meta.name }}</div>
@@ -63,28 +61,6 @@ const { meta } = useCompassMeta()
 }
 .back-arrow {
   font-size: 13px;
-}
-
-.collapse-btn {
-  width: 24px;
-  height: 24px;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 4px;
-  color: #aaa;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.collapse-btn:hover {
-  background: #2a2a2a;
-  border-color: #555;
-  color: #fff;
 }
 
 .s-header__title {

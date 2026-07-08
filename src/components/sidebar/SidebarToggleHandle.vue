@@ -1,14 +1,28 @@
 <script setup lang="ts">
 /**
- * 折叠态左中悬浮把手：40 × 80 的胶囊按钮，点击展开侧栏
+ * 侧栏左中常驻悬浮把手：28 × 72 的胶囊按钮，点击切换展开 / 折叠
+ *
+ * ─ 折叠时：贴在视口左边缘（left: 0），显示 »
+ * ─ 展开时：贴在侧栏右边缘（left: 260px），显示 «
+ *
+ * 两种状态共用同一个视觉位置（垂直居中），保证「展开 / 收起」是同一个按钮、同一个位置。
  */
 
-defineEmits<{ expand: [] }>()
+interface Props {
+  expanded: boolean
+}
+defineProps<Props>()
+defineEmits<{ toggle: [] }>()
 </script>
 
 <template>
-  <button class="handle" title="展开侧栏 (Esc 收起)" @click="$emit('expand')">
-    <span class="arrow">»</span>
+  <button
+    class="handle"
+    :class="{ 'handle--expanded': expanded }"
+    :title="expanded ? '收起侧栏 (Esc)' : '展开侧栏'"
+    @click="$emit('toggle')"
+  >
+    <span class="arrow">{{ expanded ? '«' : '»' }}</span>
   </button>
 </template>
 
@@ -33,8 +47,13 @@ defineEmits<{ expand: [] }>()
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, border-color 0.2s, color 0.2s, width 0.2s;
+  transition: left 0.25s ease, background 0.2s, border-color 0.2s, color 0.2s, width 0.2s;
   box-shadow: 4px 0 12px rgba(0, 0, 0, 0.4);
+}
+
+/* 展开时移动到侧栏右缘。侧栏宽度 260px，与 CompassSidebar 里的 .sidebar width 保持一致 */
+.handle--expanded {
+  left: 260px;
 }
 
 .handle:hover {
