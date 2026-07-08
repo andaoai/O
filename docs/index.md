@@ -10,8 +10,8 @@ hero:
     alt: 乙巳观
   actions:
     - theme: brand
-      text: 从《乙巳占》开始
-      link: /books/yisizhan/
+      text: 从《京氏易傳》开始
+      link: /books/京氏易傳/
     - theme: alt
       text: 罗盘一览
       link: /compass/
