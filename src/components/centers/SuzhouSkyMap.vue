@@ -773,17 +773,6 @@ const computeCardinals = (actualRadius: number) => {
               <circle :cx="s.x" :cy="s.y" :r="s.r + 2" :fill="asterism.color" opacity="0.22" />
               <!-- 星体 -->
               <circle :cx="s.x" :cy="s.y" :r="s.r" :fill="asterism.color" />
-              <!-- 距星(每宿第一颗)加白圈突显 -->
-              <circle
-                v-if="i === 0"
-                :cx="s.x"
-                :cy="s.y"
-                :r="s.r + 1.4"
-                fill="none"
-                stroke="#FFFFFF"
-                stroke-width="0.6"
-                opacity="0.85"
-              />
               <!-- hit area:透明大圆便于 hover 命中 -->
               <circle
                 :cx="s.x"

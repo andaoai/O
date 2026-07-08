@@ -10,6 +10,13 @@
  *
  *  ⚠️ 本文件由脚本自动生成,勿手动编辑
  *     生成源: scripts/import-stellarium.py
+ *
+ *  🔑 项目内的角色:
+ *   · 本文件是"距星"的唯一真理源 —— MANSION_ASTERISMS[i].stars[0]
+ *     即 Stellarium 意义的"XX 宿一",也是本项目所有下游的距星定义。
+ *   · src/data/lunarMansions.ts::LUNAR_MANSIONS 从本文件派生(薄封装),
+ *     供 getMansionSpans / getPlanetMansions 等下游使用。
+ *   · 若要调整某宿距星,请改本文件对应宿 stars 数组的第 0 位并重排 connections。
  * ═══════════════════════════════════════════════════════════════
  */
 
@@ -33,7 +40,10 @@ export interface MansionAsterism {
   quadrant: '东青龙' | '北玄武' | '西白虎' | '南朱雀'
   /** 四象配色 */
   color: string
-  /** 星官内所有星,第一颗为距星 */
+  /**
+   * 星官内所有星,`stars[0]` = Stellarium 意义的"XX 宿一" = 本项目的距星。
+   * 下游 lunarMansions.ts 从这里派生,不要打乱顺序。
+   */
   stars: readonly MansionAsterismStar[]
   /** 星官内连线(索引对,指向 stars[]) */
   connections: readonly (readonly [number, number])[]
