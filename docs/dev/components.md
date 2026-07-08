@@ -624,7 +624,7 @@ const allPlanetsRing = computed(() =>
 
 罗盘的时间 / 缩放 / 平移 / 旋转控制由左侧嵌入式 **Sidebar** 承载（曾经的 `Control.vue` 已下线）。核心变化：
 
-- **单点挂载**：`<CompassSidebar>` 挂在 [`CompassLayout.vue`](../../docs/.vitepress/theme/layouts/CompassLayout.vue) 里，9 个罗盘 View 共享一份 Sidebar
+- **单点挂载**：`<CompassSidebar>` 挂在 `docs/.vitepress/theme/layouts/CompassLayout.vue` 里，9 个罗盘 View 共享一份 Sidebar
 - **状态解耦**：不再走 `v-model` 五联 —— View 只负责 `provideCompassContext({ time, viewport, onUserTimeChange })`
 - **View 专属工具位**：通过 `<Teleport to="#sidebar-view-tools">` 把 View 自己的控件塞进 Sidebar 的「视图选项」区块
 - **折叠形态**：展开态左侧 260px；折叠态整体 `translateX(-100%)`，屏幕左中悬浮一个 40×80 把手可再打开
