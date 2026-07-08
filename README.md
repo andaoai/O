@@ -82,7 +82,7 @@ npm run preview     # 预览生产产物
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
    ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / …
-   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / liuqin / beidou / ziwei / jianJiang / feifu / …）
+   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / guaInfo / beidou / ziwei / jianJiang / feifu / …）
 ```
 
 ## 📚 深入了解

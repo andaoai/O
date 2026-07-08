@@ -1,88 +1,176 @@
 <script setup lang="ts">
 /**
- * 单卦静态图（六爻爻线 + 纳甲六亲 + 世应）
+ * 单卦属性图（爻位 · 爻辞 · 卦五行 · 卦阴阳 · 爻线 · 当位 · 纳甲 · 五行 · 六亲）
  *
  * ⚠️ 完全静态 —— 单卦是不随时间变化的，无 time prop、无 ClientOnly、无响应式依赖。
  *
- * 数据派生：全部走 utils/liuqin.ts#deriveGuaInfo，组件层不重复实现纳甲 / 六亲逻辑。
+ * 数据派生：全部走 utils/guaInfo.ts#deriveGuaInfo，组件层不重复实现。
  * 使用位置：VitePress md 里直接 <SingleGuaChart :value="63" />，或古籍注解页复用。
  *
+ * 核心设计：
+ *   - 所有行数据预计算为 YaoRow[]，模板纯声明式渲染
+ *   - 只有爻辞来自外部 props（不稳定因素），其余全部由 value 确定
+ *
  * 版式：
- *   - 深紫底 SVG，六行等高（六爻自上而下：上爻→初爻），每行分若干列
+ *   - 深紫底 SVG，六行等高（六爻自上而下：上爻→初爻），每行 9 列
  *   - 阳爻：整段横条；阴爻：中间断开的两段横条
  *   - 世爻标金色「世」、应爻标青色「应」
- *   - 三爻/四爻之间虚线，右侧标"外卦 · 纳X"/"内卦 · 纳Y"
+ *   - 三爻/四爻之间虚线分隔内外卦
+ *   - 卦五行/卦阴阳：合并三行标注（外卦标五爻、内卦标二爻）
+ *   - 当位列：阳爻居阳位(1/3/5)或阴爻居阴位(2/4/6)为当位，否则为失位
  */
 import { computed } from 'vue'
-import { deriveGuaInfo, ELEMENT_COLORS } from '@/utils/liuqin'
+import { deriveGuaInfo, ELEMENT_COLORS } from '@/utils/guaInfo'
+
+// =========================================================================
+// Props
+// =========================================================================
 
 interface Props {
   /** 六爻二进制编码 0-63（bit0=初爻，阳=1） */
   value: number
   /** 爻辞覆盖，长度 6，index 0 = 初爻文字（如"潜龙勿用"） */
   yaoText?: readonly string[]
-  /** 图题（默认自动生成 "乾卦 · 纳甲六亲图" 等） */
+  /** 图题（默认自动生成 "乾卦（䷀） · 乾宫 · 属金" 等） */
   caption?: string
-  /** 图宽（px），默认 520 */
+  /** 图宽（px），默认 920 */
   width?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  width: 900
+  width: 920
 })
 
-/** 从 value 派生完整卦信息 */
+// =========================================================================
+// 布局常量
+// =========================================================================
+
+const L = {
+  colX: {
+    pos: 30,        // 爻位
+    text: 110,      // 爻辞
+    gua: 470,       // 卦五行（外卦/内卦），合并三行标注
+    guaYinYang: 530,// 卦阴阳（阳卦/阴卦），合并三行标注
+    lineStart: 590, // 爻线起点
+    lineWidth: 80,
+    dangWei: 690,   // 当位（爻线与纳甲之间）
+    najia: 740,     // 纳甲
+    element: 810,   // 五行
+    liuqin: 870     // 六亲
+  },
+  rowY: {
+    header: 66,
+    first: 90,
+    step: 40
+  },
+  width: 920,
+  height: 340
+} as const
+
+// =========================================================================
+// 纯工具函数（无响应式依赖）
+// =========================================================================
+
+const POSITIONS = ['初', '二', '三', '四', '五', '上'] as const
+
+/** 中文爻位名：阳爻 = 九，阴爻 = 六 */
+function yaoPositionName(index: number, yang: boolean): string {
+  const suffix = yang ? '九' : '六'
+  const prefix = POSITIONS[index]!
+  return (index === 0 || index === 5) ? prefix + suffix : suffix + prefix
+}
+
+/** 八卦阴阳标签 */
+const yinYangLabelOf = (yang: boolean) => yang ? '阳卦' : '阴卦'
+
+// =========================================================================
+// 预计算行数据（核心：模板只消费此数组，零逻辑）
+// =========================================================================
+
+interface YaoRow {
+  posLabel: string
+  posColor: string
+  isShi: boolean
+  isYing: boolean
+  yaoText: string        // ← 唯一不稳定因素
+  guaLabel: string
+  guaColor: string
+  showGua: boolean       // 外卦标五爻、内卦标二爻时可见
+  yinYangLabel: string
+  lineColor: string
+  yang: boolean
+  dangWeiLabel: string
+  dangWeiColor: string
+  najia: string
+  elementLabel: string
+  elementColor: string
+  liuqin: string
+}
+
+/** 从上到下（上爻→初爻）的预计算行数据 */
+const rows = computed<YaoRow[]>(() => {
+  const g = gua.value
+  return [...g.yaos].reverse().map(yao => {
+    const isOuter = yao.index >= 3
+    const triEl = isOuter ? g.outerElement : g.innerElement
+    const triYang = isOuter ? g.outerYang : g.innerYang
+    const triName = isOuter ? g.outerGua : g.innerGua
+    const showTri = yao.index === 4 || yao.index === 1
+
+    return {
+      posLabel: yaoPositionName(yao.index, yao.yang),
+      posColor: yao.isShi ? '#f1c40f' : yao.isYing ? '#3498db' : '#aaa',
+      isShi: yao.isShi,
+      isYing: yao.isYing,
+      yaoText: props.yaoText?.[yao.index] ?? '',
+      guaLabel: `${triName}${triEl}`,
+      guaColor: ELEMENT_COLORS[triEl],
+      showGua: showTri,
+      yinYangLabel: yinYangLabelOf(triYang),
+      lineColor: ELEMENT_COLORS[yao.element],
+      yang: yao.yang,
+      dangWeiLabel: yao.dangWei ? '当位' : '失位',
+      dangWeiColor: yao.dangWei ? '#27AE60' : '#C0392B',
+      najia: yao.najia,
+      elementLabel: yao.element,
+      elementColor: ELEMENT_COLORS[yao.element],
+      liuqin: yao.liuqin
+    }
+  })
+})
+
+// =========================================================================
+// 派生
+// =========================================================================
+
 const gua = computed(() => deriveGuaInfo(props.value))
 
-/** 图题：优先用外部传入，否则自动生成 */
 const figureCaption = computed(() => {
   if (props.caption) return props.caption
   const g = gua.value
   return `${g.name}卦（${g.unicode}） · ${g.palace}宫 · ${g.shiyingType} · 属${g.palaceElement}`
 })
 
-/** 六爻显示顺序：自上而下（上爻→初爻） */
-const yaosTopDown = computed(() => [...gua.value.yaos].reverse())
+/** 内外卦分界虚线 y 坐标（三爻和四爻之间） */
+const dividerY = L.rowY.first + 2 * L.rowY.step + L.rowY.step / 2
 
-/** 中文爻位名（阳爻 = 九，阴爻 = 六） */
-function yaoPositionName(index: number, yang: boolean): string {
-  const positions = ['初', '二', '三', '四', '五', '上']
-  const suffix = yang ? '九' : '六'
-  const prefix = positions[index]!
-  // 「初九/上九」 vs 「九二/九三/九四/九五」的传统写法
-  if (index === 0 || index === 5) return prefix + suffix
-  return suffix + prefix
-}
+/** 表头定义 */
+const headers = [
+  { x: L.colX.pos, label: '爻位' },
+  { x: L.colX.text, label: '爻辞' },
+  { x: L.colX.gua, label: '卦五行' },
+  { x: L.colX.guaYinYang, label: '卦阴阳' },
+  { x: L.colX.lineStart + 10, label: '爻线' },
+  { x: L.colX.dangWei, label: '当位' },
+  { x: L.colX.najia, label: '纳甲' },
+  { x: L.colX.element, label: '五行' },
+  { x: L.colX.liuqin, label: '六亲' }
+]
 
-/** 布局常量（SVG viewBox 空间） */
-const LAYOUT = {
-  colX: {
-    pos: 30,        // 爻位（初九 世）
-    text: 110,      // 爻辞
-    lineStart: 600, // 爻线起点（爻辞列展至 590，留 10px 间隔）
-    lineWidth: 80,
-    najia: 700,     // 纳甲
-    element: 770,   // 五行
-    liuqin: 830     // 六亲
-  },
-  rowY: {
-    header: 66,     // 表头
-    first: 90,      // 第一行（上爻）
-    step: 40        // 行间距
-  },
-  width: 900,       // viewBox 宽度
-  height: 340       // viewBox 高度
-} as const
+// =========================================================================
+// 样式
+// =========================================================================
 
-/** 内外卦分界虚线的 y 坐标（三爻和四爻之间） */
-const dividerY = computed(() => {
-  // 上爻 = row 0 (y=90), 五爻 = row 1 (y=130), 四爻 = row 2 (y=170),
-  // 三爻 = row 3 (y=210), 二爻 = row 4 (y=250), 初爻 = row 5 (y=290)
-  // 分界位于 row 2 (y=170, 四爻) 和 row 3 (y=210, 三爻) 之间 = 190
-  return LAYOUT.rowY.first + 2 * LAYOUT.rowY.step + LAYOUT.rowY.step / 2
-})
-
-/** figure / svg / figcaption 的 inline style（对应品牌 tokens） */
 const figureStyle = computed(() => ({
   margin: '1.8rem auto',
   maxWidth: `${props.width}px`,
@@ -91,6 +179,7 @@ const figureStyle = computed(() => ({
   alignItems: 'center',
   gap: '0.6rem'
 }))
+
 const svgStyle = {
   width: '100%',
   height: 'auto',
@@ -99,6 +188,7 @@ const svgStyle = {
   borderRadius: '8px',
   boxShadow: '0 2px 24px var(--ysg-brand-glow-dim)'
 }
+
 const figcaptionStyle = {
   color: 'var(--ysg-paper-300)',
   fontFamily: 'var(--ysg-font-serif)',
@@ -112,99 +202,91 @@ const figcaptionStyle = {
 <template>
   <figure :style="figureStyle">
     <svg
-      :viewBox="`0 0 ${LAYOUT.width} ${LAYOUT.height}`"
+      :viewBox="`0 0 ${L.width} ${L.height}`"
       xmlns="http://www.w3.org/2000/svg"
       role="img"
-      :aria-label="`${gua.name}卦纳甲六亲图`"
+      :aria-label="`${gua.name}卦属性图`"
       :style="svgStyle"
     >
-      <!-- 深紫底 -->
-      <rect x="0" y="0" :width="LAYOUT.width" :height="LAYOUT.height" fill="#1a0f2e" rx="6" />
+      <!-- 背景 -->
+      <rect x="0" y="0" :width="L.width" :height="L.height" fill="#1a0f2e" rx="6" />
 
-      <!-- 标题：卦名 + Unicode 卦符 + 所属宫 + 本宫五行 -->
+      <!-- 标题 -->
       <text
-        :x="LAYOUT.width / 2" y="30"
+        :x="L.width / 2" y="30"
         text-anchor="middle"
         fill="#f1c40f"
         font-size="18"
         font-family="serif"
         letter-spacing="0.2em"
-      >{{ gua.name }} {{ gua.unicode }} · {{ gua.palace }}宫 · 属{{ gua.palaceElement }}</text>
+      >{{ gua.name }} {{ gua.unicode }} · {{ gua.palace }}宫 · 属{{ gua.palaceElement }} · {{ gua.hexagramYinYang }}</text>
 
       <!-- 表头 -->
-      <text :x="LAYOUT.colX.pos"          :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">爻位</text>
-      <text :x="LAYOUT.colX.text"         :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">爻辞</text>
-      <text :x="LAYOUT.colX.lineStart + 10" :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">爻线</text>
-      <text :x="LAYOUT.colX.najia"        :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">纳甲</text>
-      <text :x="LAYOUT.colX.element"      :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">五行</text>
-      <text :x="LAYOUT.colX.liuqin"       :y="LAYOUT.rowY.header" fill="#aaa" font-size="12">六亲</text>
+      <text
+        v-for="h in headers"
+        :key="h.label"
+        :x="h.x"
+        :y="L.rowY.header"
+        fill="#aaa"
+        font-size="12"
+      >{{ h.label }}</text>
 
-      <!-- 六爻自上而下 -->
+      <!-- 六爻行（自上而下：上爻→初爻） -->
       <g
-        v-for="(yao, rowIdx) in yaosTopDown"
-        :key="yao.index"
-        :transform="`translate(0, ${LAYOUT.rowY.first + rowIdx * LAYOUT.rowY.step})`"
+        v-for="(row, idx) in rows"
+        :key="idx"
+        :transform="`translate(0, ${L.rowY.first + idx * L.rowY.step})`"
       >
-        <!-- 爻位（世/应用高亮色，其余灰色） -->
+        <!-- 爻位 -->
         <text
-          :x="LAYOUT.colX.pos" y="0"
-          :fill="yao.isShi ? '#f1c40f' : yao.isYing ? '#3498db' : '#aaa'"
-          font-size="14"
-          font-family="serif"
-        >{{ yaoPositionName(yao.index, yao.yang) }}<tspan v-if="yao.isShi" fill="#f1c40f"> 世</tspan><tspan v-if="yao.isYing" fill="#3498db"> 应</tspan></text>
+          :x="L.colX.pos" y="0"
+          :fill="row.posColor"
+          font-size="14" font-family="serif"
+          dominant-baseline="central"
+        >{{ row.posLabel }}<tspan v-if="row.isShi" fill="#f1c40f"> 世</tspan><tspan v-if="row.isYing" fill="#3498db"> 应</tspan></text>
 
-        <!-- 爻辞（可选） -->
-        <text :x="LAYOUT.colX.text" y="0" fill="#ddd" font-size="13">{{ yaoText?.[yao.index] ?? '' }}</text>
+        <!-- 爻辞（唯一不稳定列） -->
+        <text :x="L.colX.text" y="0" fill="#ddd" font-size="13" dominant-baseline="central">{{ row.yaoText }}</text>
 
-        <!-- 爻线：阳整段 / 阴中间断开 -->
+        <!-- 卦五行（外卦标五爻、内卦标二爻，合并三行） -->
+        <text v-if="row.showGua" :x="L.colX.gua" y="0" :fill="row.guaColor" font-size="13" dominant-baseline="central">{{ row.guaLabel }}</text>
+
+        <!-- 卦阴阳（外卦标五爻、内卦标二爻，合并三行） -->
+        <text v-if="row.showGua" :x="L.colX.guaYinYang" y="0" fill="#bbb" font-size="13" dominant-baseline="central">{{ row.yinYangLabel }}</text>
+
+        <!-- 爻线 -->
         <rect
-          v-if="yao.yang"
-          :x="LAYOUT.colX.lineStart" y="-10"
-          :width="LAYOUT.colX.lineWidth" height="10"
-          :fill="ELEMENT_COLORS[yao.element]"
+          v-if="row.yang"
+          :x="L.colX.lineStart" y="-5"
+          :width="L.colX.lineWidth" height="10"
+          :fill="row.lineColor"
         />
         <template v-else>
           <rect
-            :x="LAYOUT.colX.lineStart" y="-10"
-            :width="LAYOUT.colX.lineWidth * 0.4" height="10"
-            :fill="ELEMENT_COLORS[yao.element]"
+            :x="L.colX.lineStart" y="-5"
+            :width="L.colX.lineWidth * 0.4" height="10"
+            :fill="row.lineColor"
           />
           <rect
-            :x="LAYOUT.colX.lineStart + LAYOUT.colX.lineWidth * 0.6" y="-10"
-            :width="LAYOUT.colX.lineWidth * 0.4" height="10"
-            :fill="ELEMENT_COLORS[yao.element]"
+            :x="L.colX.lineStart + L.colX.lineWidth * 0.6" y="-5"
+            :width="L.colX.lineWidth * 0.4" height="10"
+            :fill="row.lineColor"
           />
         </template>
 
+        <!-- 当位 / 失位 -->
+        <text :x="L.colX.dangWei" y="0" :fill="row.dangWeiColor" font-size="13" dominant-baseline="central">{{ row.dangWeiLabel }}</text>
+
         <!-- 纳甲 / 五行 / 六亲 -->
-        <text :x="LAYOUT.colX.najia"   y="0" fill="#eee" font-size="14">{{ yao.najia }}</text>
-        <text :x="LAYOUT.colX.element" y="0" :fill="ELEMENT_COLORS[yao.element]" font-size="14">{{ yao.element }}</text>
-        <text :x="LAYOUT.colX.liuqin"  y="0" :fill="ELEMENT_COLORS[yao.element]" font-size="14">{{ yao.liuqin }}</text>
+        <text :x="L.colX.najia"   y="0" fill="#eee"                           font-size="14" dominant-baseline="central">{{ row.najia }}</text>
+        <text :x="L.colX.element" y="0" :fill="row.elementColor"               font-size="14" dominant-baseline="central">{{ row.elementLabel }}</text>
+        <text :x="L.colX.liuqin"  y="0" :fill="row.elementColor"               font-size="14" dominant-baseline="central">{{ row.liuqin }}</text>
       </g>
 
-      <!--
-        内外卦分界：虚线横穿全图，中央小徽章标注 "外 X / 内 Y"。
-        徽章 x 位置落在爻辞列右端与爻线列左端之间的空白带上，
-        用底色矩形把虚线中段遮盖，避免文字与虚线交叉。
-      -->
-      <line x1="20" :y1="dividerY" :x2="LAYOUT.width - 20" :y2="dividerY" stroke="#555" stroke-dasharray="3 4" />
-      <rect
-        :x="LAYOUT.colX.lineStart - 60"
-        :y="dividerY - 9"
-        width="52"
-        height="18"
-        fill="#1a0f2e"
-        rx="2"
-      />
-      <text
-        :x="LAYOUT.colX.lineStart - 34"
-        :y="dividerY + 4"
-        fill="#aaa"
-        font-size="10"
-        text-anchor="middle"
-        letter-spacing="0.1em"
-      >外 {{ gua.outerGua }} / 内 {{ gua.innerGua }}</text>
+      <!-- 内外卦分界虚线 -->
+      <line x1="20" :y1="dividerY" :x2="L.width - 20" :y2="dividerY" stroke="#555" stroke-dasharray="3 4" />
     </svg>
+
     <figcaption :style="figcaptionStyle">
       <span :style="{ color: 'var(--ysg-gold-400)' }">图 · </span>{{ figureCaption }}
     </figcaption>

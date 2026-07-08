@@ -91,7 +91,7 @@ export default defineConfig({
           items: [
             { text: '书籍导读', link: '/books/京氏易傳/' },
             {
-              text: '卷上',
+              text: '卷上 · 乾宫',
               collapsed: false,
               items: [
                 { text: '乾', link: '/books/京氏易傳/乾卦' },
@@ -102,6 +102,17 @@ export default defineConfig({
                 { text: '剥', link: '/books/京氏易傳/剥卦' },
                 { text: '𣈆', link: '/books/京氏易傳/𣈆卦' },
                 { text: '大有', link: '/books/京氏易傳/大有卦' },
+              ],
+            },
+            {
+              text: '卷上 · 震宫',
+              collapsed: false,
+              items: [
+                { text: '震', link: '/books/京氏易傳/震卦' },
+                { text: '豫', link: '/books/京氏易傳/豫卦' },
+                { text: '解', link: '/books/京氏易傳/解卦' },
+                { text: '恒', link: '/books/京氏易傳/恒卦' },
+                { text: '升', link: '/books/京氏易傳/升卦' },
               ],
             },
           ],
