@@ -113,6 +113,8 @@ export default defineConfig({
                 { text: '解', link: '/books/京氏易傳/解卦' },
                 { text: '恒', link: '/books/京氏易傳/恒卦' },
                 { text: '升', link: '/books/京氏易傳/升卦' },
+                { text: '井', link: '/books/京氏易傳/井卦' },
+                { text: '大过', link: '/books/京氏易傳/大过卦' },
               ],
             },
           ],

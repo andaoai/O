@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, markRaw } from 'vue'
 import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
 import WorldMapCenter from '../components/centers/WorldMapCenter.vue'
+import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
@@ -10,6 +11,8 @@ import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 import { reverseGeocode } from '@/utils/reverseGeocode'
+import { localSiderealTimeDeg } from '@/utils/beidou'
+import { normalizeAngle } from '@/utils/geometry'
 
 /**
  * 苏州石刻天文图(五层架构 · 时间驱动 · 初版)
@@ -27,8 +30,9 @@ import { reverseGeocode } from '@/utils/reverseGeocode'
  *   BeidouCenter 已经把北斗放在盘心,SuzhouSkyMap 往外扩到二十八宿距星,
  *   三规圆 + 28 根不等宽径向辐条 + 中央拱极北斗 —— 苏图灵魂。
  *
- * ⚠️ 层级配置:仅圆心组件(SuzhouSkyMap),外圈环等待重构。
- *    圆心组件通过 RingStack #center slot 直接接管整个可视区域。
+ * 层级配置:
+ *   1. 外环:ConstellationsRing (二十八宿段环,时间驱动 · 天象事件高亮 · LST 相位对齐)
+ *   2. 圆心:#center slot 内的 SuzhouSkyMap + WorldMapCenter 叠加
  */
 
 // 唯一时间源(与 URL ?t=... 双向绑定)
@@ -95,8 +99,46 @@ const showHorizon = ref(true)
 /** 是否显示子午线 + 「子/午」标签(默认开) */
 const showMeridian = ref(true)
 
-/** 无外圈环:圆心组件 SuzhouSkyMap 直接填满整个可视区 */
-const outerRings: never[] = []
+/**
+ * 二十八宿环起始相位偏移(度)，对准中心星图投影。
+ *
+ * 环现用 raToAngle = RA（顺时针角度与中心一致），需补偿 LST、orientOffset 与 90° 偏移。
+ *
+ * 中心投影：projAngle = LST − RA + 90，经 makeToSvg(orientOffset) 输出 SVG 坐标。
+ * projAngle 中自带 90°（"面朝北仰望"约定），makeToSvg 旋转 orientOffset 固定整盘。
+ * 最终辐条的 CW-from-right SVG 角度为：
+ *
+ *   辐条 SVG 角 = startRa − LST − 90 + orientOffset
+ *
+ * 环的公式：angle = RA + startDegree
+ * 令两者相等 → startDegree = orientOffset − LST − 90
+ *
+ * 各模式：
+ *   · fixed-ground     : orientOffset=0            → startDegree = −LST − 90
+ *   · fixed-sky-coord  : orientOffset=LST          → startDegree = −90
+ *   · fixed-sky-suzhou : orientOffset=LST+25       → startDegree = −65
+ */
+const ringStartDegree = computed(() => {
+  if (orientation.value === 'fixed-ground') {
+    const lst = localSiderealTimeDeg(controlledTime.value, longitude.value)
+    return normalizeAngle(-lst - 90)
+  }
+  if (orientation.value === 'fixed-sky-coord') return normalizeAngle(-90)
+  return normalizeAngle(-65) // fixed-sky-suzhou: orientOffset=LST+25 → 25 − 90 = −65
+})
+
+/** 外环:二十八宿段环（时间驱动，LST 相位对齐） */
+const outerRings = computed(() => [
+  {
+    component: markRaw(ConstellationsRing),
+    thickness: 30,
+    props: {
+      time: controlledTime,
+      startDegree: ringStartDegree.value,
+      raDirection: 'clockwise'
+    }
+  }
+])
 </script>
 
 <template>

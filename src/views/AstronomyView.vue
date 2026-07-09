@@ -76,12 +76,6 @@ const rings = [
       circleWidth: 1
     }
   },
-  // 二十四节气（✅ 时间驱动：当前节气高亮）
-  {
-    component: markRaw(SolarTermsRing),
-    thickness: 24,
-    props: { time: controlledTime }
-  },
   // 二十八星宿（📌 静态数据，传统罗盘角度固定）
   { component: markRaw(DataRing), thickness: 30, props: { data: twentyEightConstellations } },
   // 六十甲子（✅ 时间驱动：年柱高亮 + 五行配色）

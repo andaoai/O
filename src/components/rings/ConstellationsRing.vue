@@ -17,8 +17,19 @@ import { normalizeAngle } from '@/utils/geometry'
  *   - 各宿的天象事件分级（合/冲/聚 → 高亮等级）
  *   - 单曜路过的宿（微亮），合冲三星聚（中亮），四星五星聚（强亮）
  *
- * 坐标系对齐：赤经 ra → DataRing 顺时针角度 = 360° - ra
- * 这样外圈宿环与内部 SkyChart 的赤经坐标系完全对齐。
+ * 坐标系约定（通过 raDirection 入参选择）：
+ *
+ *   · 'counterclockwise'（默认）：
+ *       raToAngle = 360 − ra，RA=0 在 SVG 正右，RA 增大逆时针旋转。
+ *       匹配 SkyChart 的 project(ra,0)→toCanvas（即 y-flip），
+ *       用于 PlanetMansionView 等基于天球投影的视图。
+ *
+ *   · 'clockwise'：
+ *       raToAngle = ra，RA=0 在 SVG 正右，RA 增大顺时针旋转。
+ *       匹配 SuzhouSkyMap 的 projAngle = LST − RA + 90 投影路径，
+ *       用于 SuzhouStellarMapView 等面北仰望的极方位投影视图。
+ *
+ * 再通过 startDegree 外部注入 LST 相位补偿完成最终对齐。
  */
 interface Props {
   /** 时间源（支持 ref 或 plain value） */
@@ -29,12 +40,25 @@ interface Props {
   innerRadius?: number
   /** 旋转方向 */
   rotationDirection?: 'clockwise' | 'counterclockwise'
+  /**
+   * 起始相位偏移（度），覆盖默认的 0。
+   * 用于与外层坐标系（如苏州星图的 LST 投影）对齐，使环的宿段与中心辐条一致。
+   */
+  startDegree?: number
+  /**
+   * 赤经角度映射方向：
+   *   'clockwise'        — raToAngle = ra，段从 startRa 到 endRa（正向）
+   *   'counterclockwise' — raToAngle = 360 − ra，段从 endRa 到 startRa（反向，默认）
+   * 默认 'counterclockwise' 以保持与 SkyChart（PlanetMansionView）的向后兼容。
+   */
+  raDirection?: 'clockwise' | 'counterclockwise'
 }
 
 const props = withDefaults(defineProps<Props>(), {
   radius: 200,
   innerRadius: 180,
-  rotationDirection: 'clockwise'
+  rotationDirection: 'clockwise',
+  raDirection: 'counterclockwise'
 })
 
 /** ⚠️ 时间驱动统一范式：确保 time 始终是响应式的 */
@@ -42,8 +66,14 @@ const timeRef = computed(() => unref(props.time) ?? new Date())
 
 /** 角度归一化到 [0,360) */
 const norm = normalizeAngle
-/** 赤经 → DataRing 顺时针角度 */
-const raToAngle = (ra: number) => norm(360 - ra)
+
+/**
+ * raToAngle 工厂：根据 raDirection 选择赤经→SVG 角度映射。
+ * - 'clockwise'        : raToAngle = norm(ra)，RA 增大顺时针旋转
+ * - 'counterclockwise' : raToAngle = norm(360 - ra)，RA 增大逆时针旋转
+ */
+const raToAngle = (ra: number) =>
+  props.raDirection === 'clockwise' ? norm(ra) : norm(360 - ra)
 
 /** 当前七曜落宿 */
 const planetMansions = computed(() => getPlanetMansions(timeRef.value))
@@ -61,7 +91,7 @@ const ringData = computed(() => {
   const events = mansionEvents.value
   return {
     ...twentyEightConstellations,
-    startDegree: 0,
+    startDegree: props.startDegree ?? 0,
     items: spans.map((s) => {
       const evt = events.get(s.label)
       const level = evt ? evt.level : litLabels.has(s.label) ? 1 : 0
@@ -69,8 +99,14 @@ const ringData = computed(() => {
         label: s.label,
         // 不亮=灰白；微亮及以上=宿本色
         color: level >= 1 ? s.color : '#cccccc',
-        startAngle: raToAngle(s.endRa),
-        endAngle: raToAngle(s.startRa),
+        // 'clockwise': 段从 startRa 到 endRa（赤经递增方向）
+        // 'counterclockwise': 段从 endRa 到 startRa（赤经递减，与 SkyChart 一致）
+        startAngle: props.raDirection === 'clockwise'
+          ? raToAngle(s.startRa)
+          : raToAngle(s.endRa),
+        endAngle: props.raDirection === 'clockwise'
+          ? raToAngle(s.endRa)
+          : raToAngle(s.startRa),
         highlightLevel: level as 0 | 1 | 2 | 3
       }
     })
