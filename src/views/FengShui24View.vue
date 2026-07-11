@@ -72,23 +72,21 @@ const { zoom, offsetX, offsetY, rotationAngle } = viewport
  * 自动旋转：手机朝向变化 → 盘面跟随
  *
  * 公式：rotationAngle = -trueHeading
- *   · 手机朝北（trueHeading=0）  → rotationAngle=0   → 子(北)在屏幕顶部 ✓
- *   · 手机朝东（trueHeading=90） → rotationAngle=-90 → 卯(东)在屏幕顶部 ✓
- *   · 手机朝南（trueHeading=180）→ rotationAngle=-180→ 午(南)在屏幕顶部 ✓
- *   · 手机朝西（trueHeading=270）→ rotationAngle=-270→ 酉(西)在屏幕顶部 ✓
+ *   · 手机朝北（trueHeading=0） → rotationAngle=0 → 子(北)在屏幕顶部 ✓
+ *   · 手机朝东（trueHeading=90）→ rotationAngle=-90 → 卯(东)在顶部 ✓
  *
- * ⚠️ 这里必须取 -heading（取反）：
- *   SVG rotate() 是顺时针旋转，而手机朝向 α 是逆时针的方位角。
- *   若直接 rotationAngle = heading，手机朝东时盘面顺时针转 90°，
- *   导致卯(东)跑到屏幕底部，方位全错。
- *
- * 平滑：usePhoneOrientation 已内置 α 低通滤波（smoothFactor=0.3），
- * 此处直接赋值即可，无需额外平滑。
+ * 平滑系数 ROTATION_SMOOTH=0.7 避免角度硬跳
  */
+const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
   // 仅在手机水平时追迹，防止倾斜时的读数漂移
   if (phoneOri.isLevel.value) {
-    viewport.updateRotationAngle(-heading)
+    const target = heading
+    const current = rotationAngle.value
+    let diff = target - current
+    if (diff > 180) diff -= 360
+    else if (diff < -180) diff += 360
+    viewport.updateRotationAngle(current + diff * ROTATION_SMOOTH)
   }
 })
 
