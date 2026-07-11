@@ -65,7 +65,7 @@ const DISK_OUTER_RADIUS = 580
 const { latitude, longitude, status: geoStatus } = useGeolocation({
   lat: 35,         // 汴京(开封) —— 苏图底本
   lon: 116.4,
-  autoRequest: true
+  watch: false
 })
 
 /**

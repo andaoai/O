@@ -119,7 +119,7 @@ const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime }
 const { latitude, longitude, status: geoStatus } = useGeolocation({
   lat: 34.65,      // 洛阳
   lon: 112.45,
-  autoRequest: true
+  watch: false
 })
 
 /** 观测点显示名：授权成功显示"当前位置"，否则显示"洛阳（默认）" */

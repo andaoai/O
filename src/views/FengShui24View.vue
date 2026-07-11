@@ -5,10 +5,16 @@
  * ═══════════════════════════════════════════════════════════════
  *  手机端风水罗盘，核心交互：
  *    1. 利用 DeviceOrientation API 获取手机磁北朝向
- *    2. 利用 useGeolocation 获取 GPS 定位
- *    3. WMM 地磁模型自动校正磁偏角→得到真北朝向
- *    4. 整盘跟随手机旋转，方位始终正确
- *    5. DataBodyRing 叠加太阳当前方位标记
+ *    2. 利用 useGeolocation 获取 GPS 定位（watchPosition 持续追踪）
+ *    3.   permissions API 智能检测权限状态，自动/手动触发
+ *    4. WMM 地磁模型自动校正磁偏角→得到真北朝向
+ *    5. 整盘跟随手机旋转，方位始终正确
+ *    6. DataBodyRing 叠加太阳当前方位标记
+ *
+ *  ⚠️ 定位与传感器授权分离
+ *     · 定位权限通过独立"需要位置"遮罩引导用户点击授权
+ *     · 传感器（DeviceOrientation）权限通过独立"授权使用传感器"按钮
+ *     · 两者互不依赖，任一失败不影响对方功能
  *
  *  五层架构映射：
  *    Layer 2: 本视图 — 组合编排层
@@ -18,7 +24,7 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { ref, computed, watch, markRaw } from 'vue'
+import { ref, computed, watch, markRaw, onMounted, onUnmounted } from 'vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { usePhoneOrientation } from '@/composables/usePhoneOrientation'
@@ -35,12 +41,17 @@ import type { BodyRingData } from '@/data/rings/types'
 // ─── 时间源 ─────────────────────────────────────────────
 const { controlledTime } = useUrlTime()
 
-// ─── 地理位置（默认洛阳） ───────────────────────────────
-const { latitude, longitude, status: geoStatus } = useGeolocation({
+// ─── 地理位置（watchPosition 持续追踪） ──────────────────
+const geo = useGeolocation({
   lat: 34.65,
   lon: 112.45,
-  autoRequest: true
+  watch: true,                  // 持续追踪，用户走动时自动更新
+  enableHighAccuracy: true,      // 罗盘需要高精度
+  throttleMs: 2000,              // 2 秒节流，平衡精度与省电
 })
+const { latitude, longitude, accuracy, status: geoStatus, error: geoError,
+        permissionState: geoPermission, needsPermission: geoNeedsPermission,
+        isFallback: geoIsFallback, request: geoRequest, reposition: geoReposition } = geo
 
 // ─── 手机朝向传感器 ─────────────────────────────────────
 const phoneOri = usePhoneOrientation()
@@ -88,19 +99,6 @@ const sunPos = computed(() =>
   sunDiurnal(controlledTime.value, longitude.value, latitude.value)
 )
 
-/**
- * screenAngle → SVG 角度
- *
- * screenAngle 是"面朝北仰望"坐标系：
- *   0=右/东, 90=下/北, 180=左/西, 270=上/南
- *
- * SVG 坐标系：
- *   0=右/东（0°=正右=3点钟方向）, 顺时针增加
- *
- * 映射公式：svgAngle = (360 - screenAngle) % 360
- *   验证：screenAngle=0(东)→svgAngle=0(SVG右=东) ✓
- *         screenAngle=90(北)→svgAngle=270(SVG上=北) ✓
- */
 const sunSvgAngle = computed(() => (360 - sunPos.value.screenAngle + 360) % 360)
 
 /** 太阳 Body 环数据 */
@@ -128,7 +126,6 @@ const rings = computed(() => [
     component: markRaw(TwentyFourMountainsRing),
     thickness: 60,
     props: {
-      // 传入太阳角度→自动高亮对应山
       highlightAngle: sunSvgAngle.value,
     }
   },
@@ -152,33 +149,81 @@ const svgRef = ref<SVGSVGElement | null>(null)
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(trueHeading.value))
 
-/** 计算与水平面的前后倾斜偏差度（取最接近的"水平"基准） */
+// ─── 水平气泡偏差（beta 取最接近的"水平"基准） ─────────
 const betaDeviation = computed(() => {
   const b = phoneOri.beta.value
   const bn = ((b % 360) + 360) % 360
   const devs = [bn, Math.abs(bn - 90), Math.abs(bn - 180), Math.abs(bn - 270)]
   const minDev = Math.min(...devs)
-  // 找出对应的"水平"基准值，计算有符号偏差
   const idx = devs.indexOf(minDev)
   const base = [0, 90, 180, 270][idx]!
   return b - base
 })
 
-/** 定位状态文本 */
+// ─── 定位标签（兼顾超长精度值） ─────────────────────────
 const geoLabel = computed(() => {
   switch (geoStatus.value) {
-    case 'pending': return '定位中…'
-    case 'success': return `📍 ${latitude.value.toFixed(1)}°N, ${longitude.value.toFixed(1)}°E`
-    case 'denied': return '📍 默认位置（洛阳）'
-    default: return '📍 等待定位…'
+    case 'pending': return { text: '定位中…', icon: '📡' }
+    case 'success': {
+      const acc = accuracy.value
+      const accText = acc !== null && acc < 1000
+        ? ` ±${acc.toFixed(0)}m`
+        : acc !== null
+          ? ` ±${(acc / 1000).toFixed(1)}km`
+          : ''
+      return {
+        text: `${latitude.value.toFixed(4)}°N, ${longitude.value.toFixed(4)}°E${accText}`,
+        icon: '📍'
+      }
+    }
+    case 'denied':  return { text: '位置未获取', icon: '🚫' }
+    default:        return { text: '等待定位…', icon: '📍' }
   }
 })
+
+/** 定位是否就绪（success 状态） */
+const geoReady = computed(() => geoStatus.value === 'success')
+
+// ─── 遮罩优先级 ──────────────────────────────────────────
+/**
+ * 遮罩优先级（高→低）：
+ *   1. 桌面端不支持传感器
+ *   2. iOS 传感器授权
+ *   3. 水平校准
+ *   4. 定位权限
+ *
+ * 定位权限遮罩层级最低——即使用户没授权定位，盘面仍可旋转，
+ * 只是磁偏角用 fallback 位置计算。
+ */
+const showDesktopUnsupported = computed(() => !phoneOri.isSupported.value)
+const showOrientationPermission = computed(() =>
+  phoneOri.isSupported.value
+  && phoneOri.needsPermission.value
+  && phoneOri.permissionStatus.value === 'unknown'
+)
+const showLevelCalibration = computed(() =>
+  phoneOri.isSupported.value
+  && !phoneOri.isLevel.value
+  && phoneOri.permissionStatus.value === 'granted'
+  && !showOrientationPermission.value
+)
+/** 用户跳过了定位授权 */
+const geoPermissionSkipped = ref(false)
+
+const showGeoPermission = computed(() =>
+  phoneOri.isSupported.value
+  && geoNeedsPermission.value
+  && geoStatus.value !== 'pending'
+  && !showOrientationPermission.value
+  && !showDesktopUnsupported.value
+  && !geoPermissionSkipped.value
+)
 </script>
 
 <template>
   <div class="fengshui-container">
     <!--
-      ═══ 手机朝向集成：Teleport 到 Sidebar 的 view-tools 插槽 ═══
+      ═══ 手机朝向信息：Teleport 到 Sidebar 视图选项 ═══
     -->
     <Teleport to="#sidebar-view-tools">
       <div class="orientation-panel">
@@ -194,7 +239,7 @@ const geoLabel = computed(() => {
         <div class="info-row">
           <span class="info-label">水平</span>
           <span :class="['info-value', phoneOri.isLevel.value ? 'level-ok' : 'level-warn']">
-            {{ phoneOri.isLevel.value ? '✅ 已校准' : '⚠️ 请水平放置手机' }}
+            {{ phoneOri.isLevel.value ? '✅ 已校准' : '⚠️ 请水平放置' }}
           </span>
         </div>
 
@@ -203,6 +248,7 @@ const geoLabel = computed(() => {
           <span class="info-label">磁偏角</span>
           <span class="info-value">
             {{ magDecl.declination.value >= 0 ? '+' : '' }}{{ magDecl.declination.value.toFixed(1) }}°
+            <small>真北 {{ magDecl.declination.value > 0 ? '偏东' : '偏西' }}</small>
           </span>
         </div>
 
@@ -215,39 +261,79 @@ const geoLabel = computed(() => {
           </span>
         </div>
 
-        <!-- 定位 -->
+        <!-- 定位信息（比之前更详细） -->
         <div class="info-row">
-          <span class="info-value" style="grid-column: span 2; font-size: 11px; opacity: 0.6;">
-            {{ geoLabel }}
+          <span class="info-label">定位</span>
+          <span class="info-value">
+            <template v-if="geoReady">
+              <span class="geo-ok">{{ geoLabel.icon }}</span>
+              {{ geoLabel.text }}
+            </template>
+            <template v-else-if="geoStatus === 'pending'">
+              📡 定位中…
+            </template>
+            <template v-else>
+              <span class="geo-warn">🚫</span>
+              {{ geoLabel.text }}
+            </template>
           </span>
         </div>
 
-        <!-- iOS 授权按钮 -->
+        <!-- 重新定位按钮（失败/fallback 时显示） -->
         <button
-          v-if="phoneOri.needsPermission.value && phoneOri.permissionStatus.value === 'unknown'"
-          class="auth-btn"
-          @click="phoneOri.requestPermission()"
+          v-if="geoIsFallback && geoStatus !== 'pending'"
+          class="retry-btn"
+          @click="geoReposition()"
         >
-          📱 授权使用传感器
+          🔄 重新定位
         </button>
       </div>
     </Teleport>
 
-    <!--
-      ═══ 水平校准覆盖层 ═══
-      只在需要时显示：设备支持、未水平、且已授权
-    -->
+    <!-- ═══════════════════════════════════════════════════
+         ═══  叠加层（按优先级从高到低）  ═══
+         ═══════════════════════════════════════════════════ -->
+
+    <!-- 1. 桌面端不支持 -->
     <div
-      v-if="phoneOri.isSupported.value
-        && !phoneOri.isLevel.value
-        && phoneOri.permissionStatus.value === 'granted'"
-      class="level-overlay"
+      v-if="showDesktopUnsupported"
+      class="overlay"
     >
-      <div class="level-card">
-        <div class="level-icon">📐</div>
+      <div class="overlay-card">
+        <div class="overlay-icon">🖥️</div>
+        <h3>请在手机上使用</h3>
+        <p>二十四山风水盘需要手机磁力计传感器<br>才能自动感知方向</p>
+        <p class="hint">您也可以使用侧栏手动旋转盘面</p>
+      </div>
+    </div>
+
+    <!-- 2. iOS 传感器授权 -->
+    <div
+      v-else-if="showOrientationPermission"
+      class="overlay"
+    >
+      <div class="overlay-card">
+        <div class="overlay-icon">🧭</div>
+        <h3>使用方向传感器</h3>
+        <p>此罗盘需要访问您的设备方向传感器<br>以显示正确方位</p>
+        <button
+          class="action-btn action-btn--primary"
+          @click="phoneOri.requestPermission()"
+        >
+          授权使用
+        </button>
+      </div>
+    </div>
+
+    <!-- 3. 水平校准 -->
+    <div
+      v-else-if="showLevelCalibration"
+      class="overlay"
+    >
+      <div class="overlay-card">
+        <div class="overlay-icon">📐</div>
         <h3>请将手机水平放置</h3>
-        <p>前后 {{ betaDeviation.toFixed(0) }}°（raw: {{ phoneOri.beta.value.toFixed(0) }}°）</p>
-        <p>左右 {{ phoneOri.gamma.value.toFixed(0) }}°</p>
+        <p>前后 {{ betaDeviation.toFixed(0) }}° &nbsp; 左右 {{ phoneOri.gamma.value.toFixed(0) }}°</p>
         <div class="level-bubble-container">
           <div class="bubble-track track-x">
             <div
@@ -262,46 +348,59 @@ const geoLabel = computed(() => {
             />
           </div>
         </div>
+        <p class="hint">水平后自动关闭</p>
       </div>
     </div>
 
-    <!--
-      ═══ iOS 授权遮罩 ═══
-    -->
+    <!-- 4. 定位权限授权（最低优先级，允许穿透看到盘面） -->
     <div
-      v-if="phoneOri.needsPermission.value && phoneOri.permissionStatus.value === 'unknown'"
-      class="permission-overlay"
+      v-if="showGeoPermission"
+      class="overlay overlay--transparent"
     >
-      <div class="permission-card">
-        <div class="permission-icon">🧭</div>
-        <h3>使用传感器</h3>
-        <p>此罗盘需要访问您的设备方向传感器<br>以显示正确方位</p>
+      <div class="overlay-card overlay-card--compact">
+        <div class="overlay-icon">📍</div>
+        <h3>获取您的位置</h3>
+        <p class="desc">用于计算磁偏角修正和太阳精确方位</p>
+
+        <!-- 显示之前被拒绝的历史 -->
+        <p v-if="geoPermission === 'denied'" class="geo-denied-hint">
+          ⚠️ 定位权限已被拒绝，请在浏览器地址栏左侧<br>重新允许「位置」访问
+        </p>
+
         <button
-          class="auth-btn auth-btn--large"
-          @click="phoneOri.requestPermission()"
+          class="action-btn action-btn--primary"
+          @click="geoRequest()"
         >
-          授权使用
+          允许获取位置
+        </button>
+        <button
+          class="action-btn action-btn--ghost"
+          @click="geoPermissionSkipped = true"
+        >
+          跳过，使用默认位置
         </button>
       </div>
     </div>
 
-    <!--
-      ═══ 桌面端不支持提示 ═══
-    -->
+    <!-- ═══ 位置状态浮动指示器（不遮挡罗盘） ═══ -->
     <div
-      v-if="!phoneOri.isSupported.value"
-      class="unsupported-overlay"
+      v-if="phoneOri.isSupported.value && !showOrientationPermission && !showDesktopUnsupported"
+      class="geo-badge"
+      :class="{ 'geo-badge--ready': geoReady, 'geo-badge--pending': geoStatus === 'pending' }"
     >
-      <div class="permission-card">
-        <div class="permission-icon">🖥️</div>
-        <h3>请在手机上使用</h3>
-        <p>二十四山风水盘需要手机磁力计传感器<br>才能自动感知方向</p>
-        <p class="hint">您也可以使用侧栏手动旋转盘面</p>
-      </div>
+      <span class="geo-badge-icon">{{ geoLabel.icon }}</span>
+      <span class="geo-badge-text">{{ geoLabel.text }}</span>
+      <!-- 定位成功后显示磁偏角摘要 -->
+      <span v-if="geoReady && magDecl.isReady.value" class="geo-badge-decl">
+        · 磁偏 {{ magDecl.declination.value.toFixed(1) }}°
+      </span>
+      <!-- pending 时的小动画 -->
+      <span v-if="geoStatus === 'pending'" class="geo-badge-spinner"></span>
     </div>
 
     <!--
       ═══ SVG 罗盘 ═══
+      注意：定位权限遮罩是 overlay--transparent，盘面可见
     -->
     <svg
       ref="svgRef"
@@ -321,14 +420,10 @@ const geoLabel = computed(() => {
           <template #center="{ innerRadius }">
             <!-- 圆心区域：方向指示器 -->
             <g class="center-indicator">
-              <!-- 内圆 -->
               <circle cx="0" cy="0" :r="innerRadius * 0.85" fill="none" stroke="#444" stroke-width="0.5" />
-              <!-- 十字线 -->
               <line x1="0" :y1="-innerRadius * 0.7" x2="0" :y2="innerRadius * 0.7" stroke="#555" stroke-width="0.5" />
               <line :x1="-innerRadius * 0.7" y1="0" :x2="innerRadius * 0.7" y2="0" stroke="#555" stroke-width="0.5" />
-              <!-- 中心点 -->
               <circle cx="0" cy="0" r="6" fill="#C62828" />
-              <!-- 当前朝向度数 -->
               <text
                 x="0"
                 y="14"
@@ -372,10 +467,10 @@ const geoLabel = computed(() => {
   display: block;
 }
 
-/* ═══ 覆盖层 —— 居中遮罩 ═══ */
-.level-overlay,
-.permission-overlay,
-.unsupported-overlay {
+/* ═══════════════════════════════════════════════════════
+   ═══  覆盖层体系  ═══
+   ═══════════════════════════════════════════════════════ */
+.overlay {
   position: absolute;
   inset: 0;
   display: flex;
@@ -386,30 +481,49 @@ const geoLabel = computed(() => {
   backdrop-filter: blur(4px);
 }
 
-.level-card,
-.permission-card {
+/** 半透明层：定位授权遮罩使用，盘面仍然可见 */
+.overlay--transparent {
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(2px);
+}
+
+.overlay-card {
   text-align: center;
   padding: 32px 24px;
   border-radius: 16px;
+  max-width: 320px;
 }
 
-.level-card h3,
-.permission-card h3 {
+.overlay-card--compact {
+  padding: 24px 20px;
+}
+
+.overlay-card h3 {
   margin: 12px 0 8px;
   font-size: 18px;
   color: #e0d5c0;
 }
 
-.level-card p,
-.permission-card p {
+.overlay-card p {
   margin: 4px 0;
   font-size: 14px;
   color: #a09080;
 }
 
-.level-icon,
-.permission-icon {
+.overlay-card .desc {
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.overlay-icon {
   font-size: 48px;
+}
+
+.geo-denied-hint {
+  font-size: 12px !important;
+  color: #FF9800 !important;
+  margin-bottom: 12px !important;
+  line-height: 1.5;
 }
 
 /* ═══ 气泡水平仪 ═══ */
@@ -452,36 +566,95 @@ const geoLabel = computed(() => {
   transition: left 0.15s ease, top 0.15s ease;
 }
 
-/* ═══ iOS 授权按钮 ═══ */
-.auth-btn {
+/* ═══ 通用按钮 ═══ */
+.action-btn {
   display: block;
   width: 100%;
-  margin-top: 12px;
+  margin-top: 10px;
   padding: 10px 16px;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #7c4dff, #651fff);
-  color: #fff;
   font-size: 14px;
   cursor: pointer;
   transition: opacity 0.2s;
 }
-
-.auth-btn:hover {
+.action-btn:hover {
   opacity: 0.85;
 }
 
-.auth-btn--large {
-  margin-top: 20px;
-  padding: 14px 32px;
-  font-size: 16px;
-  border-radius: 12px;
+.action-btn--primary {
+  background: linear-gradient(135deg, #7c4dff, #651fff);
+  color: #fff;
+}
+
+.action-btn--ghost {
+  background: transparent;
+  color: #888;
+  font-size: 12px;
+}
+.action-btn--ghost:hover {
+  color: #ccc;
 }
 
 .hint {
   font-size: 12px !important;
   opacity: 0.5;
   margin-top: 12px !important;
+}
+
+/* ═══ 浮动定位状态指示器 ═══
+     置于屏幕左上角，不遮挡罗盘盘面 */
+.geo-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  font-size: 11px;
+  color: #999;
+  z-index: 50;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  transition: color 0.3s, background 0.3s;
+}
+
+.geo-badge--ready {
+  color: #81C784;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.geo-badge--pending {
+  color: #FFD54A;
+}
+
+.geo-badge-icon {
+  font-size: 13px;
+}
+
+.geo-badge-decl {
+  color: #888;
+  font-size: 10px;
+}
+
+/* 定位中的小旋转动画 */
+.geo-badge-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid transparent;
+  border-top-color: #FFD54A;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 /* ═══ Sidebar Teleport 面板 ═══ */
@@ -505,6 +678,8 @@ const geoLabel = computed(() => {
 :global(.info-value) {
   color: #ccc;
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 :global(.info-value small) {
@@ -513,11 +688,27 @@ const geoLabel = computed(() => {
   margin-left: 4px;
 }
 
-:global(.level-ok) {
-  color: #4CAF50;
-}
+:global(.level-ok) { color: #4CAF50; }
+:global(.level-warn) { color: #FF9800; }
+:global(.geo-ok) { font-size: 12px; }
+:global(.geo-warn) { font-size: 12px; }
 
-:global(.level-warn) {
-  color: #FF9800;
+/* 重新定位按钮 */
+:global(.retry-btn) {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid #444;
+  border-radius: 6px;
+  background: transparent;
+  color: #aaa;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+:global(.retry-btn:hover) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
 }
 </style>
