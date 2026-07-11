@@ -95,10 +95,22 @@ export const usePhoneOrientation = (
 
   const isLevel = computed<boolean>(() => {
     if (!isSupported.value) return false
-    return (
-      Math.abs(beta.value - 90) < betaThreshold &&
-      Math.abs(gamma.value) < gammaThreshold
+    // 左右倾斜(gamma)必须接近0°——所有设备通用
+    if (Math.abs(gamma.value) >= gammaThreshold) return false
+
+    // 前后倾斜(beta)在不同设备/浏览器上水平时的值不同：
+    //   · Chrome Android:  水平 ≈ 0°
+    //   · iOS Safari:      水平 ≈ 90°
+    //   · 部分设备:        水平 ≈ -90° (如用户反馈 -89°)
+    // 取最接近的"水平基准"差值
+    const b = ((beta.value % 360) + 360) % 360 // 归一化到 [0, 360)
+    const betaFromLevel = Math.min(
+      b,               // 0°
+      Math.abs(b - 90),   // 90°
+      Math.abs(b - 180),  // 180°
+      Math.abs(b - 270),  // 270° (= -90°)
     )
+    return betaFromLevel < betaThreshold
   })
 
   /** 监听 DeviceOrientation */

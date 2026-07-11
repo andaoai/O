@@ -152,6 +152,18 @@ const svgRef = ref<SVGSVGElement | null>(null)
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(trueHeading.value))
 
+/** 计算与水平面的前后倾斜偏差度（取最接近的"水平"基准） */
+const betaDeviation = computed(() => {
+  const b = phoneOri.beta.value
+  const bn = ((b % 360) + 360) % 360
+  const devs = [bn, Math.abs(bn - 90), Math.abs(bn - 180), Math.abs(bn - 270)]
+  const minDev = Math.min(...devs)
+  // 找出对应的"水平"基准值，计算有符号偏差
+  const idx = devs.indexOf(minDev)
+  const base = [0, 90, 180, 270][idx]!
+  return b - base
+})
+
 /** 定位状态文本 */
 const geoLabel = computed(() => {
   switch (geoStatus.value) {
@@ -234,7 +246,7 @@ const geoLabel = computed(() => {
       <div class="level-card">
         <div class="level-icon">📐</div>
         <h3>请将手机水平放置</h3>
-        <p>前后 {{ (phoneOri.beta.value - 90).toFixed(0) }}°</p>
+        <p>前后 {{ betaDeviation.toFixed(0) }}°（raw: {{ phoneOri.beta.value.toFixed(0) }}°）</p>
         <p>左右 {{ phoneOri.gamma.value.toFixed(0) }}°</p>
         <div class="level-bubble-container">
           <div class="bubble-track track-x">
@@ -246,7 +258,7 @@ const geoLabel = computed(() => {
           <div class="bubble-track track-y">
             <div
               class="bubble"
-              :style="{ top: `${Math.max(0, Math.min(100, ((phoneOri.beta.value - 90) / 30 * -50 + 50)))}%` }"
+              :style="{ top: `${Math.max(0, Math.min(100, (betaDeviation / -30 * 50 + 50)))}%` }"
             />
           </div>
         </div>
