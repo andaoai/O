@@ -81,7 +81,7 @@ const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
   // 仅在手机水平时追迹，防止倾斜时的读数漂移
   if (phoneOri.isLevel.value) {
-    const target = -heading
+    const target = heading + 90
     const current = rotationAngle.value
     let diff = target - current
     if (diff > 180) diff -= 360
