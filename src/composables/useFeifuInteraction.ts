@@ -74,8 +74,22 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     const palace = options.palaceFilter.value
     if (shiying.length === 0 && palace.length === 0) return relationTable.value
     return relationTable.value.filter(entry => {
-      if (shiying.length > 0 && entry.shiyingType && !shiying.includes(entry.shiyingType as ShiyingType)) return false
-      if (palace.length > 0 && entry.palace && !palace.includes(entry.palace)) return false
+      // 世位筛选：源卦或目标卦的世位匹配即可
+      if (shiying.length > 0) {
+        const shiyingMatches = [
+          entry.shiyingType,
+          entry.targetShiyingType,
+        ].some(s => s && shiying.includes(s as ShiyingType))
+        if (!shiyingMatches) return false
+      }
+      // 八宫筛选：源卦或目标卦的宫匹配即可
+      if (palace.length > 0) {
+        const palaceMatches = [
+          entry.palace,
+          entry.targetPalace,
+        ].some(p => p && palace.includes(p))
+        if (!palaceMatches) return false
+      }
       return true
     })
   })

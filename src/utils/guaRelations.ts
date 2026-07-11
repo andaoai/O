@@ -60,29 +60,29 @@ export const RELATION_METAS: Record<GuaRelationType, GuaRelationMeta> = {
     type: 'hugua',
     label: '互卦',
     description: '取卦中二至四爻为下互卦、三至五爻为上互卦，揭示卦象内在交互关系。',
-    supportsPalaceFilter: false,
-    supportsShiyingFilter: false,
+    supportsPalaceFilter: true,
+    supportsShiyingFilter: true,
   },
   duigua: {
     type: 'duigua',
     label: '对卦',
     description: '六爻全变（阴阳翻转），亦称错卦。如乾䷀↔坤䷁、泰䷊↔否䷋，互为对卦。',
-    supportsPalaceFilter: false,
-    supportsShiyingFilter: false,
+    supportsPalaceFilter: true,
+    supportsShiyingFilter: true,
   },
   zonggua: {
     type: 'zonggua',
     label: '综卦',
     description: '上下颠倒（覆卦），初爻跟上爻、二爻跟五爻、三爻跟四爻交换位置。不变卦（如乾、坤、坎、离）自综。',
-    supportsPalaceFilter: false,
-    supportsShiyingFilter: false,
+    supportsPalaceFilter: true,
+    supportsShiyingFilter: true,
   },
   jiaogua: {
     type: 'jiaogua',
     label: '交卦',
     description: '内外卦交换位置，下卦移至上位、上卦移至下位，又称上下易位。',
-    supportsPalaceFilter: false,
-    supportsShiyingFilter: false,
+    supportsPalaceFilter: true,
+    supportsShiyingFilter: true,
   },
 }
 
@@ -172,10 +172,12 @@ export function computeJiaogua(value: number): number {
 // ─── 通用关系条目 ───
 
 /**
- * 单条关系记录（非 feifu 关系普遍形态）
+ * 单条关系记录
  *
- * feifu 关系额外包含 palace / color / shiyingType 字段，
- * 其他关系类型这些字段为 undefined。
+ * 所有关系类型均携带有宫/世位信息，但来源不同：
+ *   feifu 关系：palace/shiyingType 为源卦（飞卦）所属宫/世位（与目标卦同宫同世位）
+ *   非 feifu 关系：palace/shiyingType 为源卦所属宫/世位，
+ *                 targetPalace/targetShiyingType 为目标卦所属宫/世位
  */
 export interface GuaRelationEntry {
   /** 源卦 value (0-63) */
@@ -190,12 +192,16 @@ export interface GuaRelationEntry {
   sourceUnicode: string
   /** 目标卦符 (Unicode) */
   targetUnicode: string
-  /** 所属宫（仅 feifu 有效） */
+  /** 所属宫（源卦所属京房八宫） */
   palace?: string
-  /** 宫色（仅 feifu 有效） */
+  /** 宫色（源卦所属宫色） */
   color?: string
-  /** 世位类型（仅 feifu 有效） */
+  /** 世位类型（源卦世位） */
   shiyingType?: string
+  /** 目标卦所属宫（非 feifu 关系筛选用，feifu 与 palace 相同） */
+  targetPalace?: string
+  /** 目标卦世位类型（非 feifu 关系筛选用，feifu 与 shiyingType 相同） */
+  targetShiyingType?: string
 }
 
 /** 计算非 feifu 关系的通用表 */
@@ -206,6 +212,8 @@ function computeGenericRelationTable(
     const targetValue = computeTarget(value)
     const sourceMeta = WENWANG_GUA_BY_VALUE[value]!
     const targetMeta = WENWANG_GUA_BY_VALUE[targetValue]!
+    const sourceJf = JING_FANG_64_GUA.find(g => g.value === value)
+    const targetJf = JING_FANG_64_GUA.find(g => g.value === targetValue)
     return {
       sourceValue: value,
       targetValue,
@@ -213,6 +221,11 @@ function computeGenericRelationTable(
       targetName: targetMeta.name,
       sourceUnicode: getUnicodeHexagram(sourceMeta.wenwangOrder),
       targetUnicode: getUnicodeHexagram(targetMeta.wenwangOrder),
+      palace: sourceJf?.palace,
+      color: sourceJf?.color,
+      shiyingType: sourceJf?.shiyingType,
+      targetPalace: targetJf?.palace,
+      targetShiyingType: targetJf?.shiyingType,
     }
   })
 }
@@ -239,6 +252,8 @@ export function computeRelationTable(type: GuaRelationType): GuaRelationEntry[] 
         palace: e.palace,
         color: e.color,
         shiyingType: e.shiyingType,
+        targetPalace: e.palace,
+        targetShiyingType: e.shiyingType,
       }))
     case 'hugua':
       return computeGenericRelationTable(computeHugua)

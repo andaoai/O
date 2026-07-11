@@ -12,8 +12,8 @@
  * ⚠️ 圆心组件：只有 radius，无 innerRadius
  */
 import { inject, computed } from 'vue'
-import { FEIFU_KEY } from '@/composables/useFeifuInteraction'
-import { computeRelationTable, getGuaAngle, getArrowColor, RELATION_METAS, type GuaRelationType } from '@/utils/guaRelations'
+import { FEIFU_KEY, type FeifuInteraction } from '@/composables/useFeifuInteraction'
+import { computeRelationTable, getGuaAngle, getArrowColor, RELATION_METAS, type GuaRelationType, type GuaRelationEntry } from '@/utils/guaRelations'
 import { polarToCartesian } from '@/utils/geometry'
 
 interface Props {
@@ -226,14 +226,29 @@ function onArrowLeave() {
           {{ hoveredPair.targetUnicode }} {{ hoveredPair.targetName }}
         </tspan>
       </text>
-      <text v-if="hoveredPair.palace" x="-460" y="-476" fill="#aaa" font-size="11">
+      <text v-if="hoveredPair.palace && relationMeta.type === 'feifu'" x="-460" y="-476" fill="#aaa" font-size="11">
         所属宫：
         <tspan :fill="hoveredPair.color || '#aaa'">{{ hoveredPair.palace }}</tspan>
       </text>
-      <text v-if="hoveredPair.shiyingType" x="-460" y="-456" fill="#aaa" font-size="11">
+      <text v-if="hoveredPair.shiyingType && relationMeta.type === 'feifu'" x="-460" y="-456" fill="#aaa" font-size="11">
         世位：
         <tspan fill="#F5E8C8">{{ hoveredPair.shiyingType }}</tspan>
       </text>
+      <!-- 非 feifu 关系：分别显示源卦和目标卦的宫/世位 -->
+      <template v-if="relationMeta.type !== 'feifu'">
+        <text x="-460" y="-476" fill="#aaa" font-size="11">
+          源卦：
+          <tspan :fill="hoveredPair.color || '#aaa'">{{ hoveredPair.palace || '—' }}宫</tspan>
+          <tspan fill="#666" dx="12">世</tspan>
+          <tspan fill="#F5E8C8">{{ hoveredPair.shiyingType || '—' }}</tspan>
+        </text>
+        <text x="-460" y="-456" fill="#aaa" font-size="11">
+          目标卦：
+          <tspan fill="#66CCFF">{{ hoveredPair.targetPalace || '—' }}宫</tspan>
+          <tspan fill="#666" dx="12">世</tspan>
+          <tspan fill="#A29BFE">{{ hoveredPair.targetShiyingType || '—' }}</tspan>
+        </text>
+      </template>
       <text x="-460" y="-432" fill="#888" font-size="10" font-style="italic">
         {{ relationMeta.description }}
       </text>

@@ -199,8 +199,6 @@ function selectPalace(palace: string) {
   }
 }
 
-/** 当前是否为 feifu 模式（决定是否显示宫/世位筛选） */
-const isFeifuMode = computed(() => relationType.value === 'feifu')
 </script>
 
 <template>
@@ -251,8 +249,7 @@ const isFeifuMode = computed(() => relationType.value === 'feifu')
         </div>
       </div>
 
-      <!-- ─── 八宫筛选（仅 feifu 模式） ─── -->
-      <template v-if="isFeifuMode">
+      <!-- ─── 八宫筛选（所有关系类型通用） ─── -->
         <div class="view-tool-group">
           <label class="view-tool-label">八宫筛选</label>
           <div class="filter-row filter-row--wrap">
@@ -300,8 +297,6 @@ const isFeifuMode = computed(() => relationType.value === 'feifu')
             </button>
           </div>
         </div>
-      </template>
-
       <!-- ─── 图层显示 ─── -->
       <div class="view-tool-group">
         <label class="view-tool-label">图层显示</label>
