@@ -53,12 +53,12 @@ import JingFangView from '@/views/JingFangView.vue'
 import PlanetMansionView from '@/views/PlanetMansionView.vue'
 import TropicalYearView from '@/views/TropicalYearView.vue'
 import GuanDouView from '@/views/GuanDouView.vue'
-import FeifuView from '@/views/FeifuView.vue'
+import GuaRelationView from '@/views/GuaRelationView.vue'
 import SuzhouStellarMapView from '@/views/SuzhouStellarMapView.vue'
 
-// 飞伏圆心 + 文本环（RingStack 架构）
-import FeifuCenter from '@/components/centers/FeifuCenter.vue'
-import FeifuTextRing from '@/components/rings/FeifuTextRing.vue'
+// 卦关系盘圆心 + 文本环（RingStack 架构）
+import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
+import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
 
 export default {
   extends: DefaultTheme,
@@ -109,10 +109,10 @@ export default {
     app.component('PlanetMansionView', PlanetMansionView)
     app.component('TropicalYearView', TropicalYearView)
     app.component('GuanDouView', GuanDouView)
-    app.component('FeifuView', FeifuView)
+    app.component('GuaRelationView', GuaRelationView)
     app.component('SuzhouStellarMapView', SuzhouStellarMapView)
-    app.component('FeifuCenter', FeifuCenter)
-    app.component('FeifuTextRing', FeifuTextRing)
+    app.component('GuaRelationCenter', GuaRelationCenter)
+    app.component('GuaRelationTextRing', GuaRelationTextRing)
   },
 } satisfies Theme
 

@@ -17,7 +17,7 @@
 - **七曜入宿天象盘** — 盖天投影，赤道·黄道·白道三道斜交，日月五星实时入二十八宿。
 - **回归年闰月盘** — 365 天回归年对 360 度甲子纪年，节气节/中气区分，农历闰月与月相实时可视化。
 - **观斗盘** — 圆心真实北斗七星（岁差修正）+ 紫微垣东西两藩 + 勾陈一 + 地平圈（浏览器定位），外裹月建/时辰赤道环、月将/七曜/节气黄道环——把北斗的方位读成时辰、季节与年岁。
-- **飞伏图盘** — 京房八宫六十四卦飞伏关系，外圈京房八宫环，中央 64 条有向箭头从各卦指向 8 个纯卦，呈放射状收敛。
+- **卦关系盘** — 京房八宫六十四卦飞伏关系，外圈京房八宫环，中央 64 条有向箭头从各卦指向 8 个纯卦，呈放射状收敛。
 - **苏州石刻天文图** — 南宋淳祐七年（1247）王致远勒石于苏州府学的天文图数字复原：三规圆 + 二十八宿不等宽径向辐条 + 中央拱极北斗，斗柄随本地恒星时旋转。
 
 访问：<https://andaoai.github.io/O/>
@@ -77,12 +77,12 @@ npm run preview     # 预览生产产物
    │  ├─ rings/                   # 领域圆环组件（27 个）+ 3 个 Data* 数据包装器
    │  ├─ centers/                 # 领域圆心组件（6 个）
    │  ├─ sidebar/                 # 罗盘左侧嵌入式 Sidebar（时间/视口/View 专属工具位）
-   │  ├─ feifu/                   # 飞伏图盘专用（64 条飞伏箭头径向叠加）
+   │  ├─ gua-relation/                   # 飞伏图盘专用（64 条飞伏箭头径向叠加）
    │  ├─ gua/                     # 单卦静态图（SingleGuaChart，供古籍笔记内嵌）
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
    ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / …
-   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / guaInfo / beidou / ziwei / jianJiang / feifu / …）
+   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / guaInfo / beidou / ziwei / jianJiang / guaRelationArrows / …）
 ```
 
 ## 📚 深入了解

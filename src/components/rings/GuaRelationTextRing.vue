@@ -1,18 +1,18 @@
 <script setup lang="ts">
 /**
- * FeifuTextRing — 卦关系图盘文本环
+ * GuaRelationTextRing — 卦关系图盘文本环
  *
  * 通用组件，通过 layer prop 区分 6 种文本层：
  *   name / element / unicode / innerElement / outerElement / yinYang
  *
- * 每环渲染 64 个卦节点的文本标签，与 FeifuCenter 共享角度基准。
- * 注入 useFeifuInteraction 获取 hover/筛选状态。
+ * 每环渲染 64 个卦节点的文本标签，与 GuaRelationCenter 共享角度基准。
+ * 注入 useGuaRelationInteraction 获取 hover/筛选状态。
  * 通过 relationType prop 控制纯卦特殊着色（仅飞伏类型生效）。
  *
  * ⚠️ 标准 RingStack 圆环组件：半径由 RingStack 控制
  */
 import { computed, inject } from 'vue'
-import { FEIFU_KEY } from '@/composables/useFeifuInteraction'
+import { GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
 import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
@@ -22,7 +22,7 @@ import PolarCanvas from '../base/PolarCanvas.vue'
 
 // ─── 图层配置 ───
 
-export type FeifuTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement'
+export type GuaRelationTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement'
 
 // ─── Props ───
 
@@ -31,8 +31,8 @@ interface Props {
   innerRadius: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
-  layout?: 'houtian' | 'xiantian'
-  layer: FeifuTextLayer
+  layout?: 'jingfang' | 'xiantian'
+  layer: GuaRelationTextLayer
   /** 卦关系类型（影响纯卦特殊着色） */
   relationType?: GuaRelationType
   /**
@@ -45,13 +45,13 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise',
   startDegree: 0,
-  layout: 'houtian',
+  layout: 'jingfang',
   relationType: 'feifu',
 })
 
 // ─── 交互状态注入 ───
 
-const feifu = inject(FEIFU_KEY)!
+const interaction = inject(GUA_RELATION_KEY)!
 
 // ─── 角度与坐标计算 ───
 
@@ -77,15 +77,15 @@ function getGuaElement(value: number): string {
 
 const items = computed(() => {
   const r = textRadius.value
-  const isHov = feifu.isHovered.value
+  const isHov = interaction.isHovered.value
 
   return Array.from({ length: 64 }, (_, value) => {
     const angle = getGuaAngle(value, props.layout, props.startDegree)
     const pos = polarToCartesian(angle, r, props.rotationDirection)
     const rot = radialTextRotation(angle, props.rotationDirection)
     const meta = WENWANG_GUA_BY_VALUE[value]!
-    const active = feifu.isNodeActive(value)
-    const match = feifu.isNodeMatch(value)
+    const active = interaction.isNodeActive(value)
+    const match = interaction.isNodeMatch(value)
 
     // 计算不透明度
     let opacity: number
@@ -103,7 +103,7 @@ const items = computed(() => {
       case 'name': {
         label = meta.name
         // 纯卦特殊着色仅限 feifu 模式
-        const specialPureColor = isFeifuMode.value && feifu.isPureGua(value) ? '#66CCFF' : null
+        const specialPureColor = isFeifuMode.value && interaction.isPureGua(value) ? '#66CCFF' : null
         if (match) {
           color = specialPureColor
             ?? (props.usePaletteColorFallback ? getGuaPaletteColor(value) : '#FFD700')
@@ -123,7 +123,7 @@ const items = computed(() => {
       case 'unicode':
         label = getUnicodeHexagram(meta.wenwangOrder)
         if (match) {
-          color = isFeifuMode.value && feifu.isPureGua(value) ? '#66CCFF' : getGuaPaletteColor(value)
+          color = isFeifuMode.value && interaction.isPureGua(value) ? '#66CCFF' : getGuaPaletteColor(value)
         } else {
           color = active ? '#555' : '#1a1a1a'
         }
@@ -165,11 +165,11 @@ const items = computed(() => {
 // ─── Hover ───
 
 function onTextEnter(value: number) {
-  feifu.setHovered(value)
+  interaction.setHovered(value)
 }
 
 function onTextLeave() {
-  feifu.setHovered(null)
+  interaction.setHovered(null)
 }
 </script>
 
@@ -181,7 +181,7 @@ function onTextLeave() {
     :center-y="0"
   >
     <template #default>
-      <g class="feifu-text-ring">
+      <g class="gua-relation-text-ring">
         <text
           v-for="item in items"
           :key="`${props.layer}-${item.value}`"
@@ -194,7 +194,7 @@ function onTextLeave() {
           text-anchor="middle"
           dominant-baseline="central"
           :transform="`rotate(${item.rot} ${item.x} ${item.y})`"
-          class="feifu-node-text"
+          class="gua-relation-node-text"
           @mouseenter="onTextEnter(item.value)"
           @mouseleave="onTextLeave"
         >
@@ -206,8 +206,8 @@ function onTextLeave() {
 </template>
 
 <style scoped>
-.feifu-text-ring { pointer-events: none; }
-.feifu-node-text {
+.gua-relation-text-ring { pointer-events: none; }
+.gua-relation-node-text {
   pointer-events: all;
   cursor: pointer;
   transition: opacity 0.2s ease, fill 0.2s ease;

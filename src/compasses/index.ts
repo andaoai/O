@@ -60,9 +60,9 @@ export const compasses: CompassMeta[] = [
     category: '天文'
   },
   {
-    id: 'feifu',
+    id: 'gua-relation',
     name: '卦关系盘',
-    description: '六十四卦多种关系可视化——可选飞伏、互卦、对卦、综卦、交卦，有向箭头直观展示卦与卦之间的关联。五种关系类型可随意切换，与后天/先天布局自由组合',
+    description: '六十四卦多种关系可视化——可选飞伏、互卦、对卦、综卦、交卦，有向箭头直观展示卦与卦之间的关联。五种关系类型可随意切换，与京房八宫/先天布局自由组合',
     category: '易学'
   },
   {

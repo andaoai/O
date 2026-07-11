@@ -37,18 +37,18 @@ title: 飞伏 · 显隐互藏
 
 <script setup>
 import { provide } from 'vue'
-import { useFeifuInteraction, FEIFU_KEY } from '@/composables/useFeifuInteraction'
-provide(FEIFU_KEY, useFeifuInteraction())
+import { useGuaRelationInteraction, GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
+provide(GUA_RELATION_KEY, useGuaRelationInteraction())
 </script>
 
 ## 完整飞伏图盘
 
 <CompassFigure caption="飞伏图盘 · 64箭收敛于8纯卦">
   <JingFangEightPalaceRing :radius="220" :inner-radius="175" :unicode-font-size="14" :name-font-size="7" />
-  <FeifuCenter :radius="165" />
+  <GuaRelationCenter :radius="165" />
 </CompassFigure>
 
-> 如需交互查看更多细节，请打开[飞伏图盘](/compass/feifu)全屏查看——hover 任意卦即可高亮该卦的飞伏连线并显示详情。
+> 如需交互查看更多细节，请打开[卦关系盘](/compass/gua-relation)全屏查看——hover 任意卦即可高亮该卦的飞伏连线并显示详情。
 
 ## 示例：飞伏读法
 

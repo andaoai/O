@@ -13,14 +13,14 @@
  *  所有函数满足 Layer 5 纯函数要求：
  *    相同输入 → 相同输出，无副作用，不依赖外部状态
  *
- *  关系类型与排序布局（先天/后天）互相独立，可任意组合：
- *    后天八卦（京房八宫序）：乾坎艮震坤离兑巽
+ *  关系类型与排序布局（京房/先天）互相独立，可任意组合：
+ *    京房八宫序：乾坎艮震坤离兑巽
  *    先天八卦（伏羲圆图序）：按二进制位反转排列
  * ═══════════════════════════════════════════════════════════════
  */
 import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram, bitReverse6, GUA_STEP } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
-import { FEIFU_TABLE } from './feifu'
+import { FEIFU_TABLE } from './guaRelationArrows'
 import type { RotationDirection } from './geometry'
 
 // ─── 关系类型定义 ───
@@ -134,9 +134,9 @@ export const RELATION_COLORS: Record<GuaRelationType, string> = {
 // ─── 排序布局 ───
 
 /** 卦象排列方式 */
-export type GuaLayout = 'houtian' | 'xiantian'
+export type GuaLayout = 'jingfang' | 'xiantian'
 
-/** 后天八卦（京房八宫）序下重排宫位，使四对宫处于对径位置（180°） */
+/** 京房八宫序下重排宫位，使四对宫处于对径位置（180°） */
 const FEIFU_PALACE_ORDER: readonly string[] = ['乾', '坎', '艮', '震', '坤', '离', '兑', '巽']
 
 /**
@@ -146,12 +146,12 @@ const FEIFU_PALACE_ORDER: readonly string[] = ['乾', '坎', '艮', '震', '坤'
  * 在此统一收敛，避免三处维护。
  *
  * @param value      六爻二进制编码 0-63
- * @param layout     排列方式：'houtian'（后天京房序）| 'xiantian'（先天圆图序）
+ * @param layout     排列方式：'jingfang'（京房八宫序）| 'xiantian'（先天圆图序）
  * @param startDegree 起始角度偏移
  * @returns 圆心角度数 (0-360)，SVG 坐标系（0°=正右，90°=正下，270°=正上）
  */
 export function getGuaAngle(value: number, layout: GuaLayout, startDegree: number = 0): number {
-  if (layout === 'houtian') {
+  if (layout === 'jingfang') {
     const gua = JING_FANG_64_GUA.find(g => g.value === value)
     if (!gua) return 0
     const orderInPalace = gua.jingFangOrder % 8

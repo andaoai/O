@@ -4,5 +4,5 @@ title: 卦关系盘
 ---
 
 <ClientOnly>
-  <FeifuView />
+  <GuaRelationView />
 </ClientOnly>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * FeifuCenter — 卦关系箭矢圆心组件
+ * GuaRelationCenter — 卦关系箭矢圆心组件
  *
  * 渲染 64 条从源卦→目标卦的有向箭头，支持五种关系类型：
  *   飞伏 / 互卦 / 对卦 / 综卦 / 交卦
@@ -12,7 +12,7 @@
  * ⚠️ 圆心组件：只有 radius，无 innerRadius
  */
 import { inject, computed } from 'vue'
-import { FEIFU_KEY, type FeifuInteraction } from '@/composables/useFeifuInteraction'
+import { GUA_RELATION_KEY, type GuaRelationInteraction } from '@/composables/useGuaRelationInteraction'
 import { computeRelationTable, getGuaAngle, getArrowColor, RELATION_METAS, type GuaRelationType, type GuaRelationEntry } from '@/utils/guaRelations'
 import { polarToCartesian } from '@/utils/geometry'
 
@@ -21,7 +21,7 @@ interface Props {
   radius: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
-  layout?: 'houtian' | 'xiantian'
+  layout?: 'jingfang' | 'xiantian'
   /** 卦关系类型（默认飞伏） */
   relationType?: GuaRelationType
 }
@@ -29,13 +29,13 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise',
   startDegree: 0,
-  layout: 'houtian',
+  layout: 'jingfang',
   relationType: 'feifu',
 })
 
 // ─── 注入交互状态 ───
 
-const feifu = inject(FEIFU_KEY)!
+const interaction = inject(GUA_RELATION_KEY)!
 
 // ─── 箭头计算 ───
 
@@ -68,11 +68,11 @@ interface ArrowRenderItem {
  *
  * 使用泛型关系表（而非固定的 FEIFU_TABLE）：
  *  - sourceValue → targetValue 即为箭头方向
- *  - 角度通过 getGuaAngle 按当前布局（后天/先天）计算
+ *  - 角度通过 getGuaAngle 按当前布局（京房/先天）计算
  *  - 自环（sourceValue === targetValue）用 circleMarker 渲染
  */
 const arrows = computed<ArrowRenderItem[]>(() => {
-  const isHov = feifu.isHovered.value
+  const isHov = interaction.isHovered.value
 
   return currentTable.value.map(entry => {
     const sourceAngle = getGuaAngle(entry.sourceValue, props.layout, props.startDegree)
@@ -80,8 +80,8 @@ const arrows = computed<ArrowRenderItem[]>(() => {
     const from = polarToCartesian(sourceAngle, arrowRadius.value, props.rotationDirection)
     const to = polarToCartesian(targetAngle, arrowRadius.value, props.rotationDirection)
 
-    const match = feifu.isArrowMatch(entry)
-    const active = feifu.isEntryFiltered(entry.sourceValue, entry.targetValue)
+    const match = interaction.isArrowMatch(entry)
+    const active = interaction.isEntryFiltered(entry.sourceValue, entry.targetValue)
     const isSelfLoop = entry.sourceValue === entry.targetValue
     const arrowColor = getArrowColor(entry)
 
@@ -123,27 +123,27 @@ const selfLoopArrows = computed(() => arrows.value.filter(a => a.isSelfLoop))
 // ─── 详情面板 ───
 
 const hoveredPair = computed(() => {
-  if (feifu.hoveredValue.value === null) return null
+  if (interaction.hoveredValue.value === null) return null
   return currentTable.value.find(
-    e => e.sourceValue === feifu.hoveredValue.value || e.targetValue === feifu.hoveredValue.value,
+    e => e.sourceValue === interaction.hoveredValue.value || e.targetValue === interaction.hoveredValue.value,
   ) ?? null
 })
 
 function onArrowEnter(value: number) {
-  feifu.setHovered(value)
+  interaction.setHovered(value)
 }
 
 function onArrowLeave() {
-  feifu.setHovered(null)
+  interaction.setHovered(null)
 }
 </script>
 
 <template>
-  <g class="feifu-center">
+  <g class="gua-relation-center">
     <!-- 箭头标记 -->
     <defs>
       <marker
-        id="feifu-arrowhead"
+        id="gua-relation-arrowhead"
         viewBox="0 0 10 10"
         refX="9"
         refY="5"
@@ -167,8 +167,8 @@ function onArrowLeave() {
       :stroke="a.arrowColor"
       :stroke-width="a.strokeWidth"
       :opacity="a.strokeOpacity"
-      :marker-end="a.showMarker ? 'url(#feifu-arrowhead)' : undefined"
-      class="feifu-arrow"
+      :marker-end="a.showMarker ? 'url(#gua-relation-arrowhead)' : undefined"
+      class="gua-relation-arrow"
       @mouseenter="onArrowEnter(a.entry.sourceValue)"
       @mouseleave="onArrowLeave"
     />
@@ -182,7 +182,7 @@ function onArrowLeave() {
       :r="8"
       :fill="a.arrowColor"
       :opacity="a.circleOpacity"
-      class="feifu-self-loop"
+      class="gua-relation-self-loop"
       @mouseenter="onArrowEnter(a.entry.sourceValue)"
       @mouseleave="onArrowLeave"
     />
@@ -196,13 +196,13 @@ function onArrowLeave() {
       text-anchor="middle"
       dominant-baseline="central"
       opacity="0.3"
-      class="feifu-self-loop-label"
+      class="gua-relation-self-loop-label"
     >
       ↻
     </text>
 
     <!-- 详情面板 -->
-    <g v-if="hoveredPair" class="feifu-detail">
+    <g v-if="hoveredPair" class="gua-relation-detail">
       <rect
         x="-480" y="-560"
         width="280" height="170"
@@ -257,8 +257,8 @@ function onArrowLeave() {
 </template>
 
 <style scoped>
-.feifu-center { pointer-events: none; }
-.feifu-arrow { pointer-events: stroke; cursor: pointer; transition: opacity 0.2s ease; }
-.feifu-self-loop { pointer-events: all; cursor: pointer; transition: opacity 0.2s ease; }
-.feifu-self-loop-label { pointer-events: none; }
+.gua-relation-center { pointer-events: none; }
+.gua-relation-arrow { pointer-events: stroke; cursor: pointer; transition: opacity 0.2s ease; }
+.gua-relation-self-loop { pointer-events: all; cursor: pointer; transition: opacity 0.2s ease; }
+.gua-relation-self-loop-label { pointer-events: none; }
 </style>

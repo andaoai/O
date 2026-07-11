@@ -1,5 +1,8 @@
 /**
- * 飞伏工具函数
+ * 卦关系盘箭头计算
+ *
+ * 为卦关系图盘提供布局角度计算、飞伏（feifu）关系表生成、
+ * 以及箭头笛卡尔坐标转换。
  *
  * 飞伏是京房八宫体系的核心概念：
  *   「飞」= 显现之卦，「伏」= 隐藏之卦，阴阳互藏其宅。
@@ -57,11 +60,11 @@ import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 布局类型 ───
 
-/** 卦象排列方式：'houtian' = 后天八卦（京房八宫序）；'xiantian' = 先天八卦（伏羲圆图序） */
-export type FeifuLayout = 'houtian' | 'xiantian'
+/** 卦象排列方式：'jingfang' = 京房八宫序；'xiantian' = 先天八卦（伏羲圆图序） */
+export type GuaRelationLayout = 'jingfang' | 'xiantian'
 
 /**
- * 后天八卦（京房八宫）序下重排宫位，使四对宫处于对径位置（180°）：
+ * 京房八宫序下重排宫位，使四对宫处于对径位置（180°）：
  *   乾↔坤、坎↔离、艮↔兑、震↔巽
  *
  * 原始京房序：乾(0) 坎(1) 艮(2) 震(3) 巽(4) 离(5) 坤(6) 兑(7)
@@ -71,19 +74,19 @@ export type FeifuLayout = 'houtian' | 'xiantian'
  */
 const FEIFU_PALACE_ORDER: readonly string[] = ['乾', '坎', '艮', '震', '坤', '离', '兑', '巽']
 
-/** 重排后的后天序 order（0-63），使四对宫对径 */
-function reorderHoutian(palace: string, orderInPalace: number): number {
+/** 重排后的京房八宫序 order（0-63），使四对宫对径 */
+function reorderPalaces(palace: string, orderInPalace: number): number {
   const newPalacePos = FEIFU_PALACE_ORDER.indexOf(palace)
   return newPalacePos * 8 + orderInPalace
 }
 
 /** 获取某卦在指定布局下的圆心角（SVG 空间，度） */
-function getAngle(value: number, layout: FeifuLayout, startDegree: number): number {
-  if (layout === 'houtian') {
+function getAngle(value: number, layout: GuaRelationLayout, startDegree: number): number {
+  if (layout === 'jingfang') {
     const gua = JING_FANG_64_GUA.find(g => g.value === value)
     if (!gua) return 0
-    // 后天八卦排序：用重排后的序定位，使对宫对径
-    const order = reorderHoutian(gua.palace, gua.jingFangOrder % 8)
+    // 京房八宫序：用重排后的序定位，使对宫对径
+    const order = reorderPalaces(gua.palace, gua.jingFangOrder % 8)
     return (270 + order * JING_FANG_EIGHT_PALACE_STEP + startDegree) % 360
   } else {
     // 先天八卦：按二进制位反转（伏羲圆图）定位
@@ -184,16 +187,16 @@ export interface FeifuArrowData {
 
 /**
  * 计算所有飞伏箭头的笛卡尔坐标
- * @param nodeRadius   节点布局圆的半径（现在由调用方传入箭头环的半径）
+ * @param nodeRadius   节点布局圆的半径
  * @param startDegree  起始角度偏移
  * @param direction    旋转方向
- * @param layout       卦象排列方式：'houtian'（后天八卦/京房八宫序）| 'xiantian'（先天八卦/伏羲圆图序）
+ * @param layout       卦象排列方式：'jingfang'（京房八宫序）| 'xiantian'（先天八卦/伏羲圆图序）
  */
 export function computeFeifuArrows(
   nodeRadius: number,
   startDegree: number = 0,
   direction: RotationDirection = 'clockwise',
-  layout: FeifuLayout = 'houtian'
+  layout: GuaRelationLayout = 'jingfang'
 ): FeifuArrowData[] {
   return FEIFU_TABLE.map(entry => {
     const feiAngle = getAngle(entry.feiValue, layout, startDegree)
@@ -215,7 +218,7 @@ export function getNodePosition(
   nodeRadius: number,
   startDegree: number = 0,
   direction: RotationDirection = 'clockwise',
-  layout: FeifuLayout = 'houtian'
+  layout: GuaRelationLayout = 'jingfang'
 ): { x: number; y: number } {
   const angle = getAngle(value, layout, startDegree)
   return polarToCartesian(angle, nodeRadius, direction)

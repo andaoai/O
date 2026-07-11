@@ -908,7 +908,7 @@ export const compasses: CompassMeta[] = [
   { id: 'planet-mansion',      name: '七曜入宿天象盘',     description: '天极投影盖天图……',              category: '天文' },
   { id: 'tropical-year',       name: '回归年闰月盘',       description: '365 天回归年 vs 360 度甲子……', category: '天文' },
   { id: 'guan-dou',            name: '观斗盘',             description: '圆心真实北斗 + 紫微垣 + 地平圈……', category: '天文' },
-  { id: 'feifu',               name: '飞伏图盘',           description: '京房八宫 64 卦飞伏方向……',      category: '易学' },
+  { id: 'gua-relation',        name: '卦关系盘',           description: '京房八宫 64 卦飞伏方向……',      category: '易学' },
   { id: 'suzhou-stellar-map',  name: '苏州石刻天文图',     description: '南宋 1247 年苏州府学石刻复原……', category: '天文' },
 ]
 ```
@@ -978,7 +978,7 @@ const { controlledTime } = useUrlTime()
 | `ziwei.ts` | 紫微垣东西两藩恒星（勾陈一、天皇大帝等） |
 | `jianJiang.ts` | 斗建 / 月将 / 太阳所在 宫位换算 |
 | `jingFangYao.ts` | 京房爻辞 + 飞伏查询 |
-| `feifu.ts` | 京房八宫 64 卦飞伏方向 |
+| `guaRelationArrows.ts` | 京房八宫 64 卦飞伏方向 |
 | `wuxing.ts` | 五行相生相克 + 配色 |
 
 ---

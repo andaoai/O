@@ -1,17 +1,17 @@
 /**
- * useFeifuInteraction — 卦关系图盘跨组件交互状态
+ * useGuaRelationInteraction — 卦关系图盘跨组件交互状态
  *
- * 提供（FeifuView） + 注入（FeifuCenter / FeifuTextRing）模式，
+ * 提供（GuaRelationView） + 注入（GuaRelationCenter / GuaRelationTextRing）模式，
  * 共享 hover / 筛选状态。
  *
  * 设计原则：
- * - FeifuView 调用 useFeifuInteraction(options) 创建状态实例
- * - FeifuCenter 和 FeifuTextRing 通过 inject(FEIFU_KEY) 获取共享状态
+ * - GuaRelationView 调用 useGuaRelationInteraction(options) 创建状态实例
+ * - GuaRelationCenter 和 GuaRelationTextRing 通过 inject(GUA_RELATION_KEY) 获取共享状态
  * - 所有筛选逻辑集中于此，子组件只消费不计算
  * - 支持动态切换关系类型（飞伏/互卦/对卦/综卦/交卦）
  */
 import { ref, computed, type Ref, type InjectionKey, type ComputedRef } from 'vue'
-import { FEIFU_TABLE, type FeifuEntry } from '@/utils/feifu'
+import { FEIFU_TABLE, type FeifuEntry } from '@/utils/guaRelationArrows'
 import {
   computeRelationTable,
   RELATION_METAS,
@@ -23,12 +23,12 @@ import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 依赖注入 Key ───
 
-export type FeifuInteraction = ReturnType<typeof useFeifuInteraction>
-export const FEIFU_KEY: InjectionKey<FeifuInteraction> = Symbol('feifu')
+export type GuaRelationInteraction = ReturnType<typeof useGuaRelationInteraction>
+export const GUA_RELATION_KEY: InjectionKey<GuaRelationInteraction> = Symbol('gua-relation')
 
 // ─── 输入参数 ───
 
-export interface FeifuInteractionOptions {
+export interface GuaRelationInteractionOptions {
   shiyingFilter: Ref<ShiyingType[]>
   palaceFilter: Ref<string[]>
   /** 当前关系类型（可选，默认为 'feifu'） */
@@ -37,7 +37,7 @@ export interface FeifuInteractionOptions {
 
 // ─── 状态工厂 ───
 
-export function useFeifuInteraction(options?: FeifuInteractionOptions) {
+export function useGuaRelationInteraction(options?: GuaRelationInteractionOptions) {
   // 悬停状态（所有组件读写）
   const hoveredValue = ref<number | null>(null)
   const isHovered: ComputedRef<boolean> = computed(() => hoveredValue.value !== null)

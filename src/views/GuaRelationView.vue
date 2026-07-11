@@ -1,18 +1,18 @@
 <script setup lang="ts">
 /**
- * FeifuView — 卦关系图盘
+ * GuaRelationView — 卦关系图盘
  *
- * 将六十四卦按后天/先天布局排列，圆心绘制有向箭头展示卦间关系。
+ * 将六十四卦按京房八宫/先天布局排列，圆心绘制有向箭头展示卦间关系。
  * 支持五种关系类型（飞伏/互卦/对卦/综卦/交卦），可在侧栏切换。
  *
  * 关系类型与排序布局互相独立，可任意组合。
  */
 import { ref, computed, markRaw, provide } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
-import FeifuCenter from '@/components/centers/FeifuCenter.vue'
-import FeifuTextRing from '@/components/rings/FeifuTextRing.vue'
-import type { FeifuTextLayer } from '@/components/rings/FeifuTextRing.vue'
-import { useFeifuInteraction, FEIFU_KEY } from '@/composables/useFeifuInteraction'
+import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
+import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
+import type { GuaRelationTextLayer } from '@/components/rings/GuaRelationTextRing.vue'
+import { useGuaRelationInteraction, GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
@@ -54,16 +54,16 @@ const relationType = ref<GuaRelationType>('feifu')
 
 const shiyingFilter = ref<ShiyingType[]>([])
 const palaceFilter = ref<string[]>([])
-const layout = ref<'houtian' | 'xiantian'>('houtian')
+const layout = ref<'jingfang' | 'xiantian'>('jingfang')
 
-const feifuInteraction = useFeifuInteraction({
+const interaction = useGuaRelationInteraction({
   shiyingFilter,
   palaceFilter,
   relationType,
 })
 
-// 提供 FEIFU_KEY 给 FeifuCenter / FeifuTextRing
-provide(FEIFU_KEY, feifuInteraction)
+// 提供 GUA_RELATION_KEY 给 GuaRelationCenter / GuaRelationTextRing
+provide(GUA_RELATION_KEY, interaction)
 
 // ─── 图层显隐 ───
 
@@ -110,7 +110,7 @@ const GAP = 1
  *   外卦五行(outerElement): 14px — 1 字五行 + 内边距
  *   阴阳(yinYang): 18px — 3 字体性 + 内边距
  */
-const LAYER_THICKNESS: Record<FeifuTextLayer, number> = {
+const LAYER_THICKNESS: Record<GuaRelationTextLayer, number> = {
   name: 22,
   element: 16,
   unicode: 30,
@@ -120,7 +120,7 @@ const LAYER_THICKNESS: Record<FeifuTextLayer, number> = {
 
 type RingLayerConfig = {
   key: keyof RingVisibility | 'always'
-  layer: FeifuTextLayer
+  layer: GuaRelationTextLayer
   always: boolean
 }
 
@@ -141,7 +141,7 @@ const rings = computed(() => {
     r => r.always || ringVisibility.value[r.key as keyof RingVisibility]
   )
   return visible.map(r => ({
-    component: markRaw(FeifuTextRing),
+    component: markRaw(GuaRelationTextRing),
     thickness: LAYER_THICKNESS[r.layer],
     gapBefore: GAP,
     props: {
@@ -227,11 +227,11 @@ function selectPalace(palace: string) {
         <div class="filter-row">
           <button
             class="filter-btn"
-            :class="{ active: layout === 'houtian' }"
+            :class="{ active: layout === 'jingfang' }"
             :style="{ '--btn-color': '#F1C40F' }"
-            @click="layout = 'houtian'"
+            @click="layout = 'jingfang'"
           >
-            后天八卦
+            京房八宫
           </button>
           <button
             class="filter-btn"
@@ -343,7 +343,7 @@ function selectPalace(palace: string) {
           :rotation-direction="rotationDirection"
         >
           <template #center="{ innerRadius }">
-            <FeifuCenter
+            <GuaRelationCenter
               :radius="innerRadius"
               :rotation-direction="rotationDirection"
               :start-degree="0"
