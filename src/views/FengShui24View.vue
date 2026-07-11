@@ -371,8 +371,8 @@ const showGeoPermission = computed(() =>
           rotation-direction="clockwise"
         >
           <template #center="{ innerRadius }">
-            <!-- 圆心区域：方向指示器 -->
-            <g class="center-indicator">
+            <!-- 圆心区域：方向指示器（反旋保持屏幕正立） -->
+            <g class="center-indicator" :transform="`rotate(${-rotationAngle})`">
               <circle cx="0" cy="0" :r="innerRadius * 0.85" fill="none" stroke="#444" stroke-width="0.5" />
               <line x1="0" :y1="-innerRadius * 0.7" x2="0" :y2="innerRadius * 0.7" stroke="#555" stroke-width="0.5" />
               <line :x1="-innerRadius * 0.7" y1="0" :x2="innerRadius * 0.7" y2="0" stroke="#555" stroke-width="0.5" />
