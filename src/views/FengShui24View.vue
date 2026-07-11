@@ -105,8 +105,11 @@ provideCompassContext({ time: controlledTime, viewport })
 // ─── SVG ref ────────────────────────────────────────────
 const svgRef = ref<SVGSVGElement | null>(null)
 
+/** 圆心显示朝向 = 真北 + 90°（与外圈旋转偏移量一致） */
+const displayHeading = computed(() => normalizeAngle(trueHeading.value + 90))
+
 /** 当前朝向中文名 */
-const directionLabel = computed(() => headingToChinese(trueHeading.value))
+const directionLabel = computed(() => headingToChinese(displayHeading.value))
 
 // ─── 水平气泡偏差（beta 取最接近的"水平"基准） ─────────
 const betaDeviation = computed(() => {
@@ -383,7 +386,7 @@ const showGeoPermission = computed(() =>
                 dominant-baseline="middle"
                 font-family="monospace"
               >
-                {{ trueHeading.toFixed(0) }}°
+                {{ displayHeading.toFixed(0) }}°
               </text>
               <text
                 x="0"
