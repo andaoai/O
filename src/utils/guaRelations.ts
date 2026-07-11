@@ -28,61 +28,88 @@ import type { RotationDirection } from './geometry'
 /** 支持的卦关系类型 */
 export type GuaRelationType = 'feifu' | 'hugua' | 'duigua' | 'zonggua' | 'jiaogua'
 
+/**
+ * 可视化方向约束
+ *
+ * 明确标注每种关系在盘面上的呈现方式：
+ *   unidirectional — 单向 A→B，一条有向箭头，不可逆（飞伏/互卦）
+ *   bidirectional — 双向对称 A↔B，互为关系，重复渲染可去重（对卦/综卦/交卦）
+ */
+export type RelationDirection = 'unidirectional' | 'bidirectional'
+
 /** 关系类型元数据 */
 export interface GuaRelationMeta {
   type: GuaRelationType
   label: string
   description: string
   /**
-   * 是否支持八宫筛选。
-   * 仅 feifu 关系源于京房八宫体系，其他关系不依赖宫概念。
+   * 可视化方向需求。
+   *   unidirectional — 单向箭头，A→B
+   *   bidirectional — 双向对称，A↔B
    */
-  supportsPalaceFilter: boolean
+  direction: RelationDirection
   /**
-   * 是否支持世位筛选。
-   * 仅 feifu 关系有世应体系，其他关系无世位概念。
+   * 筛选作用域。
+   *   true  — 仅检查源卦的宫/世位（非 feifu 关系：互卦/对卦/综卦/交卦）
+   *   false — 同时检查源卦和目标卦的宫/世位（feifu 收敛关系）
+   *
+   * ⚠️ 互卦（hugua）：多对一映射（丢失初/上爻），若同时检查目标卦的宫，
+   *    会导致大量无关卦通过筛选而高亮。必须 source-only。
+   *    对卦/综卦/交卦：双向对称，筛选源卦即为查看「X 宫各卦的对/综/交」。
    */
-  supportsShiyingFilter: boolean
+  filterSourceOnly: boolean
 }
 
 /**
  * 所有关系类型的元数据注册表
+ *
+ * 五种关系可视化方向与筛选行为互不相同，在此集中声明：
+ *
+ * ┌────────┬──────────────┬───────────────┬─────────────────────────────┐
+ * │ 类型   │ direction    │ filterScope   │ 原因                        │
+ * ├────────┼──────────────┼───────────────┼─────────────────────────────┤
+ * │ 飞伏   │ unidirectional │ source+target │ 64→8 收敛，伏卦必在八纯卦   │
+ * │ 互卦   │ unidirectional │ source-only   │ 多对一映射，目标卦不应反向匹配 │
+ * │ 对卦   │ bidirectional  │ source-only   │ 六爻全反，双向对称           │
+ * │ 综卦   │ bidirectional  │ source-only   │ 位反转，双向对称             │
+ * │ 交卦   │ bidirectional  │ source-only   │ 内外易位，双向对称           │
+ * └────────┴──────────────┴───────────────┴─────────────────────────────┘
  */
 export const RELATION_METAS: Record<GuaRelationType, GuaRelationMeta> = {
   feifu: {
     type: 'feifu',
     label: '飞伏',
     description: '飞为显、伏为隐，阴阳互藏其宅。依京房八宫世应体系，每卦有对应的伏卦，收敛至八纯卦。',
-    supportsPalaceFilter: true,
-    supportsShiyingFilter: true,
+    direction: 'unidirectional',
+    filterSourceOnly: false,
   },
   hugua: {
     type: 'hugua',
     label: '互卦',
     description: '取卦中二至四爻为下互卦、三至五爻为上互卦，揭示卦象内在交互关系。',
-    supportsPalaceFilter: true,
-    supportsShiyingFilter: true,
+    direction: 'unidirectional',
+    filterSourceOnly: true,
   },
   duigua: {
     type: 'duigua',
     label: '对卦',
     description: '六爻全变（阴阳翻转），亦称错卦。如乾䷀↔坤䷁、泰䷊↔否䷋，互为对卦。',
-    supportsPalaceFilter: true,
-    supportsShiyingFilter: true,
+    direction: 'bidirectional',
+    filterSourceOnly: true,
   },
   zonggua: {
     type: 'zonggua',
     label: '综卦',
     description: '上下颠倒（覆卦），初爻跟上爻、二爻跟五爻、三爻跟四爻交换位置。不变卦（如乾、坤、坎、离）自综。',
-    supportsPalaceFilter: true,
-    supportsShiyingFilter: true,
+    direction: 'bidirectional',
+    filterSourceOnly: true,
   },
   jiaogua: {
     type: 'jiaogua',
     label: '交卦',
     description: '内外卦交换位置，下卦移至上位、上卦移至下位，又称上下易位。',
-    supportsPalaceFilter: true,
-    supportsShiyingFilter: true,
+    direction: 'bidirectional',
+    filterSourceOnly: true,
   },
 }
 

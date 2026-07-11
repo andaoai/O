@@ -14,6 +14,7 @@ import { ref, computed, type Ref, type InjectionKey, type ComputedRef } from 'vu
 import { FEIFU_TABLE, type FeifuEntry } from '@/utils/feifu'
 import {
   computeRelationTable,
+  RELATION_METAS,
   PURE_GUA_VALUES,
   type GuaRelationType,
   type GuaRelationEntry,
@@ -68,27 +69,43 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
 
   // ─── 筛选后的条目 ───
 
+  /**
+   * 筛选策略（依关系类型元数据）：
+   *
+   * 非 feifu 关系（互卦/对卦/综卦/交卦）：
+   *   filterSourceOnly=true → 只检查源卦的宫/世位。
+   *   因为互卦是多对一映射，若同时匹配目标卦的宫，非筛选宫的卦会
+   *   因其互卦落在筛选宫而「泄漏」进结果集，导致无关卦高亮。
+   *
+   * feifu 关系：
+   *   filterSourceOnly=false → 同时匹配源卦和目标卦。
+   *   因为飞伏本质是 64→8 收敛可视化，检查目标卦（伏卦）的宫
+   *   有助于呈现「哪些卦收敛到乾宫纯卦」这类交叉视角。
+   */
   const filteredEntries: ComputedRef<readonly GuaRelationEntry[]> = computed(() => {
     if (!options) return relationTable.value
     const shiying = options.shiyingFilter.value
     const palace = options.palaceFilter.value
     if (shiying.length === 0 && palace.length === 0) return relationTable.value
+
+    const type = options.relationType?.value ?? 'feifu'
+    const meta = RELATION_METAS[type]
+    const sourceOnly = meta.filterSourceOnly
+
     return relationTable.value.filter(entry => {
-      // 世位筛选：源卦或目标卦的世位匹配即可
+      // 世位筛选
       if (shiying.length > 0) {
-        const shiyingMatches = [
-          entry.shiyingType,
-          entry.targetShiyingType,
-        ].some(s => s && shiying.includes(s as ShiyingType))
-        if (!shiyingMatches) return false
+        const candidates = [entry.shiyingType]
+        // feifu 关系额外检查目标卦的世位（收敛视图）
+        if (!sourceOnly) candidates.push(entry.targetShiyingType)
+        if (!candidates.some(s => s && shiying.includes(s as ShiyingType))) return false
       }
-      // 八宫筛选：源卦或目标卦的宫匹配即可
+      // 八宫筛选
       if (palace.length > 0) {
-        const palaceMatches = [
-          entry.palace,
-          entry.targetPalace,
-        ].some(p => p && palace.includes(p))
-        if (!palaceMatches) return false
+        const candidates = [entry.palace]
+        // feifu 关系额外检查目标卦的宫（收敛视图）
+        if (!sourceOnly) candidates.push(entry.targetPalace)
+        if (!candidates.some(p => p && palace.includes(p))) return false
       }
       return true
     })
