@@ -105,8 +105,8 @@ provideCompassContext({ time: controlledTime, viewport })
 // ─── SVG ref ────────────────────────────────────────────
 const svgRef = ref<SVGSVGElement | null>(null)
 
-/** 圆心显示朝向 = 真北 + 90°（与外圈旋转偏移量一致） */
-const displayHeading = computed(() => normalizeAngle(trueHeading.value + 90))
+/** 圆心显示朝向 = 真北角度（不带旋转偏移，保证东/西文字正确） */
+const displayHeading = computed(() => trueHeading.value)
 
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(displayHeading.value))
