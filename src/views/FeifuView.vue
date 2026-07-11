@@ -78,48 +78,60 @@ const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: 
 
 // ─── RingStack 配置 ───
 
-/** 圆盘外缘半径 */
-const OUTER_RADIUS = 540
+/** 基础罗盘外缘半径（由缩放比例控制整体大小） */
+const BASE_OUTER_RADIUS = 600
+/** 整体缩放百分比 (30~100) — 外缘、环、圆心同步缩放 */
+const centerPercent = ref(100)
 /** 环间间隙 */
 const GAP = 1
-/** 圆环区占用的总径向深度（OUTER_RADIUS 到圆心的距离中分配给圆环的部分） */
-const TOTAL_RING_DEPTH = 240
 
 /**
- * 各文本环的层级定义（由外到内）
+ * 每层文本环的固定径向厚度（px）
  *
- * 梯度权重：圆心最小、向外逐层递增叠加。
- *   最内层(name) → weight=1 (约 11px)
- *   最外层(yinYang) → weight=6 (约 67px)
- * always: true 的环始终可见
+ * 以 OUTER_RADIUS 为外边界，由外向内累加环厚，
+ * 余下的自然成为圆心空间。隐藏的环不占空间，圆心自动扩大。
+ *   卦名(name): 22px — 2 字卦名 + 内边距
+ *   五行(element): 16px — 2 字五行 + 内边距
+ *   卦符(unicode): 30px — 魁字卦符 + 内边距
+ *   内卦五行(innerElement): 14px — 1 字五行 + 内边距
+ *   外卦五行(outerElement): 14px — 1 字五行 + 内边距
+ *   阴阳(yinYang): 18px — 3 字体性 + 内边距
  */
-const RING_LAYERS: readonly {
+const LAYER_THICKNESS: Record<FeifuTextLayer, number> = {
+  name: 22,
+  element: 16,
+  unicode: 30,
+  innerElement: 14,
+  outerElement: 14,
+  yinYang: 18,
+}
+
+type RingLayerConfig = {
   key: keyof RingVisibility | 'always'
   layer: FeifuTextLayer
-  weight: number
   always: boolean
-}[] = [
-  { key: 'yinYang',       layer: 'yinYang',       weight: 6, always: false },
-  { key: 'outerElement',  layer: 'outerElement',  weight: 5, always: false },
-  { key: 'innerElement',  layer: 'innerElement',  weight: 4, always: false },
-  { key: 'always',        layer: 'unicode',       weight: 3, always: true  },
-  { key: 'element',       layer: 'element',       weight: 2, always: false },
-  { key: 'always',        layer: 'name',          weight: 1, always: true  },
+}
+
+/** 各文本环层级定义（由外到内，RingStack 反向累加） */
+const RING_LAYERS: readonly RingLayerConfig[] = [
+  { key: 'yinYang',       layer: 'yinYang',       always: false },
+  { key: 'outerElement',  layer: 'outerElement',  always: false },
+  { key: 'innerElement',  layer: 'innerElement',  always: false },
+  { key: 'always',        layer: 'unicode',       always: true  },
+  { key: 'element',       layer: 'element',       always: false },
+  { key: 'always',        layer: 'name',          always: true  },
 ] as const
 
+/** 外缘半径 = 基础半径 × 缩放比例，环与圆心同步缩放 */
+const outerRadius = computed(() => BASE_OUTER_RADIUS * (centerPercent.value / 100))
+
 const rings = computed(() => {
-  // 筛选可见环
   const visible = RING_LAYERS.filter(
     r => r.always || ringVisibility.value[r.key as keyof RingVisibility]
   )
-  const totalWeight = visible.reduce((s, r) => s + r.weight, 0)
-  const gapCount = Math.max(0, visible.length - 1)
-  // 可用厚度预算 = 总深度 - 间隙总宽
-  const textBudget = TOTAL_RING_DEPTH - gapCount * GAP
-
   return visible.map(r => ({
     component: markRaw(FeifuTextRing),
-    thickness: Math.max(6, Math.round((r.weight / totalWeight) * textBudget)),
+    thickness: LAYER_THICKNESS[r.layer],
     gapBefore: GAP,
     props: {
       layer: r.layer,
@@ -264,6 +276,18 @@ function selectPalace(palace: string) {
           </button>
         </div>
       </div>
+
+      <div class="view-tool-group">
+        <label class="view-tool-label">整体缩放 {{ centerPercent }}%</label>
+        <input
+          type="range"
+          min="30"
+          max="100"
+          step="1"
+          v-model.number="centerPercent"
+          class="scale-slider"
+        />
+      </div>
     </Teleport>
 
     <svg
@@ -277,7 +301,7 @@ function selectPalace(palace: string) {
         :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`"
       >
         <RingStack
-          :outer-radius="OUTER_RADIUS"
+          :outer-radius="outerRadius"
           :rings="rings"
           :rotation-direction="rotationDirection"
         >
@@ -346,6 +370,28 @@ svg {
 }
 .filter-row--wrap {
   flex-wrap: wrap;
+}
+
+.scale-slider {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #333;
+  border-radius: 2px;
+  outline: none;
+  margin: 4px 0;
+  cursor: pointer;
+}
+.scale-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #F1C40F;
+  cursor: pointer;
+  border: none;
 }
 
 .filter-btn {

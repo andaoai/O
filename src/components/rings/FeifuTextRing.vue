@@ -131,9 +131,7 @@ const items = computed(() => {
 
       case 'unicode':
         label = getUnicodeHexagram(meta.wenwangOrder)
-        color = match
-          ? (props.usePaletteColorFallback ? gua.color : (feifu.isPureGua(gua.value) ? '#66CCFF' : '#FFD700'))
-          : (active ? '#555' : '#1a1a1a')
+        color = match ? gua.color : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(14, Math.round(r * 0.055))
         break
 
