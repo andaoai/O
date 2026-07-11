@@ -9,7 +9,6 @@
  *    3.   permissions API 智能检测权限状态，自动/手动触发
  *    4. WMM 地磁模型自动校正磁偏角→得到真北朝向
  *    5. 整盘跟随手机旋转，方位始终正确
- *    6. DataBodyRing 叠加太阳当前方位标记
  *
  *  ⚠️ 定位与传感器授权分离
  *     · 定位权限通过独立"需要位置"遮罩引导用户点击授权
@@ -18,13 +17,13 @@
  *
  *  五层架构映射：
  *    Layer 2: 本视图 — 组合编排层
- *    Layer 3: TwentyFourMountainsRing / DataBodyRing
- *    Layer 4: DataRing / DataBodyRing / RingStack
- *    Layer 5: celestial.ts / geometry.ts
+ *    Layer 3: TwentyFourMountainsRing
+ *    Layer 4: DataRing / RingStack
+ *    Layer 5: geometry.ts
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { ref, computed, watch, markRaw, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch, markRaw } from 'vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useGeolocation } from '@/composables/useGeolocation'
 import { usePhoneOrientation } from '@/composables/usePhoneOrientation'
@@ -33,10 +32,7 @@ import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 import RingStack from '@/components/base/RingStack.vue'
 import TwentyFourMountainsRing from '@/components/rings/TwentyFourMountainsRing.vue'
-import DataBodyRing from '@/components/rings/DataBodyRing.vue'
-import { sunDiurnal } from '@/utils/celestial'
 import { normalizeAngle } from '@/utils/geometry'
-import type { BodyRingData } from '@/data/rings/types'
 
 // ─── 时间源 ─────────────────────────────────────────────
 const { controlledTime } = useUrlTime()
@@ -85,7 +81,7 @@ const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
   // 仅在手机水平时追迹，防止倾斜时的读数漂移
   if (phoneOri.isLevel.value) {
-    const target = -heading
+    const target = heading
     const current = rotationAngle.value
     let diff = target - current
     if (diff > 180) diff -= 360
@@ -94,50 +90,13 @@ watch(trueHeading, (heading) => {
   }
 })
 
-// ─── 太阳位置 ──────────────────────────────────────────
-const sunPos = computed(() =>
-  sunDiurnal(controlledTime.value, longitude.value, latitude.value)
-)
-
-const sunSvgAngle = computed(() => (360 - sunPos.value.screenAngle + 360) % 360)
-
-/** 太阳 Body 环数据 */
-const sunBodyData = computed<BodyRingData>(() => ({
-  items: [
-    {
-      kind: 'sun',
-      symbol: '☀',
-      angle: sunSvgAngle.value,
-      label: sunPos.value.alt > 0
-        ? `太阳 ${sunPos.value.alt.toFixed(0)}° 高`
-        : `太阳 ${sunPos.value.alt.toFixed(0)}° 低`,
-      color: sunPos.value.alt > 0 ? '#FFD54A' : '#7A6F42',
-      symbolColor: '#fff',
-      size: 10,
-      highlightLevel: sunPos.value.alt > 0 ? 3 : 0,
-      haloLevel: sunPos.value.alt > 0 ? 3 : 0,
-    }
-  ]
-}))
-
 // ─── 环配置（外→内） ─────────────────────────────────
 const rings = computed(() => [
   {
     component: markRaw(TwentyFourMountainsRing),
     thickness: 60,
-    props: {
-      highlightAngle: sunSvgAngle.value,
-    }
+    props: {},
   },
-  {
-    component: markRaw(DataBodyRing),
-    thickness: 30,
-    props: {
-      data: sunBodyData.value,
-      showMotionArrow: false,
-      showMotionLabel: false,
-    }
-  }
 ])
 
 // ─── CompassContext（供 Sidebar 读取） ────────────────
@@ -252,16 +211,7 @@ const showGeoPermission = computed(() =>
           </span>
         </div>
 
-        <!-- 太阳方位 -->
-        <div class="info-row">
-          <span class="info-label">太阳</span>
-          <span class="info-value">
-            {{ sunSvgAngle.toFixed(0) }}°
-            <small>{{ sunPos.alt > 0 ? `${sunPos.alt.toFixed(0)}°高` : `${sunPos.alt.toFixed(0)}°低` }}</small>
-          </span>
-        </div>
-
-        <!-- 定位信息（比之前更详细） -->
+        <!-- 定位信息 -->
         <div class="info-row">
           <span class="info-label">定位</span>
           <span class="info-value">
