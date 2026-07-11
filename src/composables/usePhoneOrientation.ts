@@ -105,10 +105,10 @@ export const usePhoneOrientation = (
     // 取最接近的"水平基准"差值
     const b = ((beta.value % 360) + 360) % 360 // 归一化到 [0, 360)
     const betaFromLevel = Math.min(
-      b,               // 0°
-      Math.abs(b - 90),   // 90°
-      Math.abs(b - 180),  // 180°
-      Math.abs(b - 270),  // 270° (= -90°)
+      Math.min(b, 360 - b),  // 0°（圆周最短距离）
+      Math.abs(b - 90),      // 90°
+      Math.abs(b - 180),     // 180°
+      Math.abs(b - 270),     // 270° (= -90°)
     )
     return betaFromLevel < betaThreshold
   })
