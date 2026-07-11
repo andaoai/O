@@ -1,5 +1,5 @@
 /**
- * useFeifuInteraction — 飞伏图盘跨组件交互状态
+ * useFeifuInteraction — 卦关系图盘跨组件交互状态
  *
  * 提供（FeifuView） + 注入（FeifuCenter / FeifuTextRing）模式，
  * 共享 hover / 筛选状态。
@@ -8,9 +8,16 @@
  * - FeifuView 调用 useFeifuInteraction(options) 创建状态实例
  * - FeifuCenter 和 FeifuTextRing 通过 inject(FEIFU_KEY) 获取共享状态
  * - 所有筛选逻辑集中于此，子组件只消费不计算
+ * - 支持动态切换关系类型（飞伏/互卦/对卦/综卦/交卦）
  */
 import { ref, computed, type Ref, type InjectionKey, type ComputedRef } from 'vue'
-import { FEIFU_TABLE, PURE_GUA_VALUES, type FeifuEntry, type FeifuLayout } from '@/utils/feifu'
+import { FEIFU_TABLE, type FeifuEntry } from '@/utils/feifu'
+import {
+  computeRelationTable,
+  PURE_GUA_VALUES,
+  type GuaRelationType,
+  type GuaRelationEntry,
+} from '@/utils/guaRelations'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 依赖注入 Key ───
@@ -23,6 +30,8 @@ export const FEIFU_KEY: InjectionKey<FeifuInteraction> = Symbol('feifu')
 export interface FeifuInteractionOptions {
   shiyingFilter: Ref<ShiyingType[]>
   palaceFilter: Ref<string[]>
+  /** 当前关系类型（可选，默认为 'feifu'） */
+  relationType?: Ref<GuaRelationType>
 }
 
 // ─── 状态工厂 ───
@@ -36,16 +45,37 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     hoveredValue.value = value
   }
 
+  // ─── 当前关系表（动态切换） ───
+
+  const relationTable: ComputedRef<readonly GuaRelationEntry[]> = computed(() => {
+    const type = options?.relationType?.value
+    if (type && type !== 'feifu') {
+      return computeRelationTable(type)
+    }
+    // feifu 类型（或未指定）：使用现有的 FEIFU_TABLE
+    return FEIFU_TABLE.map(e => ({
+      sourceValue: e.feiValue,
+      targetValue: e.fuValue,
+      sourceName: e.feiName,
+      targetName: e.fuName,
+      sourceUnicode: e.feiUnicode,
+      targetUnicode: e.fuUnicode,
+      palace: e.palace,
+      color: e.color,
+      shiyingType: e.shiyingType,
+    }))
+  })
+
   // ─── 筛选后的条目 ───
 
-  const filteredEntries: ComputedRef<readonly FeifuEntry[]> = computed(() => {
-    if (!options) return FEIFU_TABLE
+  const filteredEntries: ComputedRef<readonly GuaRelationEntry[]> = computed(() => {
+    if (!options) return relationTable.value
     const shiying = options.shiyingFilter.value
     const palace = options.palaceFilter.value
-    if (shiying.length === 0 && palace.length === 0) return FEIFU_TABLE
-    return FEIFU_TABLE.filter(entry => {
-      if (shiying.length > 0 && !shiying.includes(entry.shiyingType)) return false
-      if (palace.length > 0 && !palace.includes(entry.palace)) return false
+    if (shiying.length === 0 && palace.length === 0) return relationTable.value
+    return relationTable.value.filter(entry => {
+      if (shiying.length > 0 && entry.shiyingType && !shiying.includes(entry.shiyingType as ShiyingType)) return false
+      if (palace.length > 0 && entry.palace && !palace.includes(entry.palace)) return false
       return true
     })
   })
@@ -54,14 +84,14 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
 
   const activeFeiValues: ComputedRef<Set<number> | null> = computed(() => {
     const entries = filteredEntries.value
-    if (!options) return null // 无筛选 → 全部可见
+    if (!options) return null
     const shiying = options.shiyingFilter.value
     const palace = options.palaceFilter.value
     if (shiying.length === 0 && palace.length === 0) return null
     const set = new Set<number>()
     for (const e of entries) {
-      set.add(e.feiValue)
-      set.add(e.fuValue)
+      set.add(e.sourceValue)
+      set.add(e.targetValue)
     }
     return set
   })
@@ -74,8 +104,8 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     if (value === hoveredValue.value) return true
     return filteredEntries.value.some(
       e =>
-        (e.feiValue === hoveredValue.value && e.fuValue === value) ||
-        (e.fuValue === hoveredValue.value && e.feiValue === value)
+        (e.sourceValue === hoveredValue.value && e.targetValue === value) ||
+        (e.targetValue === hoveredValue.value && e.sourceValue === value),
     )
   }
 
@@ -85,15 +115,17 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     return set === null || set.has(value)
   }
 
-  /** 是否为纯卦 */
+  /** 是否为纯卦（仅 feifu 关系有意义，非 feifu 返回 false） */
   function isPureGua(value: number): boolean {
+    const type = options?.relationType?.value
+    if (type && type !== 'feifu') return false
     return PURE_GUA_VALUES.includes(value)
   }
 
   /** 某条箭头的 entry 是否包含当前悬停的卦值（用于箭头层高亮） */
-  function isArrowMatch(entry: FeifuEntry): boolean {
+  function isArrowMatch(entry: GuaRelationEntry): boolean {
     if (hoveredValue.value === null) return true
-    return entry.feiValue === hoveredValue.value || entry.fuValue === hoveredValue.value
+    return entry.sourceValue === hoveredValue.value || entry.targetValue === hoveredValue.value
   }
 
   return {
@@ -105,6 +137,6 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     isNodeMatch,
     isNodeActive,
     isPureGua,
-    isArrowMatch
+    isArrowMatch,
   }
 }

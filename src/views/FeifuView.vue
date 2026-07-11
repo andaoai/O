@@ -1,4 +1,12 @@
 <script setup lang="ts">
+/**
+ * FeifuView — 卦关系图盘
+ *
+ * 将六十四卦按后天/先天布局排列，圆心绘制有向箭头展示卦间关系。
+ * 支持五种关系类型（飞伏/互卦/对卦/综卦/交卦），可在侧栏切换。
+ *
+ * 关系类型与排序布局互相独立，可任意组合。
+ */
 import { ref, computed, markRaw, provide } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
 import FeifuCenter from '@/components/centers/FeifuCenter.vue'
@@ -11,15 +19,18 @@ import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 import { PALACES } from '@/data/rings/jingFangEightPalaces'
-import type { FeifuLayout } from '@/utils/feifu'
+import {
+  RELATION_METAS_LIST,
+  RELATION_COLORS,
+  type GuaRelationType,
+} from '@/utils/guaRelations'
 
 /**
- * 飞伏图盘
+ * 卦关系可视化
  *
  * 五层架构重构版：
- *   RingStack 布局文字环层（卦名/卦符/五行/阴阳）围绕圆心飞伏箭头。
- *
- * 飞者显、伏者隐，阴阳互藏其宅。
+ *   RingStack 布局文字环层（卦名/卦符/五行/阴阳）围绕圆心关系箭头。
+ *   五种关系类型可切换，箭头动态重绘。
  *
  * ✨ 纯静态易学可视化
  */
@@ -35,15 +46,20 @@ const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 provideCompassContext({ time: controlledTime, viewport })
 
-// ─── 飞伏交互状态 ───
+// ─── 关系类型（默认飞伏） ───
+
+const relationType = ref<GuaRelationType>('feifu')
+
+// ─── 交互状态 ───
 
 const shiyingFilter = ref<ShiyingType[]>([])
 const palaceFilter = ref<string[]>([])
-const layout = ref<FeifuLayout>('houtian')
+const layout = ref<'houtian' | 'xiantian'>('houtian')
 
 const feifuInteraction = useFeifuInteraction({
   shiyingFilter,
-  palaceFilter
+  palaceFilter,
+  relationType,
 })
 
 // 提供 FEIFU_KEY 给 FeifuCenter / FeifuTextRing
@@ -62,7 +78,7 @@ const ringVisibility = ref<RingVisibility>({
   element: true,
   innerElement: true,
   outerElement: true,
-  yinYang: true
+  yinYang: true,
 })
 
 function toggleRing(key: keyof RingVisibility) {
@@ -136,14 +152,15 @@ const rings = computed(() => {
     props: {
       layer: r.layer,
       layout: layout.value,
+      relationType: relationType.value,
       startDegree: 0,
       // 五行环隐藏时，name/unicode 回退到宫色补偿
-      usePaletteColorFallback: (r.layer === 'name' || r.layer === 'unicode') && !ringVisibility.value.element
+      usePaletteColorFallback: (r.layer === 'name' || r.layer === 'unicode') && !ringVisibility.value.element,
     }
   }))
 })
 
-// ─── 世位筛选 ───
+// ─── 世位筛选（仅 feifu 模式有效） ───
 
 const shiyingOptions: readonly { type: ShiyingType | 'all'; label: string; color: string }[] = [
   { type: 'all',  label: '全部', color: '#FFD700' },
@@ -181,12 +198,37 @@ function selectPalace(palace: string) {
     palaceFilter.value = [...palaceFilter.value, palace]
   }
 }
+
+/** 当前是否为 feifu 模式（决定是否显示宫/世位筛选） */
+const isFeifuMode = computed(() => relationType.value === 'feifu')
 </script>
 
 <template>
   <div class="container">
     <!-- 筛选器 Teleport 到 Sidebar 的"视图选项"区块 -->
     <Teleport to="#sidebar-view-tools">
+      <!-- ─── 卦关系类型选择 ─── -->
+      <div class="view-tool-group">
+        <label class="view-tool-label">卦关系</label>
+        <div class="filter-row">
+          <button
+            v-for="meta in RELATION_METAS_LIST"
+            :key="meta.type"
+            class="filter-btn"
+            :class="{ active: relationType === meta.type }"
+            :style="{
+              '--btn-color': RELATION_COLORS[meta.type],
+              borderColor: relationType === meta.type ? RELATION_COLORS[meta.type] : '#444',
+              color: relationType === meta.type ? RELATION_COLORS[meta.type] : '#aaa',
+            }"
+            @click="relationType = meta.type"
+          >
+            {{ meta.label }}
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── 卦象排列（所有关系类型通用） ─── -->
       <div class="view-tool-group">
         <label class="view-tool-label">卦象排列</label>
         <div class="filter-row">
@@ -209,54 +251,58 @@ function selectPalace(palace: string) {
         </div>
       </div>
 
-      <div v-if="layout === 'houtian'" class="view-tool-group">
-        <label class="view-tool-label">八宫筛选</label>
-        <div class="filter-row filter-row--wrap">
-          <button
-            class="filter-btn filter-btn--sm"
-            :class="{ active: palaceFilter.length === 0 }"
-            :style="{ '--btn-color': '#FFD700' }"
-            @click="palaceFilter = []"
-          >
-            全部
-          </button>
-          <button
-            v-for="p in PALACES"
-            :key="p.palace"
-            class="filter-btn filter-btn--sm"
-            :class="{ active: palaceFilter.includes(p.palace) }"
-            :style="{
-              '--btn-color': p.color,
-              borderColor: palaceFilter.includes(p.palace) ? p.color : '#444',
-              color: palaceFilter.includes(p.palace) ? p.color : '#aaa'
-            }"
-            @click="selectPalace(p.palace)"
-          >
-            {{ p.palace }}
-          </button>
+      <!-- ─── 八宫筛选（仅 feifu 模式） ─── -->
+      <template v-if="isFeifuMode">
+        <div class="view-tool-group">
+          <label class="view-tool-label">八宫筛选</label>
+          <div class="filter-row filter-row--wrap">
+            <button
+              class="filter-btn filter-btn--sm"
+              :class="{ active: palaceFilter.length === 0 }"
+              :style="{ '--btn-color': '#FFD700' }"
+              @click="palaceFilter = []"
+            >
+              全部
+            </button>
+            <button
+              v-for="p in PALACES"
+              :key="p.palace"
+              class="filter-btn filter-btn--sm"
+              :class="{ active: palaceFilter.includes(p.palace) }"
+              :style="{
+                '--btn-color': p.color,
+                borderColor: palaceFilter.includes(p.palace) ? p.color : '#444',
+                color: palaceFilter.includes(p.palace) ? p.color : '#aaa'
+              }"
+              @click="selectPalace(p.palace)"
+            >
+              {{ p.palace }}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div class="view-tool-group">
-        <label class="view-tool-label">世位筛选</label>
-        <div class="filter-row filter-row--wrap">
-          <button
-            v-for="opt in shiyingOptions"
-            :key="opt.type"
-            class="filter-btn filter-btn--sm"
-            :class="{ active: activeType === opt.type }"
-            :style="{
-              '--btn-color': opt.color,
-              borderColor: activeType === opt.type ? opt.color : '#444',
-              color: activeType === opt.type ? opt.color : '#aaa'
-            }"
-            @click="selectShiying(opt.type)"
-          >
-            {{ opt.label }}
-          </button>
+        <div class="view-tool-group">
+          <label class="view-tool-label">世位筛选</label>
+          <div class="filter-row filter-row--wrap">
+            <button
+              v-for="opt in shiyingOptions"
+              :key="opt.type"
+              class="filter-btn filter-btn--sm"
+              :class="{ active: activeType === opt.type }"
+              :style="{
+                '--btn-color': opt.color,
+                borderColor: activeType === opt.type ? opt.color : '#444',
+                color: activeType === opt.type ? opt.color : '#aaa'
+              }"
+              @click="selectShiying(opt.type)"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
         </div>
-      </div>
+      </template>
 
+      <!-- ─── 图层显示 ─── -->
       <div class="view-tool-group">
         <label class="view-tool-label">图层显示</label>
         <div class="filter-row filter-row--wrap">
@@ -277,6 +323,7 @@ function selectPalace(palace: string) {
         </div>
       </div>
 
+      <!-- ─── 整体缩放 ─── -->
       <div class="view-tool-group">
         <label class="view-tool-label">整体缩放 {{ centerPercent }}%</label>
         <input
@@ -311,6 +358,7 @@ function selectPalace(palace: string) {
               :rotation-direction="rotationDirection"
               :start-degree="0"
               :layout="layout"
+              :relation-type="relationType"
             />
           </template>
         </RingStack>

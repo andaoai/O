@@ -1,23 +1,24 @@
 <script setup lang="ts">
 /**
- * FeifuTextRing — 飞伏图盘文本环
+ * FeifuTextRing — 卦关系图盘文本环
  *
  * 通用组件，通过 layer prop 区分 6 种文本层：
  *   name / element / unicode / innerElement / outerElement / yinYang
  *
  * 每环渲染 64 个卦节点的文本标签，与 FeifuCenter 共享角度基准。
  * 注入 useFeifuInteraction 获取 hover/筛选状态。
+ * 通过 relationType prop 控制纯卦特殊着色（仅飞伏类型生效）。
  *
  * ⚠️ 标准 RingStack 圆环组件：半径由 RingStack 控制
  */
 import { computed, inject } from 'vue'
 import { FEIFU_KEY } from '@/composables/useFeifuInteraction'
-import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
-import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6 } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
+import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { BAGUA_YANG, BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
+import { getGuaAngle, type GuaRelationType } from '@/utils/guaRelations'
 import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import type { FeifuLayout } from '@/utils/feifu'
 
 // ─── 图层配置 ───
 
@@ -38,8 +39,10 @@ interface Props {
   innerRadius: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
-  layout?: FeifuLayout
+  layout?: 'houtian' | 'xiantian'
   layer: FeifuTextLayer
+  /** 卦关系类型（影响纯卦特殊着色） */
+  relationType?: GuaRelationType
   /**
    * 当本宫五行环隐藏时，卦名/卦符改用宫色着色补偿。
    * name / unicode 层使用此 prop，其他层忽略。
@@ -50,7 +53,8 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise',
   startDegree: 0,
-  layout: 'houtian'
+  layout: 'houtian',
+  relationType: 'feifu',
 })
 
 // ─── 交互状态注入 ───
@@ -58,22 +62,6 @@ const props = withDefaults(defineProps<Props>(), {
 const feifu = inject(FEIFU_KEY)!
 
 // ─── 角度与坐标计算 ───
-
-/** 获取某卦在当前布局下的圆心角 */
-function getGuaAngle(value: number): number {
-  const gua = JING_FANG_64_GUA.find(g => g.value === value)
-  if (!gua) return 0
-  if (props.layout === 'houtian') {
-    const FEIFU_PALACE_ORDER = ['乾', '坎', '艮', '震', '坤', '离', '兑', '巽'] as const
-    const orderInPalace = gua.jingFangOrder % 8
-    const newPalacePos = FEIFU_PALACE_ORDER.indexOf(gua.palace as typeof FEIFU_PALACE_ORDER[number])
-    const order = newPalacePos * 8 + orderInPalace
-    return (270 + order * JING_FANG_EIGHT_PALACE_STEP + props.startDegree) % 360
-  } else {
-    const pos = bitReverse6(value)
-    return ((pos >= 32 ? 270 + (63 - pos) * GUA_STEP : 270 - (32 - pos) * GUA_STEP) + props.startDegree) % 360
-  }
-}
 
 /** 文本环的中间半径（文字渲染在此处） */
 const textRadius = computed(() => (props.radius + props.innerRadius) / 2)
@@ -88,19 +76,34 @@ function getHexagramYinYang(value: number): string {
   return '阴长卦'
 }
 
+/** 当前是否为飞伏模式（纯卦特殊着色仅飞伏模式启用） */
+const isFeifuMode = computed(() => props.relationType === 'feifu')
+
+/** 获取某卦的宫色 */
+function getGuaPaletteColor(value: number): string {
+  const gua = JING_FANG_64_GUA.find(g => g.value === value)
+  return gua?.color ?? '#FFD700'
+}
+
+/** 获取某卦本宫五行 */
+function getGuaElement(value: number): string {
+  const gua = JING_FANG_64_GUA.find(g => g.value === value)
+  return gua?.element ?? ''
+}
+
 // ─── 文本数据生成 ───
 
 const items = computed(() => {
   const r = textRadius.value
   const isHov = feifu.isHovered.value
 
-  return JING_FANG_64_GUA.map(gua => {
-    const angle = getGuaAngle(gua.value)
+  return Array.from({ length: 64 }, (_, value) => {
+    const angle = getGuaAngle(value, props.layout, props.startDegree)
     const pos = polarToCartesian(angle, r, props.rotationDirection)
     const rot = radialTextRotation(angle, props.rotationDirection)
-    const meta = WENWANG_GUA_BY_VALUE[gua.value]!
-    const active = feifu.isNodeActive(gua.value)
-    const match = feifu.isNodeMatch(gua.value)
+    const meta = WENWANG_GUA_BY_VALUE[value]!
+    const active = feifu.isNodeActive(value)
+    const match = feifu.isNodeMatch(value)
 
     // 计算不透明度
     let opacity: number
@@ -115,40 +118,50 @@ const items = computed(() => {
     let fontSize: number
 
     switch (props.layer) {
-      case 'name':
-        label = gua.name
-        color = match
-          ? (props.usePaletteColorFallback ? gua.color : (feifu.isPureGua(gua.value) ? '#66CCFF' : '#FFD700'))
-          : (active ? '#555' : '#1a1a1a')
+      case 'name': {
+        label = meta.name
+        // 纯卦特殊着色仅限 feifu 模式
+        const specialPureColor = isFeifuMode.value && feifu.isPureGua(value) ? '#66CCFF' : null
+        if (match) {
+          color = specialPureColor
+            ?? (props.usePaletteColorFallback ? getGuaPaletteColor(value) : '#FFD700')
+        } else {
+          color = active ? '#555' : '#1a1a1a'
+        }
         fontSize = Math.max(9, Math.round(r * 0.032))
         break
+      }
 
       case 'element':
-        label = gua.element
-        color = match ? gua.color : (active ? '#555' : '#1a1a1a')
+        label = getGuaElement(value)
+        color = match ? getGuaPaletteColor(value) : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(8, Math.round(r * 0.024))
         break
 
       case 'unicode':
         label = getUnicodeHexagram(meta.wenwangOrder)
-        color = match ? gua.color : (active ? '#555' : '#1a1a1a')
+        if (match) {
+          color = isFeifuMode.value && feifu.isPureGua(value) ? '#66CCFF' : getGuaPaletteColor(value)
+        } else {
+          color = active ? '#555' : '#1a1a1a'
+        }
         fontSize = Math.max(14, Math.round(r * 0.055))
         break
 
       case 'innerElement':
-        label = BAGUA_ELEMENT[gua.value & 0b111] || ''
-        color = match ? (ELEMENT_COLORS[label] || '#888') : (active ? '#555' : '#1a1a1a')
+        label = BAGUA_ELEMENT[value & 0b111] || ''
+        color = match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
       case 'outerElement':
-        label = BAGUA_ELEMENT[(gua.value >> 3) & 0b111] || ''
-        color = match ? (ELEMENT_COLORS[label] || '#888') : (active ? '#555' : '#1a1a1a')
+        label = BAGUA_ELEMENT[(value >> 3) & 0b111] || ''
+        color = match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
       case 'yinYang': {
-        const yy = getHexagramYinYang(gua.value)
+        const yy = getHexagramYinYang(value)
         label = yy
         color = match
           ? (YINYANG_COLORS[yy] || '#888')
@@ -164,7 +177,7 @@ const items = computed(() => {
     }
 
     return {
-      value: gua.value,
+      value,
       x: pos.x,
       y: pos.y,
       rot,

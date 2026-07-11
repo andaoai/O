@@ -1,6 +1,6 @@
 ---
 layout: compass
-title: 飞伏图盘
+title: 卦关系盘
 ---
 
 <ClientOnly>
