@@ -42,7 +42,7 @@ export default defineConfig({
     // 主项目组件依赖 astronomy-engine / tyme4ts，SSR 阶段不预打包
     // 直接标记为 noExternal，让 Vite SSR 内联处理，避免 dev/build 时的 CJS 边界问题
     ssr: {
-      noExternal: ['astronomy-engine', 'tyme4ts'],
+      noExternal: ['astronomy-engine', 'tyme4ts', 'geomagnetism'],
     },
   },
 

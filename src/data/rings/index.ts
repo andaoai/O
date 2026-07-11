@@ -21,6 +21,7 @@ export { twelveLongevity } from './twelveLongevity'
 export { eightGates } from './eightGates'
 export { siXiang } from './siXiang'
 export { twelveShichen } from './twelveShichen'
+export { twentyFourMountains, MOUNTAIN_NAMES, MOUNTAIN_CENTERS, colorOfMountain } from './twentyFourMountains'
 
 // ⚠️ 天体环统一架构
 // 七曜配置的【唯一真相源】，所有组件必须从这里导入
