@@ -83,13 +83,14 @@ const OUTER_RADIUS = 540
 /** 环间间隙 */
 const GAP = 1
 /** 圆环区占用的总径向深度（OUTER_RADIUS 到圆心的距离中分配给圆环的部分） */
-const TOTAL_RING_DEPTH = 90
+const TOTAL_RING_DEPTH = 240
 
 /**
  * 各文本环的层级定义（由外到内）
  *
- * 权重按字号需求分配：
- *   name: 4, element: 4, unicode: 6, innerElement: 3, outerElement: 3, yinYang: 3
+ * 梯度权重：圆心最小、向外逐层递增叠加。
+ *   最内层(name) → weight=1 (约 11px)
+ *   最外层(yinYang) → weight=6 (约 67px)
  * always: true 的环始终可见
  */
 const RING_LAYERS: readonly {
@@ -98,12 +99,12 @@ const RING_LAYERS: readonly {
   weight: number
   always: boolean
 }[] = [
-  { key: 'yinYang',       layer: 'yinYang',       weight: 3, always: false },
-  { key: 'outerElement',  layer: 'outerElement',  weight: 3, always: false },
-  { key: 'innerElement',  layer: 'innerElement',  weight: 3, always: false },
-  { key: 'always',        layer: 'unicode',       weight: 6, always: true  },
-  { key: 'element',       layer: 'element',       weight: 4, always: false },
-  { key: 'always',        layer: 'name',          weight: 4, always: true  },
+  { key: 'yinYang',       layer: 'yinYang',       weight: 6, always: false },
+  { key: 'outerElement',  layer: 'outerElement',  weight: 5, always: false },
+  { key: 'innerElement',  layer: 'innerElement',  weight: 4, always: false },
+  { key: 'always',        layer: 'unicode',       weight: 3, always: true  },
+  { key: 'element',       layer: 'element',       weight: 2, always: false },
+  { key: 'always',        layer: 'name',          weight: 1, always: true  },
 ] as const
 
 const rings = computed(() => {

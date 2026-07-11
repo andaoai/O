@@ -14,7 +14,7 @@ import { computed, inject } from 'vue'
 import { FEIFU_KEY } from '@/composables/useFeifuInteraction'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
 import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6 } from '@/data/sixtyFourGua'
-import { BAGUA_YANG, BAGUA_ELEMENT } from '@/utils/guaInfo'
+import { BAGUA_YANG, BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
 import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import type { FeifuLayout } from '@/utils/feifu'
@@ -139,13 +139,13 @@ const items = computed(() => {
 
       case 'innerElement':
         label = BAGUA_ELEMENT[gua.value & 0b111] || ''
-        color = match ? gua.color : (active ? '#555' : '#1a1a1a')
+        color = match ? (ELEMENT_COLORS[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
       case 'outerElement':
         label = BAGUA_ELEMENT[(gua.value >> 3) & 0b111] || ''
-        color = match ? gua.color : (active ? '#555' : '#1a1a1a')
+        color = match ? (ELEMENT_COLORS[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
