@@ -81,7 +81,7 @@ const arrows = computed<ArrowRenderItem[]>(() => {
     const to = polarToCartesian(targetAngle, arrowRadius.value, props.rotationDirection)
 
     const match = feifu.isArrowMatch(entry)
-    const active = feifu.isNodeActive(entry.sourceValue)
+    const active = feifu.isEntryFiltered(entry.sourceValue, entry.targetValue)
     const isSelfLoop = entry.sourceValue === entry.targetValue
     const arrowColor = getArrowColor(entry)
 

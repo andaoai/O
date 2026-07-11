@@ -96,6 +96,25 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     return set
   })
 
+  // ─── 条目级筛选判定 ───
+
+  /** 筛选通过条目的 "source,target" 码集，O(1) 查表用 */
+  const filteredEntryKeys: ComputedRef<Set<string> | null> = computed(() => {
+    if (activeFeiValues.value === null) return null
+    const set = new Set<string>()
+    for (const e of filteredEntries.value) {
+      set.add(`${e.sourceValue},${e.targetValue}`)
+    }
+    return set
+  })
+
+  /** 某条 source→target 箭头是否通过当前筛选 */
+  function isEntryFiltered(sourceValue: number, targetValue: number): boolean {
+    const keys = filteredEntryKeys.value
+    if (keys === null) return true // 无筛选 → 全部通过
+    return keys.has(`${sourceValue},${targetValue}`)
+  }
+
   // ─── 节点匹配判断 ───
 
   /** 某值是否与当前悬停节点通过箭头关联 */
@@ -138,5 +157,6 @@ export function useFeifuInteraction(options?: FeifuInteractionOptions) {
     isNodeActive,
     isPureGua,
     isArrowMatch,
+    isEntryFiltered,
   }
 }
