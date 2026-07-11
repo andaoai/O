@@ -56,8 +56,9 @@ import GuanDouView from '@/views/GuanDouView.vue'
 import FeifuView from '@/views/FeifuView.vue'
 import SuzhouStellarMapView from '@/views/SuzhouStellarMapView.vue'
 
-// 飞伏箭头叠加层（供概念页内嵌）
-import FeifuArrowOverlay from '@/components/feifu/FeifuArrowOverlay.vue'
+// 飞伏圆心 + 文本环（RingStack 架构）
+import FeifuCenter from '@/components/centers/FeifuCenter.vue'
+import FeifuTextRing from '@/components/rings/FeifuTextRing.vue'
 
 export default {
   extends: DefaultTheme,
@@ -110,7 +111,8 @@ export default {
     app.component('GuanDouView', GuanDouView)
     app.component('FeifuView', FeifuView)
     app.component('SuzhouStellarMapView', SuzhouStellarMapView)
-    app.component('FeifuArrowOverlay', FeifuArrowOverlay)
+    app.component('FeifuCenter', FeifuCenter)
+    app.component('FeifuTextRing', FeifuTextRing)
   },
 } satisfies Theme
 

@@ -184,7 +184,7 @@ export interface FeifuArrowData {
 
 /**
  * 计算所有飞伏箭头的笛卡尔坐标
- * @param nodeRadius   节点布局圆的半径
+ * @param nodeRadius   节点布局圆的半径（现在由调用方传入箭头环的半径）
  * @param startDegree  起始角度偏移
  * @param direction    旋转方向
  * @param layout       卦象排列方式：'houtian'（后天八卦/京房八宫序）| 'xiantian'（先天八卦/伏羲圆图序）

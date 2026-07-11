@@ -35,11 +35,17 @@ title: 飞伏 · 显隐互藏
 | 艮宫 | ䷳ 艮 | 36 | 二世遯 · 五世剥 · 游魂晋 · 本宫艮 |
 | 坤宫 | ䷁ 坤 | 0 | 本宫坤 · 三世否 · 归魂比 · 一世豫 · 四世升 |
 
+<script setup>
+import { provide } from 'vue'
+import { useFeifuInteraction, FEIFU_KEY } from '@/composables/useFeifuInteraction'
+provide(FEIFU_KEY, useFeifuInteraction())
+</script>
+
 ## 完整飞伏图盘
 
 <CompassFigure caption="飞伏图盘 · 64箭收敛于8纯卦">
   <JingFangEightPalaceRing :radius="220" :inner-radius="175" :unicode-font-size="14" :name-font-size="7" />
-  <FeifuArrowOverlay :inner-radius="175" />
+  <FeifuCenter :radius="165" />
 </CompassFigure>
 
 > 如需交互查看更多细节，请打开[飞伏图盘](/compass/feifu)全屏查看——hover 任意卦即可高亮该卦的飞伏连线并显示详情。
