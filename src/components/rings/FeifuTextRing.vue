@@ -15,22 +15,14 @@ import { computed, inject } from 'vue'
 import { FEIFU_KEY } from '@/composables/useFeifuInteraction'
 import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
-import { BAGUA_YANG, BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
+import { BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
 import { getGuaAngle, type GuaRelationType } from '@/utils/guaRelations'
 import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
 import PolarCanvas from '../base/PolarCanvas.vue'
 
 // ─── 图层配置 ───
 
-export type FeifuTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement' | 'yinYang'
-
-/** 阴阳体性 → 配色 */
-const YINYANG_COLORS: Record<string, string> = {
-  '纯阳卦': '#FF6B35',
-  '纯阴卦': '#A29BFE',
-  '阳长卦': '#FDCB6E',
-  '阴长卦': '#74B9FF'
-}
+export type FeifuTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement'
 
 // ─── Props ───
 
@@ -65,16 +57,6 @@ const feifu = inject(FEIFU_KEY)!
 
 /** 文本环的中间半径（文字渲染在此处） */
 const textRadius = computed(() => (props.radius + props.innerRadius) / 2)
-
-/** 由六爻二进制编码推阴阳体性 */
-function getHexagramYinYang(value: number): string {
-  const innerYang = BAGUA_YANG[value & 0b111]
-  const outerYang = BAGUA_YANG[(value >> 3) & 0b111]
-  if (innerYang && outerYang) return '纯阳卦'
-  if (!innerYang && !outerYang) return '纯阴卦'
-  if (innerYang && !outerYang) return '阳长卦'
-  return '阴长卦'
-}
 
 /** 当前是否为飞伏模式（纯卦特殊着色仅飞伏模式启用） */
 const isFeifuMode = computed(() => props.relationType === 'feifu')
@@ -159,16 +141,6 @@ const items = computed(() => {
         color = match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
-
-      case 'yinYang': {
-        const yy = getHexagramYinYang(value)
-        label = yy
-        color = match
-          ? (YINYANG_COLORS[yy] || '#888')
-          : (active ? '#555' : '#1a1a1a')
-        fontSize = Math.max(7, Math.round(r * 0.020))
-        break
-      }
 
       default:
         label = ''

@@ -71,14 +71,12 @@ export interface RingVisibility {
   element: boolean
   innerElement: boolean
   outerElement: boolean
-  yinYang: boolean
 }
 
 const ringVisibility = ref<RingVisibility>({
   element: true,
   innerElement: true,
   outerElement: true,
-  yinYang: true,
 })
 
 function toggleRing(key: keyof RingVisibility) {
@@ -88,8 +86,7 @@ function toggleRing(key: keyof RingVisibility) {
 const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: string }[] = [
   { key: 'element', label: '五行', color: '#F1C40F' },
   { key: 'innerElement', label: '内卦五', color: '#2ECC71' },
-  { key: 'outerElement', label: '外卦五', color: '#3498DB' },
-  { key: 'yinYang', label: '阴阳', color: '#A29BFE' }
+  { key: 'outerElement', label: '外卦五', color: '#3498DB' }
 ]
 
 // ─── RingStack 配置 ───
@@ -119,7 +116,6 @@ const LAYER_THICKNESS: Record<FeifuTextLayer, number> = {
   unicode: 30,
   innerElement: 14,
   outerElement: 14,
-  yinYang: 18,
 }
 
 type RingLayerConfig = {
@@ -130,7 +126,6 @@ type RingLayerConfig = {
 
 /** 各文本环层级定义（由外到内，RingStack 反向累加） */
 const RING_LAYERS: readonly RingLayerConfig[] = [
-  { key: 'yinYang',       layer: 'yinYang',       always: false },
   { key: 'outerElement',  layer: 'outerElement',  always: false },
   { key: 'innerElement',  layer: 'innerElement',  always: false },
   { key: 'always',        layer: 'unicode',       always: true  },
