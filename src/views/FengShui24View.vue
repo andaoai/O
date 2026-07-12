@@ -75,16 +75,13 @@ const { zoom, offsetX, offsetY, rotationAngle } = viewport
  *   · 手机朝北（trueHeading=0） → rotationAngle=0 → 子(北)在屏幕顶部 ✓
  *   · 手机朝东（trueHeading=90）→ rotationAngle=-90 → 卯(东)在顶部 ✓
  *
- * ⚠️ 负号的含义：盘面需逆时针转动，才能让"手机指向方向"的山移到屏幕顶部。
- *    之前错误地用了 heading+90，导致盘面多转 90°，24 山位置全偏。
- *
  * 平滑系数 ROTATION_SMOOTH=0.7 避免角度硬跳
  */
 const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
   // 仅在手机水平时追迹，防止倾斜时的读数漂移
   if (phoneOri.isLevel.value) {
-    const target = -heading
+    const target = heading + 90
     const current = rotationAngle.value
     let diff = target - current
     if (diff > 180) diff -= 360
@@ -108,8 +105,8 @@ provideCompassContext({ time: controlledTime, viewport })
 // ─── SVG ref ────────────────────────────────────────────
 const svgRef = ref<SVGSVGElement | null>(null)
 
-/** 圆心显示朝向 = 手机当前真北指向（而非盘面旋转角） */
-const displayHeading = computed(() => normalizeAngle(trueHeading.value))
+/** 圆心显示朝向 = 盘面实际旋转角度（与视觉对齐） */
+const displayHeading = computed(() => normalizeAngle(rotationAngle.value))
 
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(displayHeading.value))
@@ -380,45 +377,6 @@ const showGeoPermission = computed(() =>
               <line x1="0" :y1="-innerRadius * 0.7" x2="0" :y2="innerRadius * 0.7" stroke="#555" stroke-width="0.5" />
               <line :x1="-innerRadius * 0.7" y1="0" :x2="innerRadius * 0.7" y2="0" stroke="#555" stroke-width="0.5" />
               <circle cx="0" cy="0" r="6" fill="#C62828" />
-
-              <!-- 四向牌（东南西北）— 屏幕固定，用于视觉校验 24 山是否对准 -->
-              <text
-                x="0"
-                :y="-innerRadius * 0.62"
-                fill="#C62828"
-                font-size="22"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="middle"
-              >北</text>
-              <text
-                :x="innerRadius * 0.62"
-                y="0"
-                fill="#C62828"
-                font-size="22"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="middle"
-              >东</text>
-              <text
-                x="0"
-                :y="innerRadius * 0.62"
-                fill="#C62828"
-                font-size="22"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="middle"
-              >南</text>
-              <text
-                :x="-innerRadius * 0.62"
-                y="0"
-                fill="#C62828"
-                font-size="22"
-                font-weight="bold"
-                text-anchor="middle"
-                dominant-baseline="middle"
-              >西</text>
-
               <text
                 x="0"
                 y="14"
