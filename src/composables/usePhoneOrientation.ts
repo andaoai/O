@@ -16,6 +16,16 @@
 
 import { ref, computed, readonly, onMounted, onUnmounted, type Ref, type DeepReadonly } from 'vue'
 
+/**
+ * iOS Safari 非标准扩展属性
+ * webkitCompassHeading: 磁北朝向（0=北，CW 正方向），比 event.alpha 精确
+ * webkitCompassAccuracy: 精度（度），> 0 表示数据有效
+ */
+interface DeviceOrientationEventIOS extends DeviceOrientationEvent {
+  webkitCompassHeading?: number
+  webkitCompassAccuracy?: number
+}
+
 /** 权限状态 */
 export type PermissionStatus = 'unknown' | 'granted' | 'denied' | 'unsupported'
 
@@ -117,22 +127,54 @@ export const usePhoneOrientation = (
     return betaFromLevel < betaThreshold
   })
 
+  /**
+   * 将原始传感器事件中的 alpha 转换为磁北朝向
+   *
+   * 不同平台差异：
+   *   · iOS Safari:      event.webkitCompassHeading 直接给出磁北朝向（0=北 CW）
+   *                      原生 event.alpha 是 game-relative，不可用作方向
+   *   · Chrome Android:  event.alpha 是 CCW 正方向（alpha = 360 - compass_heading）
+   *                      需要转换：magneticHeading = (360 - alpha) % 360
+   *   · Firefox Android: 同上
+   *
+   * @returns 磁北朝向（0-360，0=北，CW 正方向），或 null（无数据）
+   */
+  function rawAlphaToMagnetic(event: DeviceOrientationEvent): number | null {
+    // iOS 非标准扩展
+    const evt = event as DeviceOrientationEventIOS
+
+    // ① iOS: webkitCompassHeading 最精确
+    if (evt.webkitCompassHeading !== undefined && evt.webkitCompassHeading !== null) {
+      // webkitCompassAccuracy 可选，存在时要求 > 0
+      if (evt.webkitCompassAccuracy === undefined || evt.webkitCompassAccuracy > 0) {
+        return evt.webkitCompassHeading
+      }
+    }
+
+    // ② Android / 其他: raw alpha 是 CCW 方向，需转换
+    if (event.alpha !== null) {
+      return ((360 - event.alpha) % 360 + 360) % 360
+    }
+
+    return null
+  }
+
   /** 监听 DeviceOrientation */
   function addOrientationListener(): void {
     if (orientationHandler) return // 不重复添加
 
     orientationHandler = (event: DeviceOrientationEvent) => {
       // alpha: 0=北, 90=东, 180=南, 270=西
-      if (event.alpha !== null) {
-        const newAlpha = event.alpha
+      const magneticHeading = rawAlphaToMagnetic(event)
+      if (magneticHeading !== null) {
         if (!hasFirstValue) {
-          smoothedAlpha = newAlpha
+          smoothedAlpha = magneticHeading
           hasFirstValue = true
         } else {
           // 低通滤波器：一阶 IIR（指数移动平均）
           // 处理 360°→0° 跨越：用 diff 的最短路径（而非 raw 差值）
           // 如 355°→5°，raw diff = -350°，最短路径 = +10°
-          let diff = newAlpha - smoothedAlpha
+          let diff = magneticHeading - smoothedAlpha
           if (diff > 180) diff -= 360
           else if (diff < -180) diff += 360
           // 平滑：new_value = prev + diff × smoothFactor，再归一化
