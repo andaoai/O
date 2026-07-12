@@ -59,7 +59,7 @@ const magDecl = useMagneticDeclination({
   time: controlledTime
 })
 
-/** 真北朝向 = 磁北朝向 + 磁偏角 */
+/** 真北朝向 = 屏幕校正磁北朝向 + 磁偏角 */
 const trueHeading = computed(() =>
   normalizeAngle(phoneOri.alpha.value + magDecl.declination.value)
 )
