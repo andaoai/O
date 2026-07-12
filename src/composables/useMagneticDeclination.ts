@@ -86,8 +86,16 @@ export const useMagneticDeclination = (
 /**
  * 获取 16 方位中文名
  *
- * 将方位角度（0-360，0=北）转换为中文名称。
- * 用于 Sidebar 显示"当前朝向：235°（西南）"
+ * 将方位角度（0-360，0=北）转换为 16 分位中文名称。
+ * 每格 22.5°（= 360/16）。
+ *
+ * 用于 Sidebar 显示"当前朝向：235°（西南）"。
+ *
+ * ⚠️ 与 24 山的区别：
+ *   24 山每山 15°（360/24），而本函数是更粗略的 16 方向（22.5°/格）。
+ *   16 方向用于快速可读的 Sidebar 标签，不是 24 山级别的精确方位。
+ *   如需精确到 24 山的定位，请使用 twentyFourMountains 中的
+ *   MOUNTAIN_NAMES 和 angleToMountain() 查找。
  */
 export function headingToChinese(degrees: number): string {
   const directions = [

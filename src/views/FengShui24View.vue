@@ -71,11 +71,24 @@ const { zoom, offsetX, offsetY, rotationAngle } = viewport
 /**
  * 自动旋转：手机朝向变化 → 盘面跟随
  *
- * 公式：rotationAngle = -trueHeading
- *   · 手机朝北（trueHeading=0） → rotationAngle=0 → 子(北)在屏幕顶部 ✓
- *   · 手机朝东（trueHeading=90）→ rotationAngle=-90 → 卯(东)在顶部 ✓
+ * 实际公式：rotationAngle ≈ trueHeading + 90（经 ROTATION_SMOOTH 平滑）
  *
- * 平滑系数 ROTATION_SMOOTH=0.7 避免角度硬跳
+ * 为什么 +90？
+ *   这是 git 历史中经过多次调校确定的补偿值（见 c94f575/cmd）。
+ *   手机 DeviceOrientation alpha 的参考系与 SVG 罗盘渲染的参考系存在
+ *   固定的 90° 偏差，此偏移校正了从传感器角度 → 屏幕显示的坐标系映射。
+ *
+ *   效果：
+ *   · 手机朝北（trueHeading=0） → rotationAngle ≈ 90
+ *     盘面旋转 90° 后，盘心文字显示 "90° 东"
+ *   · 手机朝东（trueHeading=90）→ rotationAngle ≈ 180
+ *     盘心文字显示 "180° 南"
+ *
+ *   ⚠️ 注意：displayHeading = normalizeAngle(rotationAngle) 显示的是
+ *     补偿后的角度，不是原始 trueHeading。见 displayHeading 注释。
+ *
+ * 平滑系数 ROTATION_SMOOTH=0.7 避免角度硬跳（梯度平滑，非均值滤波）。
+ * 仅在手机水平时更新，防止倾斜时的 alpha 读数漂移。
  */
 const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
@@ -105,13 +118,38 @@ provideCompassContext({ time: controlledTime, viewport })
 // ─── SVG ref ────────────────────────────────────────────
 const svgRef = ref<SVGSVGElement | null>(null)
 
-/** 圆心显示朝向 = 盘面实际旋转角度（与视觉对齐） */
+/**
+ * 圆心显示角度 = normalizeAngle(rotationAngle) ≈ trueHeading + 90
+ *
+ * 这是经 +90° 补偿后的视觉对齐值，不是原始 trueHeading（磁北+磁偏）。
+ * 因补偿的存在，显示值不等于手机实际朝向，但盘面旋转与圆心文字始终保持一致。
+ *
+ * 示例：
+ *   trueHeading=0（手机朝北）→ displayHeading=90 → 圆心显示 "90°"
+ *   表示盘面已旋转 90°，屏幕正上方指向的方位是 90°（东）。
+ */
 const displayHeading = computed(() => normalizeAngle(rotationAngle.value))
 
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(displayHeading.value))
 
 // ─── 水平气泡偏差（beta 取最接近的"水平"基准） ─────────
+/**
+ * 计算手机前后倾斜 (beta) 距离最近水平基准（0°/90°/180°/270°）的偏差。
+ *
+ * 不同设备和浏览器上"水平"时的 beta 值不同：
+ *   · Chrome Android:  水平时 beta ≈ 0°
+ *   · iOS Safari:      水平时 beta ≈ 90°（屏幕朝上平躺）
+ *   · 部分设备:        beta ≈ -90°（即 270°）
+ *   · 倒置:            beta ≈ 180°
+ *
+ * 算法：
+ *   1. 将 beta 归一化到 [0, 360)
+ *   2. 计算到 4 个候选基准（0/90/180/270）的距离
+ *   3. 取最近基准的差值（带符号，显示用户需倾斜多少度才能水平）
+ *
+ * 用于水平校准 overlay 中的气泡位置和"前后 X°"提示。
+ */
 const betaDeviation = computed(() => {
   const b = phoneOri.beta.value
   const bn = ((b % 360) + 360) % 360
@@ -146,16 +184,25 @@ const geoLabel = computed(() => {
 /** 定位是否就绪（success 状态） */
 const geoReady = computed(() => geoStatus.value === 'success')
 
-// ─── 遮罩优先级 ──────────────────────────────────────────
+// ─── 遮罩优先级（互斥，高→低） ──────────────────────────
 /**
- * 遮罩优先级（高→低）：
- *   1. 桌面端不支持传感器
- *   2. iOS 传感器授权
- *   3. 水平校准
- *   4. 定位权限
+ * 遮罩优先级体系（高→低，一个遮罩显示时排他隐藏低优先级）：
  *
- * 定位权限遮罩层级最低——即使用户没授权定位，盘面仍可旋转，
- * 只是磁偏角用 fallback 位置计算。
+ * 1. 🖥️ 桌面端不支持传感器
+ *    显示器/笔记本没有 DeviceOrientation 硬件，不显示本页内容。
+ *
+ * 2. 📱 iOS 传感器授权（needsPermission = true）
+ *    iOS 13+ 需要用户手势调用 DeviceOrientationEvent.requestPermission()
+ *    才能接收 alpha/beta/gamma 数据。
+ *
+ * 3. 📐 水平校准（isLevel = false）
+ *    传感器已工作，但手机倾斜过大时 alpha 读数不可靠，
+ *    要求用户将手机平放后再使用。
+ *
+ * 4. 📍 定位权限（geoNeedsPermission = true）
+ *    最低优先级——即使用户没授权定位，盘面仍可旋转，
+ *    磁偏角计算回退到 fallback 默认位置坐标（洛阳附近）。
+ *    此遮罩使用半透明背景（overlay--transparent），盘面可见。
  */
 const showDesktopUnsupported = computed(() => !phoneOri.isSupported.value)
 const showOrientationPermission = computed(() =>
@@ -353,7 +400,16 @@ const showGeoPermission = computed(() =>
 
     <!--
       ═══ SVG 罗盘 ═══
-      注意：定位权限遮罩是 overlay--transparent，盘面可见
+
+      坐标映射说明：
+      · SVG viewBox 1200×1200，中心在 (600, 600)
+      · SVG 坐标系：0° = 正右（3 点钟），顺时针递增（y 轴向下）
+      · 二十四山数据中 子=0°=正北，通过 startDegree: -90 映射到 SVG 270°（正上）
+      · 整个盘面组由 rotationAngle 旋转：盘面旋转 theta° = 屏幕正上方位角 θ
+        （因为旋转了盘面，屏幕顶部就指向了 θ 度方向）
+      · #center 组的指示器反旋（-rotationAngle）保持文字正立
+
+      注意：定位权限遮罩是 overlay--transparent，盘面在定位提示下仍可见
     -->
     <svg
       ref="svgRef"

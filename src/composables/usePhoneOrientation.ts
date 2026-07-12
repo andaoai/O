@@ -101,14 +101,18 @@ export const usePhoneOrientation = (
     // 前后倾斜(beta)在不同设备/浏览器上水平时的值不同：
     //   · Chrome Android:  水平 ≈ 0°
     //   · iOS Safari:      水平 ≈ 90°
-    //   · 部分设备:        水平 ≈ -90° (如用户反馈 -89°)
-    // 取最接近的"水平基准"差值
-    const b = ((beta.value % 360) + 360) % 360 // 归一化到 [0, 360)
+    //   · 部分设备:        水平 ≈ -90°（即 270°）
+    //   · 倒置时:          水平 ≈ 180°（极少见）
+    //
+    // 算法：归一化 beta 到 [0, 360)，分别计算到 4 个候选基准
+    // （0°/90°/180°/270°）的最短距离，取最小值与阈值比较。
+    // 这比假设单一"水平值"（如 90°）更通用。
+    const b = ((beta.value % 360) + 360) % 360
     const betaFromLevel = Math.min(
-      Math.min(b, 360 - b),  // 0°（圆周最短距离）
-      Math.abs(b - 90),      // 90°
-      Math.abs(b - 180),     // 180°
-      Math.abs(b - 270),     // 270° (= -90°)
+      Math.min(b, 360 - b),  // 到 0°（圆周最短距离）
+      Math.abs(b - 90),      // 到 90°
+      Math.abs(b - 180),     // 到 180°
+      Math.abs(b - 270),     // 到 270°（≡ -90°）
     )
     return betaFromLevel < betaThreshold
   })
@@ -125,10 +129,13 @@ export const usePhoneOrientation = (
           smoothedAlpha = newAlpha
           hasFirstValue = true
         } else {
-          // 处理 360° 跨越：计算最短路径
+          // 低通滤波器：一阶 IIR（指数移动平均）
+          // 处理 360°→0° 跨越：用 diff 的最短路径（而非 raw 差值）
+          // 如 355°→5°，raw diff = -350°，最短路径 = +10°
           let diff = newAlpha - smoothedAlpha
           if (diff > 180) diff -= 360
           else if (diff < -180) diff += 360
+          // 平滑：new_value = prev + diff × smoothFactor，再归一化
           smoothedAlpha = (smoothedAlpha + diff * smoothFactor + 360) % 360
         }
         alpha.value = smoothedAlpha
