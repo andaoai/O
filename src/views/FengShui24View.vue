@@ -71,21 +71,19 @@ const { zoom, offsetX, offsetY, rotationAngle } = viewport
 /**
  * 自动旋转：手机朝向变化 → 盘面跟随
  *
- * 实际公式：rotationAngle ≈ trueHeading + 90（经 ROTATION_SMOOTH 平滑）
+ * 公式：rotationAngle = (360 - trueHeading) % 360（经 ROTATION_SMOOTH 平滑）
  *
- * 为什么 +90？
- *   这是 git 历史中经过多次调校确定的补偿值（见 c94f575/cmd）。
- *   手机 DeviceOrientation alpha 的参考系与 SVG 罗盘渲染的参考系存在
- *   固定的 90° 偏差，此偏移校正了从传感器角度 → 屏幕显示的坐标系映射。
+ * 原理：
+ *   二十四山数据已通过 startDegree: -90 让子(北)对齐 SVG 正上（12 点）。
+ *   盘面 rotate(θ) 顺时针旋转 θ 度后，屏幕正上方指向的方位 = (360 - θ)°。
+ *   因此要使屏幕正上方 = 手机朝向，需要 360 - rotationAngle = trueHeading，
+ *   即 rotationAngle = 360 - trueHeading。
  *
  *   效果：
- *   · 手机朝北（trueHeading=0） → rotationAngle ≈ 90
- *     盘面旋转 90° 后，盘心文字显示 "90° 东"
- *   · 手机朝东（trueHeading=90）→ rotationAngle ≈ 180
- *     盘心文字显示 "180° 南"
- *
- *   ⚠️ 注意：displayHeading = normalizeAngle(rotationAngle) 显示的是
- *     补偿后的角度，不是原始 trueHeading。见 displayHeading 注释。
+ *   · 手机朝北（trueHeading=0）  → rotationAngle ≈ 0   → 顶部指向 0°（北）✓
+ *   · 手机朝东（trueHeading=90） → rotationAngle ≈ 270 → 顶部指向 90°（东）✓
+ *   · 手机朝南（trueHeading=180）→ rotationAngle ≈ 180 → 顶部指向 180°（南）✓
+ *   · 手机朝西（trueHeading=270）→ rotationAngle ≈ 90  → 顶部指向 270°（西）✓
  *
  * 平滑系数 ROTATION_SMOOTH=0.7 避免角度硬跳（梯度平滑，非均值滤波）。
  * 仅在手机水平时更新，防止倾斜时的 alpha 读数漂移。
@@ -94,7 +92,10 @@ const ROTATION_SMOOTH = 0.7
 watch(trueHeading, (heading) => {
   // 仅在手机水平时追迹，防止倾斜时的读数漂移
   if (phoneOri.isLevel.value) {
-    const target = heading + 90
+    // 屏幕正上方指向手机真北朝向：rotationAngle = 360 - trueHeading
+    // 因为 SVG 中 rotate(θ) 顺时针旋转盘面，当 θ=0 时子(北)在顶部，
+    // 盘面旋转 θ 度后，顶部对应方位 = (360 - θ)，需要等于 trueHeading
+    const target = (360 - heading) % 360
     const current = rotationAngle.value
     let diff = target - current
     if (diff > 180) diff -= 360
@@ -119,16 +120,17 @@ provideCompassContext({ time: controlledTime, viewport })
 const svgRef = ref<SVGSVGElement | null>(null)
 
 /**
- * 圆心显示角度 = normalizeAngle(rotationAngle) ≈ trueHeading + 90
+ * 圆心显示角度 = 屏幕正上方指向的地理方位
  *
- * 这是经 +90° 补偿后的视觉对齐值，不是原始 trueHeading（磁北+磁偏）。
- * 因补偿的存在，显示值不等于手机实际朝向，但盘面旋转与圆心文字始终保持一致。
+ * 盘面每顺时针旋转 θ 度，顶部展示的方位 = (360 - θ)°。
+ * 因为 rotationAngle = (360 - trueHeading) % 360，
+ * 所以 displayHeading = normalizeAngle(360 - rotationAngle) = trueHeading。
  *
  * 示例：
- *   trueHeading=0（手机朝北）→ displayHeading=90 → 圆心显示 "90°"
- *   表示盘面已旋转 90°，屏幕正上方指向的方位是 90°（东）。
+ *   trueHeading=0（手机朝北）→ rotationAngle=0 → displayHeading=0 → 圆心显示 "0° 北" ✓
+ *   trueHeading=90（手机朝东）→ rotationAngle=270 → displayHeading=90 → 圆心显示 "90° 东" ✓
  */
-const displayHeading = computed(() => normalizeAngle(rotationAngle.value))
+const displayHeading = computed(() => normalizeAngle(360 - rotationAngle.value))
 
 /** 当前朝向中文名 */
 const directionLabel = computed(() => headingToChinese(displayHeading.value))
