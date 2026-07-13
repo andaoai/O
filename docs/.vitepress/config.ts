@@ -88,58 +88,78 @@ export default defineConfig({
         {
           text: '京氏易傳',
           collapsed: false,
-          items: [
-            { text: '书籍导读', link: '/books/京氏易傳/' },
+          "items": [
+            { "text": "书籍导读", "link": "/books/京氏易傳/" },
             {
-              text: '卷上 · 乾宫',
-              collapsed: false,
-              items: [
-                { text: '乾', link: '/books/京氏易傳/乾卦' },
-                { text: '姤', link: '/books/京氏易傳/姤卦' },
-                { text: '遯', link: '/books/京氏易傳/遯卦' },
-                { text: '否', link: '/books/京氏易傳/否卦' },
-                { text: '觀', link: '/books/京氏易傳/觀卦' },
-                { text: '剥', link: '/books/京氏易傳/剥卦' },
-                { text: '𣈆', link: '/books/京氏易傳/𣈆卦' },
-                { text: '大有', link: '/books/京氏易傳/大有卦' },
-              ],
+              "text": "卷上 · ☰ · 乾宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷀ 乾", "link": "/books/京氏易傳/乾卦" },
+                { "text": "䷫ 姤", "link": "/books/京氏易傳/姤卦" },
+                { "text": "䷠ 遯", "link": "/books/京氏易傳/遯卦" },
+                { "text": "䷋ 否", "link": "/books/京氏易傳/否卦" },
+                { "text": "䷓ 觀", "link": "/books/京氏易傳/觀卦" },
+                { "text": "䷖ 剥", "link": "/books/京氏易傳/剥卦" },
+                { "text": "䷢ 𣈆", "link": "/books/京氏易傳/𣈆卦" },
+                { "text": "䷍ 大有", "link": "/books/京氏易傳/大有卦" }
+              ]
             },
             {
-              text: '卷上 · 震宫',
-              collapsed: false,
-              items: [
-                { text: '震', link: '/books/京氏易傳/震卦' },
-                { text: '豫', link: '/books/京氏易傳/豫卦' },
-                { text: '解', link: '/books/京氏易傳/解卦' },
-                { text: '恒', link: '/books/京氏易傳/恒卦' },
-                { text: '升', link: '/books/京氏易傳/升卦' },
-                { text: '井', link: '/books/京氏易傳/井卦' },
-                { text: '大过', link: '/books/京氏易傳/大过卦' },
-                { text: '随', link: '/books/京氏易傳/随卦' },
-              ],
+              "text": "卷上 · ☳ · 震宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷲ 震", "link": "/books/京氏易傳/震卦" },
+                { "text": "䷏ 豫", "link": "/books/京氏易傳/豫卦" },
+                { "text": "䷧ 解", "link": "/books/京氏易傳/解卦" },
+                { "text": "䷟ 恒", "link": "/books/京氏易傳/恒卦" },
+                { "text": "䷭ 升", "link": "/books/京氏易傳/升卦" },
+                { "text": "䷯ 井", "link": "/books/京氏易傳/井卦" },
+                { "text": "䷛ 大过", "link": "/books/京氏易傳/大过卦" },
+                { "text": "䷐ 随", "link": "/books/京氏易傳/随卦" }
+              ]
             },
             {
-              text: '卷上 · 坎宫',
-              collapsed: false,
-              items: [
-                { text: '坎', link: '/books/京氏易傳/坎卦' },
-                { text: '节', link: '/books/京氏易傳/节卦' },
-                { text: '屯', link: '/books/京氏易傳/屯卦' },
-                { text: '既济', link: '/books/京氏易傳/既济卦' },
-                { text: '革', link: '/books/京氏易傳/革卦' },
-                { text: '丰', link: '/books/京氏易傳/丰卦' },
-                { text: '明夷', link: '/books/京氏易傳/明夷卦' },
-                { text: '师', link: '/books/京氏易傳/师卦' },
-              ],
+              "text": "卷上 · ☵ · 坎宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷜ 坎", "link": "/books/京氏易傳/坎卦" },
+                { "text": "䷻ 节", "link": "/books/京氏易傳/节卦" },
+                { "text": "䷂ 屯", "link": "/books/京氏易傳/屯卦" },
+                { "text": "䷾ 既济", "link": "/books/京氏易傳/既济卦" },
+                { "text": "䷰ 革", "link": "/books/京氏易傳/革卦" },
+                { "text": "䷶ 丰", "link": "/books/京氏易傳/丰卦" },
+                { "text": "䷣ 明夷", "link": "/books/京氏易傳/明夷卦" },
+                { "text": "䷆ 师", "link": "/books/京氏易傳/师卦" }
+              ]
             },
             {
-              text: '卷上 · 艮宫',
-              collapsed: false,
-              items: [
-                { text: '艮', link: '/books/京氏易傳/艮卦' },
-                { text: '贲', link: '/books/京氏易傳/贲卦' },
-              ],
+              "text": "卷上 · ☶ · 艮宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷳ 艮", "link": "/books/京氏易傳/艮卦" },
+                { "text": "䷕ 贲", "link": "/books/京氏易傳/贲卦" },
+                { "text": "䷙ 大畜", "link": "/books/京氏易傳/大畜卦" },
+                { "text": "䷨ 损", "link": "/books/京氏易傳/损卦" },
+                { "text": "䷥ 睽", "link": "/books/京氏易傳/睽卦" },
+                { "text": "䷉ 履", "link": "/books/京氏易傳/履卦" },
+                { "text": "䷼ 中孚", "link": "/books/京氏易傳/中孚卦" },
+                { "text": "䷴ 渐", "link": "/books/京氏易傳/渐卦" }
+              ]
             },
+            {
+              "text": "卷下 · ☷ · 坤宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷁ 坤", "link": "/books/京氏易傳/坤卦" },
+                { "text": "䷗ 复", "link": "/books/京氏易傳/复卦" },
+                { "text": "䷒ 临", "link": "/books/京氏易傳/临卦" },
+                { "text": "䷊ 泰", "link": "/books/京氏易傳/泰卦" },
+                { "text": "䷡ 大壮", "link": "/books/京氏易傳/大壮卦" },
+                { "text": "䷪ 夬", "link": "/books/京氏易傳/夬卦" },
+                { "text": "䷄ 需", "link": "/books/京氏易傳/需卦" },
+                { "text": "䷇ 比", "link": "/books/京氏易傳/比卦" }
+              ]
+            }
           ],
         },
       ],
