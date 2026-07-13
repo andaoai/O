@@ -159,6 +159,20 @@ export default defineConfig({
                 { "text": "䷄ 需", "link": "/books/京氏易傳/需卦" },
                 { "text": "䷇ 比", "link": "/books/京氏易傳/比卦" }
               ]
+            },
+            {
+              "text": "卷下 · ☴ · 巽宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷸ 巽", "link": "/books/京氏易傳/巽卦" },
+                { "text": "䷈ 小畜", "link": "/books/京氏易傳/小畜卦" },
+                { "text": "䷤ 家人", "link": "/books/京氏易傳/家人卦" },
+                { "text": "䷩ 益", "link": "/books/京氏易傳/益卦" },
+                { "text": "䷘ 无妄", "link": "/books/京氏易傳/无妄卦" },
+                { "text": "䷔ 噬嗑", "link": "/books/京氏易傳/噬嗑卦" },
+                { "text": "䷚ 颐", "link": "/books/京氏易傳/颐卦" },
+                { "text": "䷑ 蛊", "link": "/books/京氏易傳/蛊卦" }
+              ]
             }
           ],
         },
