@@ -91,12 +91,12 @@ const 房: MansionAsterism = {
   quadrant: '东青龙',
   color: '#1D8348',
   stars: [
-    { cnName: '房宿一', bayer: 'HIP 78820', raJ2000: 241.3593, decJ2000: -19.8055, mag: 2.62 },
-    { cnName: '房宿二', bayer: 'HIP 78401', raJ2000: 240.0834, decJ2000: -22.6217, mag: 2.32 },
-    { cnName: '房宿三', bayer: 'HIP 78265', raJ2000: 239.7130, decJ2000: -26.1141, mag: 2.91 },
-    { cnName: '房宿四', bayer: 'HIP 78104', raJ2000: 239.2212, decJ2000: -29.2141, mag: 3.86 }
+    { cnName: '房宿一', bayer: 'HIP 78265', raJ2000: 239.7130, decJ2000: -26.1141, mag: 2.91 },
+    { cnName: '房宿二', bayer: 'HIP 78104', raJ2000: 239.2212, decJ2000: -29.2141, mag: 3.86 },
+    { cnName: '房宿三', bayer: 'HIP 78401', raJ2000: 240.0834, decJ2000: -22.6217, mag: 2.32 },
+    { cnName: '房宿四', bayer: 'HIP 78820', raJ2000: 241.3593, decJ2000: -19.8055, mag: 2.62 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3]]
+  connections: [[3, 2], [2, 0], [0, 1]]
 }
 
 const 心: MansionAsterism = {
@@ -116,8 +116,8 @@ const 尾: MansionAsterism = {
   quadrant: '东青龙',
   color: '#145A32',
   stars: [
-    { cnName: '尾宿一', bayer: 'HIP 82396', raJ2000: 252.5409, decJ2000: -34.2932, mag: 2.29 },
-    { cnName: '尾宿二', bayer: 'HIP 82514', raJ2000: 252.9676, decJ2000: -38.0474, mag: 2.98 },
+    { cnName: '尾宿一', bayer: 'HIP 82514', raJ2000: 252.9676, decJ2000: -38.0474, mag: 2.98 },
+    { cnName: '尾宿二', bayer: 'HIP 82396', raJ2000: 252.5409, decJ2000: -34.2932, mag: 2.29 },
     { cnName: '尾宿三', bayer: 'HIP 82671', raJ2000: 253.4989, decJ2000: -42.3620, mag: 4.79 },
     { cnName: '尾宿四', bayer: 'HIP 84143', raJ2000: 258.0383, decJ2000: -43.2392, mag: 3.33 },
     { cnName: '尾宿五', bayer: 'HIP 86228', raJ2000: 264.3297, decJ2000: -42.9978, mag: 1.85 },
@@ -127,7 +127,7 @@ const 尾: MansionAsterism = {
     { cnName: '尾宿九', bayer: 'HIP 85696', raJ2000: 262.6910, decJ2000: -37.2958, mag: 2.65 },
     { cnName: '尾宿十', bayer: 'HIP 82545', raJ2000: 253.0839, decJ2000: -38.0175, mag: 3.542 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [1, 9]]
+  connections: [[1, 0], [0, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 8], [0, 9]]
 }
 
 const 箕: MansionAsterism = {
@@ -148,14 +148,14 @@ const 斗: MansionAsterism = {
   quadrant: '北玄武',
   color: '#5DADE2',
   stars: [
-    { cnName: '斗宿一', bayer: 'HIP 89341', raJ2000: 273.4409, decJ2000: -21.0588, mag: 3.85 },
+    { cnName: '斗宿一', bayer: 'HIP 92041', raJ2000: 281.4141, decJ2000: -26.9908, mag: 3.14 },
     { cnName: '斗宿二', bayer: 'HIP 90496', raJ2000: 276.9927, decJ2000: -25.4217, mag: 2.81 },
-    { cnName: '斗宿三', bayer: 'HIP 92041', raJ2000: 281.4141, decJ2000: -26.9908, mag: 3.14 },
+    { cnName: '斗宿三', bayer: 'HIP 89341', raJ2000: 273.4409, decJ2000: -21.0588, mag: 3.85 },
     { cnName: '斗宿四', bayer: 'HIP 92855', raJ2000: 283.8164, decJ2000: -26.2967, mag: 2.067 },
     { cnName: '斗宿五', bayer: 'HIP 93864', raJ2000: 286.7350, decJ2000: -27.6704, mag: 3.31 },
     { cnName: '斗宿六', bayer: 'HIP 93506', raJ2000: 285.6530, decJ2000: -29.8801, mag: 2.59 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5]]
+  connections: [[2, 1], [1, 0], [0, 3], [3, 4], [4, 5]]
 }
 
 const 牛: MansionAsterism = {
@@ -261,11 +261,11 @@ const 娄: MansionAsterism = {
   quadrant: '西白虎',
   color: '#BCC6CC',
   stars: [
-    { cnName: '娄宿一', bayer: 'HIP 9884', raJ2000: 31.7934, decJ2000: 23.4624, mag: 2.01 },
-    { cnName: '娄宿二', bayer: 'HIP 8903', raJ2000: 28.6600, decJ2000: 20.8080, mag: 2.65 },
-    { cnName: '娄宿三', bayer: 'HIP 8832', raJ2000: 28.3826, decJ2000: 19.2939, mag: 5.5 }
+    { cnName: '娄宿一', bayer: 'HIP 8903', raJ2000: 28.6600, decJ2000: 20.8080, mag: 2.65 },
+    { cnName: '娄宿二', bayer: 'HIP 8832', raJ2000: 28.3826, decJ2000: 19.2939, mag: 5.5 },
+    { cnName: '娄宿三', bayer: 'HIP 9884', raJ2000: 31.7934, decJ2000: 23.4624, mag: 2.01 }
   ],
-  connections: [[0, 1], [1, 2]]
+  connections: [[2, 0], [0, 1]]
 }
 
 const 胃: MansionAsterism = {
@@ -331,15 +331,15 @@ const 参: MansionAsterism = {
   quadrant: '西白虎',
   color: '#1C2833',
   stars: [
-    { cnName: '参宿一', bayer: 'HIP 27989', raJ2000: 88.7929, decJ2000: 7.4071, mag: 0.42 },
-    { cnName: '参宿二', bayer: 'HIP 26727', raJ2000: 85.1897, decJ2000: -1.9426, mag: 1.77 },
-    { cnName: '参宿三', bayer: 'HIP 26311', raJ2000: 84.0534, decJ2000: -1.2019, mag: 1.69 },
-    { cnName: '参宿四', bayer: 'HIP 25930', raJ2000: 83.0017, decJ2000: -0.2991, mag: 2.41 },
-    { cnName: '参宿五', bayer: 'HIP 24436', raJ2000: 78.6345, decJ2000: -8.2016, mag: 0.13 },
-    { cnName: '参宿六', bayer: 'HIP 25336', raJ2000: 81.2828, decJ2000: 6.3497, mag: 1.64 },
-    { cnName: '参宿七', bayer: 'HIP 27366', raJ2000: 86.9391, decJ2000: -9.6696, mag: 2.06 }
+    { cnName: '参宿一', bayer: 'HIP 26727', raJ2000: 85.1897, decJ2000: -1.9426, mag: 1.77 },
+    { cnName: '参宿二', bayer: 'HIP 26311', raJ2000: 84.0534, decJ2000: -1.2019, mag: 1.69 },
+    { cnName: '参宿三', bayer: 'HIP 25930', raJ2000: 83.0017, decJ2000: -0.2991, mag: 2.41 },
+    { cnName: '参宿四', bayer: 'HIP 27989', raJ2000: 88.7929, decJ2000: 7.4071, mag: 0.42 },
+    { cnName: '参宿五', bayer: 'HIP 25336', raJ2000: 81.2828, decJ2000: 6.3497, mag: 1.64 },
+    { cnName: '参宿六', bayer: 'HIP 27366', raJ2000: 86.9391, decJ2000: -9.6696, mag: 2.06 },
+    { cnName: '参宿七', bayer: 'HIP 24436', raJ2000: 78.6345, decJ2000: -8.2016, mag: 0.13 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [3, 4], [3, 5], [1, 6]]
+  connections: [[3, 0], [0, 1], [1, 2], [2, 6], [2, 4], [0, 5]]
 }
 
 const 井: MansionAsterism = {
@@ -347,17 +347,17 @@ const 井: MansionAsterism = {
   quadrant: '南朱雀',
   color: '#F5B7B1',
   stars: [
-    { cnName: '井宿一', bayer: 'HIP 35350', raJ2000: 109.5232, decJ2000: 16.5404, mag: 3.559 },
-    { cnName: '井宿二', bayer: 'HIP 34088', raJ2000: 106.0272, decJ2000: 20.5703, mag: 3.79 },
-    { cnName: '井宿三', bayer: 'HIP 32921', raJ2000: 102.8877, decJ2000: 21.7611, mag: 5.259 },
-    { cnName: '井宿四', bayer: 'HIP 32246', raJ2000: 100.9830, decJ2000: 25.1311, mag: 2.98 },
-    { cnName: '井宿五', bayer: 'HIP 30883', raJ2000: 97.2408, decJ2000: 20.2121, mag: 4.14 },
-    { cnName: '井宿六', bayer: 'HIP 30343', raJ2000: 95.7401, decJ2000: 22.5136, mag: 2.87 },
-    { cnName: '井宿七', bayer: 'HIP 31681', raJ2000: 99.4280, decJ2000: 16.3993, mag: 1.92 },
-    { cnName: '井宿八', bayer: 'HIP 32362', raJ2000: 101.3224, decJ2000: 12.8956, mag: 3.36 },
+    { cnName: '井宿一', bayer: 'HIP 30343', raJ2000: 95.7401, decJ2000: 22.5136, mag: 2.87 },
+    { cnName: '井宿二', bayer: 'HIP 30883', raJ2000: 97.2408, decJ2000: 20.2121, mag: 4.14 },
+    { cnName: '井宿三', bayer: 'HIP 31681', raJ2000: 99.4280, decJ2000: 16.3993, mag: 1.92 },
+    { cnName: '井宿四', bayer: 'HIP 32362', raJ2000: 101.3224, decJ2000: 12.8956, mag: 3.36 },
+    { cnName: '井宿五', bayer: 'HIP 32246', raJ2000: 100.9830, decJ2000: 25.1311, mag: 2.98 },
+    { cnName: '井宿六', bayer: 'HIP 32921', raJ2000: 102.8877, decJ2000: 21.7611, mag: 5.259 },
+    { cnName: '井宿七', bayer: 'HIP 34088', raJ2000: 106.0272, decJ2000: 20.5703, mag: 3.79 },
+    { cnName: '井宿八', bayer: 'HIP 35350', raJ2000: 109.5232, decJ2000: 16.5404, mag: 3.559 },
     { cnName: '井宿九', bayer: 'HIP 29655', raJ2000: 93.7194, decJ2000: 22.5068, mag: 3.28 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [2, 4], [4, 5], [4, 6], [6, 1], [6, 7], [5, 8]]
+  connections: [[7, 6], [6, 5], [5, 4], [5, 1], [1, 0], [1, 2], [2, 6], [2, 3], [0, 8]]
 }
 
 const 鬼: MansionAsterism = {
@@ -378,16 +378,16 @@ const 柳: MansionAsterism = {
   quadrant: '南朱雀',
   color: '#EC7063',
   stars: [
-    { cnName: '柳宿一', bayer: 'HIP 42402', raJ2000: 129.6893, decJ2000: 3.3414, mag: 4.43 },
-    { cnName: '柳宿二', bayer: 'HIP 42799', raJ2000: 130.8061, decJ2000: 3.3987, mag: 4.3 },
-    { cnName: '柳宿三', bayer: 'HIP 43234', raJ2000: 132.1082, decJ2000: 5.8378, mag: 4.337 },
-    { cnName: '柳宿四', bayer: 'HIP 43109', raJ2000: 131.6938, decJ2000: 6.4188, mag: 3.38 },
-    { cnName: '柳宿五', bayer: 'HIP 42313', raJ2000: 129.4140, decJ2000: 5.7038, mag: 4.131 },
+    { cnName: '柳宿一', bayer: 'HIP 42313', raJ2000: 129.4140, decJ2000: 5.7038, mag: 4.131 },
+    { cnName: '柳宿二', bayer: 'HIP 42402', raJ2000: 129.6893, decJ2000: 3.3414, mag: 4.43 },
+    { cnName: '柳宿三', bayer: 'HIP 42799', raJ2000: 130.8061, decJ2000: 3.3987, mag: 4.3 },
+    { cnName: '柳宿四', bayer: 'HIP 43234', raJ2000: 132.1082, decJ2000: 5.8378, mag: 4.337 },
+    { cnName: '柳宿五', bayer: 'HIP 43109', raJ2000: 131.6938, decJ2000: 6.4188, mag: 3.38 },
     { cnName: '柳宿六', bayer: 'HIP 43813', raJ2000: 133.8484, decJ2000: 5.9456, mag: 3.1 },
     { cnName: '柳宿七', bayer: 'HIP 44659', raJ2000: 136.4932, decJ2000: 5.0923, mag: 4.981 },
     { cnName: '柳宿八', bayer: 'HIP 45336', raJ2000: 138.5911, decJ2000: 2.3143, mag: 5.5 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [4, 3], [2, 5], [5, 6], [6, 7]]
+  connections: [[1, 2], [2, 3], [3, 4], [0, 4], [3, 5], [5, 6], [6, 7]]
 }
 
 const 星: MansionAsterism = {
@@ -428,21 +428,21 @@ const 翼: MansionAsterism = {
   stars: [
     { cnName: '翼宿一', bayer: 'HIP 53740', raJ2000: 164.9436, decJ2000: -18.2988, mag: 4.07 },
     { cnName: '翼宿二', bayer: 'HIP 55705', raJ2000: 171.2205, decJ2000: -17.6840, mag: 4.06 },
-    { cnName: '翼宿三', bayer: 'HIP 55598', raJ2000: 170.8412, decJ2000: -18.7800, mag: 5.09 },
-    { cnName: '翼宿四', bayer: 'HIP 52943', raJ2000: 162.4062, decJ2000: -16.1936, mag: 3.11 },
-    { cnName: '翼宿五', bayer: 'HIP 57283', raJ2000: 176.1907, decJ2000: -18.3507, mag: 4.706 },
+    { cnName: '翼宿三', bayer: 'HIP 57283', raJ2000: 176.1907, decJ2000: -18.3507, mag: 4.706 },
+    { cnName: '翼宿四', bayer: 'HIP 55598', raJ2000: 170.8412, decJ2000: -18.7800, mag: 5.09 },
+    { cnName: '翼宿五', bayer: 'HIP 52943', raJ2000: 162.4062, decJ2000: -16.1936, mag: 3.11 },
     { cnName: '翼宿六', bayer: 'HIP 58188', raJ2000: 179.0040, decJ2000: -17.1508, mag: 5.16 },
     { cnName: '翼宿七', bayer: 'HIP 55282', raJ2000: 169.8352, decJ2000: -14.7785, mag: 3.56 },
     { cnName: '翼宿八', bayer: 'HIP 56802', raJ2000: 174.6667, decJ2000: -13.2019, mag: 5.48 },
     { cnName: '翼宿九', bayer: 'HIP 55874', raJ2000: 171.7896, decJ2000: -12.3567, mag: 5.923 },
     { cnName: '翼宿十', bayer: 'HIP 55687', raJ2000: 171.1525, decJ2000: -10.8593, mag: 4.802 },
-    { cnName: '翼宿十一', bayer: 'HIP 53975', raJ2000: 165.6302, decJ2000: -9.9949, mag: 7.32 },
-    { cnName: '翼宿十二', bayer: 'HIP 56633', raJ2000: 174.1705, decJ2000: -9.8022, mag: 4.673 },
-    { cnName: '翼宿十三', bayer: 'HIP 57587', raJ2000: 177.0979, decJ2000: -10.3131, mag: 6.226 },
-    { cnName: '翼宿十四', bayer: 'HIP 54682', raJ2000: 167.9145, decJ2000: -22.8258, mag: 4.449 },
-    { cnName: '翼宿十五', bayer: 'HIP 54204', raJ2000: 166.3329, decJ2000: -27.2936, mag: 4.912 }
+    { cnName: '翼宿十二', bayer: 'HIP 53975', raJ2000: 165.6302, decJ2000: -9.9949, mag: 7.32 },
+    { cnName: '翼宿十三', bayer: 'HIP 56633', raJ2000: 174.1705, decJ2000: -9.8022, mag: 4.673 },
+    { cnName: '翼宿十四', bayer: 'HIP 57587', raJ2000: 177.0979, decJ2000: -10.3131, mag: 6.226 },
+    { cnName: '翼宿十六', bayer: 'HIP 54682', raJ2000: 167.9145, decJ2000: -22.8258, mag: 4.449 },
+    { cnName: '翼宿十七', bayer: 'HIP 54204', raJ2000: 166.3329, decJ2000: -27.2936, mag: 4.912 }
   ],
-  connections: [[0, 1], [0, 2], [0, 3], [1, 4], [4, 2], [4, 5], [1, 6], [6, 7], [7, 8], [8, 9], [9, 10], [9, 11], [11, 12], [2, 13], [13, 14]]
+  connections: [[0, 1], [0, 3], [0, 4], [1, 2], [2, 3], [2, 5], [1, 6], [6, 7], [7, 8], [8, 9], [9, 10], [9, 11], [11, 12], [3, 13], [13, 14]]
 }
 
 const 轸: MansionAsterism = {
@@ -450,15 +450,15 @@ const 轸: MansionAsterism = {
   quadrant: '南朱雀',
   color: '#BA4A00',
   stars: [
-    { cnName: '轸宿一', bayer: 'HIP 61359', raJ2000: 188.5968, decJ2000: -23.3968, mag: 2.64 },
-    { cnName: '轸宿二', bayer: 'HIP 60965', raJ2000: 187.4661, decJ2000: -16.5154, mag: 2.94 },
-    { cnName: '轸宿三', bayer: 'HIP 59803', raJ2000: 183.9515, decJ2000: -17.5419, mag: 2.58 },
-    { cnName: '轸宿四', bayer: 'HIP 59316', raJ2000: 182.5312, decJ2000: -22.6198, mag: 2.98 },
+    { cnName: '轸宿一', bayer: 'HIP 59803', raJ2000: 183.9515, decJ2000: -17.5419, mag: 2.58 },
+    { cnName: '轸宿二', bayer: 'HIP 59316', raJ2000: 182.5312, decJ2000: -22.6198, mag: 2.98 },
+    { cnName: '轸宿三', bayer: 'HIP 60965', raJ2000: 187.4661, decJ2000: -16.5154, mag: 2.94 },
+    { cnName: '轸宿四', bayer: 'HIP 61359', raJ2000: 188.5968, decJ2000: -23.3968, mag: 2.64 },
     { cnName: '轸宿五', bayer: 'HIP 60189', raJ2000: 185.1402, decJ2000: -22.2159, mag: 5.21 },
     { cnName: '轸宿六', bayer: 'HIP 61174', raJ2000: 188.0176, decJ2000: -16.1960, mag: 4.294 },
     { cnName: '轸宿七', bayer: 'HIP 59199', raJ2000: 182.1034, decJ2000: -24.7289, mag: 4.01 }
   ],
-  connections: [[0, 1], [1, 2], [2, 3], [2, 4], [1, 5], [3, 6]]
+  connections: [[3, 2], [2, 0], [0, 1], [0, 4], [2, 5], [1, 6]]
 }
 
 /* ═══════════════════════════════════════════════════════════════
