@@ -237,8 +237,8 @@ export default defineConfig({
           text: '观数',
           items: [
             { text: '概览', link: '/math/' },
-            { text: '为何古人"不喜欢"分数？', link: '/math/fractions' },
-            { text: '为何古人用"圆"来表意？', link: '/math/circle-normalization' },
+            { text: '整数对齐与分数概念', link: '/math/fractions' },
+            { text: '圆周归一化与空间对齐', link: '/math/circle-normalization' },
           ],
         },
       ],
