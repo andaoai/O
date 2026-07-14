@@ -25,9 +25,14 @@ features:
     details: 原文 · 校注 · 我注 · 疑问，四段并列。以段落为最小可寻址单元，与罗盘可视化联动。
     link: /books/
     linkText: 进入书目
+  - icon: 🔢
+    title: 观数
+    details: 将数学从"工具"中抽出来——整数对齐、周期闭合、圆环归一化……以数为眼，以观为法。
+    link: /math/
+    linkText: 观数
   - icon: 🧭
     title: 罗盘可视化
-    details: 中华天文圆环、京房卦气、六十甲子、七曜入宿……六个全屏交互式罗盘，任意时刻皆可对应。
+    details: 中华天文圆环、京房卦气、六十甲子、七曜入宿……九个全屏交互式罗盘，任意时刻皆可对应。
     link: /compass/
     linkText: 观察罗盘
   - icon: 🌌

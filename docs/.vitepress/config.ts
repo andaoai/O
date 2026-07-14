@@ -60,6 +60,7 @@ export default defineConfig({
     nav: [
       { text: '首页', link: '/' },
       { text: '古籍笔记', link: '/books/' },
+      { text: '观数', link: '/math/' },
       { text: '通用概念', link: '/concepts/' },
       { text: '罗盘', link: '/compass/' },
       { text: '开发文档', link: '/dev/' },
@@ -228,6 +229,16 @@ export default defineConfig({
             { text: '总览', link: '/dev/' },
             { text: '组件 API 与类型契约', link: '/dev/components' },
             { text: 'Astronomy Engine 集成', link: '/dev/astronomy-engine' },
+          ],
+        },
+      ],
+      '/math/': [
+        {
+          text: '观数',
+          items: [
+            { text: '概览', link: '/math/' },
+            { text: '为何古人"不喜欢"分数？', link: '/math/fractions' },
+            { text: '为何古人用"圆"来表意？', link: '/math/circle-normalization' },
           ],
         },
       ],
