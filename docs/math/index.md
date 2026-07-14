@@ -18,6 +18,7 @@ title: 观数
 
 - [整数对齐与分数概念](fractions) — 2026-07-14
 - [圆周归一化与空间对齐](circle-normalization) — 2026-07-14
+- [加法原语：一切运算的根本](addition-primitive) — 2026-07-14
 
 ## 写作中
 

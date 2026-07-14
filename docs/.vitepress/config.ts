@@ -239,6 +239,7 @@ export default defineConfig({
             { text: '概览', link: '/math/' },
             { text: '整数对齐与分数概念', link: '/math/fractions' },
             { text: '圆周归一化与空间对齐', link: '/math/circle-normalization' },
+            { text: '加法原语：一切运算的根本', link: '/math/addition-primitive' },
           ],
         },
       ],
