@@ -968,9 +968,10 @@ const computeCardinals = (actualRadius: number) => {
           :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`"
         >
           <g
-            v-for="asterism in computeMansionAsterismPoints(actualRadius)"
+            v-for="(asterism, idx) in computeMansionAsterismPoints(actualRadius)"
             :key="'as-' + asterism.label"
             class="mansion-asterism"
+            :style="{ '--twinkle-delay': `${(0.37 * (idx % 28)).toFixed(2)}s` }"
           >
             <!-- 星官内连线(轻描,让"图形"浮现) -->
             <line
@@ -987,7 +988,7 @@ const computeCardinals = (actualRadius: number) => {
             />
 
             <!-- 每颗星:星等控制大小,四象色系上色,hover 亮出"XX宿几" -->
-            <g v-for="(s, i) in asterism.stars" :key="'st-' + asterism.label + '-' + i" class="star">
+            <g v-for="(s, i) in asterism.stars" :key="'st-' + asterism.label + '-' + i" class="star star-twinkle">
               <!-- 淡光晕 -->
               <circle :cx="s.x" :cy="s.y" :r="s.r + 2" :fill="asterism.color" opacity="0.22" />
               <!-- 星体 -->
@@ -1025,10 +1026,11 @@ const computeCardinals = (actualRadius: number) => {
           :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`"
         >
           <g
-            v-for="asterism in computeFullAsterismPoints(actualRadius)"
+            v-for="(asterism, idx) in computeFullAsterismPoints(actualRadius)"
             :key="'fa-' + asterism.english"
             class="full-asterism"
-            :class="asterism.type"
+            :class="[asterism.type, { 'has-twinkle': asterism.type === 'mansion' }]"
+            :style="asterism.type === 'mansion' ? { '--twinkle-delay': `${(0.37 * (idx % 28)).toFixed(2)}s` } : undefined"
           >
             <!-- ── cluster 类型：星团/云气芒尖虚线圆 ── -->
             <template v-if="asterism.type === 'cluster'">
@@ -1111,6 +1113,7 @@ const computeCardinals = (actualRadius: number) => {
                 v-for="(s, j) in asterism.stars"
                 :key="'fs-' + j"
                 class="star-group"
+                :class="{ 'star-twinkle': asterism.type === 'mansion' }"
               >
               <!-- 淡光晕 -->
               <circle :cx="s.x" :cy="s.y" :r="s.r + 1" :fill="asterism.color" :opacity="s.opacity * 0.15" />
@@ -1552,5 +1555,41 @@ const computeCardinals = (actualRadius: number) => {
 }
 .suzhou-sky-map .full-asterism .star-group:hover .star-label {
   opacity: 1;
+}
+
+/* ─── 28 宿星点闪烁动画 ─── */
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  15% { opacity: 0.45; }
+  35% { opacity: 0.9; }
+  55% { opacity: 0.3; }
+  75% { opacity: 0.85; }
+}
+@keyframes twinkle-halo {
+  0%, 100% { opacity: 0.22; }
+  15% { opacity: 0.08; }
+  35% { opacity: 0.18; }
+  55% { opacity: 0.05; }
+  75% { opacity: 0.16; }
+}
+
+/* 经典模式 28 宿星点闪烁 */
+.suzhou-sky-map .mansion-asterism .star-twinkle > circle:nth-child(1) {
+  animation: twinkle-halo 3.7s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+.suzhou-sky-map .mansion-asterism .star-twinkle > circle:nth-child(2) {
+  animation: twinkle 3.7s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+/* 全星官模式 28 宿星点闪烁（仅 mansion 类型） */
+.suzhou-sky-map .full-asterism.has-twinkle .star-twinkle > circle:nth-child(1) {
+  animation: twinkle-halo 3.7s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+.suzhou-sky-map .full-asterism.has-twinkle .star-twinkle > circle:nth-child(2) {
+  animation: twinkle 3.7s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
 }
 </style>
