@@ -50,13 +50,18 @@ export interface PlanetConfig {
 /**
  * 五星配置（水金火木土）
  *
- * 颜色与尺寸沿用原 SolarEcliptic 的视觉设定。
+ * 颜色仿古人观感：
+ *   水星 — 青/蓝（超蓝外圈），星体暗
+ *   金星 — 太白（超白光辉）
+ *   火星 — 荧惑（赤红带橙）
+ *   木星 — 岁星（青绿光芒）
+ *   土星 — 镇星（黄白）
  */
 export const PLANETS_CONFIG: Record<PlanetKey, PlanetConfig> = {
-  mercury: { name: '水星', symbol: '水', color: '#8C8C8C', size: 8, body: Body.Mercury },
-  venus: { name: '金星', symbol: '金', color: '#FFC649', size: 14, body: Body.Venus },
-  mars: { name: '火星', symbol: '火', color: '#CD5C5C', size: 10, body: Body.Mars },
-  jupiter: { name: '木星', symbol: '木', color: '#DAA520', size: 18, body: Body.Jupiter },
+  mercury: { name: '水星', symbol: '水', color: '#5B9BD5', size: 8, body: Body.Mercury },
+  venus: { name: '金星', symbol: '金', color: '#FFF8F0', size: 14, body: Body.Venus },
+  mars: { name: '火星', symbol: '火', color: '#E84830', size: 10, body: Body.Mars },
+  jupiter: { name: '木星', symbol: '木', color: '#66BB6A', size: 18, body: Body.Jupiter },
   saturn: { name: '土星', symbol: '土', color: '#F4E7D7', size: 16, body: Body.Saturn }
 } as const
 

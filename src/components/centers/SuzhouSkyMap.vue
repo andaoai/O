@@ -1252,9 +1252,9 @@ const computeCardinals = (actualRadius: number) => {
             :key="'sun'"
           >
             <g class="body sun" :style="{ '--twinkle-delay': QIYAO_DELAY.sun }">
-              <circle :cx="sun.x" :cy="sun.y" :r="16" fill="#FFB84D" class="body-halo" />
-              <circle :cx="sun.x" :cy="sun.y" :r="8" fill="#FFC94A" class="body-core" />
-              <circle :cx="sun.x" :cy="sun.y" :r="4" fill="#FFF3B0" />
+              <circle :cx="sun.x" :cy="sun.y" :r="16" fill="#FFD54F" class="body-halo" />
+              <circle :cx="sun.x" :cy="sun.y" :r="8" fill="#FFECB3" class="body-core" />
+              <circle :cx="sun.x" :cy="sun.y" :r="4" fill="#FFFFFF" />
               <circle
                 :cx="sun.x"
                 :cy="sun.y"
@@ -1286,9 +1286,9 @@ const computeCardinals = (actualRadius: number) => {
             :key="'moon'"
           >
             <g class="body moon" :style="{ '--twinkle-delay': QIYAO_DELAY.moon }">
-              <circle :cx="moon.x" :cy="moon.y" :r="14" fill="#DCE6F0" class="body-halo" />
-              <circle :cx="moon.x" :cy="moon.y" :r="7" fill="#EAF0F5" class="body-core" />
-              <circle :cx="moon.x" :cy="moon.y" :r="3.5" fill="#B7C4D0" />
+              <circle :cx="moon.x" :cy="moon.y" :r="14" fill="#F5F0E0" class="body-halo" />
+              <circle :cx="moon.x" :cy="moon.y" :r="7" fill="#FFFDF5" class="body-core" />
+              <circle :cx="moon.x" :cy="moon.y" :r="3.5" fill="#FFFFFF" />
               <circle
                 :cx="moon.x"
                 :cy="moon.y"
@@ -1325,8 +1325,17 @@ const computeCardinals = (actualRadius: number) => {
                 v-for="p in [bodySvg(planet.projAngle, planet.dec, projectionScale(actualRadius), dirSign)]"
                 :key="planet.key"
               >
-                <circle :cx="p.x" :cy="p.y" :r="8" :fill="planet.color" class="body-halo" />
-                <circle :cx="p.x" :cy="p.y" :r="4" :fill="planet.color" class="body-core" />
+                <!-- 水星：暗体 + 超蓝外圈；其他行星统一色 -->
+                <circle
+                  :cx="p.x" :cy="p.y" :r="8"
+                  :fill="planet.key === 'mercury' ? '#4FC3F7' : planet.color"
+                  class="body-halo"
+                />
+                <circle
+                  :cx="p.x" :cy="p.y" :r="4"
+                  :fill="planet.key === 'mercury' ? '#1A1A2E' : planet.color"
+                  class="body-core"
+                />
                 <circle
                   :cx="p.x"
                   :cy="p.y"
