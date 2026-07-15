@@ -25,6 +25,11 @@ export default defineConfig({
     ['meta', { name: 'author', content: 'AnDaoAi' }],
   ],
 
+  // 启用 MathJax3 数学公式（依赖 markdown-it-mathjax3）
+  markdown: {
+    math: true,
+  },
+
   /**
    * 阶段二：让 md 能直接引用主项目组件
    *
@@ -240,6 +245,7 @@ export default defineConfig({
             { text: '整数对齐与分数概念', link: '/math/fractions' },
             { text: '圆周归一化与空间对齐', link: '/math/circle-normalization' },
             { text: '一切运算的根本 是 加法', link: '/math/addition-primitive' },
+            { text: '进位制与正多边形', link: '/math/base-and-polygon' },
           ],
         },
       ],

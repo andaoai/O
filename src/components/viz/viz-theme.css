@@ -1,0 +1,150 @@
+/* ===== 数学概念可视化 · 公用主题 ===== */
+
+.viz-card {
+  background: #1a1033;
+  border-radius: 20px;
+  padding: 1rem;
+  border: 1px solid rgba(200, 162, 232, 0.28);
+}
+
+.viz-canvas {
+  display: block;
+  width: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  aspect-ratio: 1/1;
+  background: #100822;
+  border-radius: 12px;
+}
+
+.viz-legend,
+.viz-footnote {
+  text-align: center;
+  color: #a48bcf;
+  font-size: 0.82rem;
+  margin: 0.4rem 0 0 0;
+  line-height: 1.5;
+}
+
+/* ---- controls layout ---- */
+.viz-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+  border-top: 1px solid rgba(200, 162, 232, 0.15);
+  padding-top: 0.75rem;
+}
+
+.ctrl-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1rem;
+}
+
+.ctrl-group {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ctrl-group label {
+  color: #a48bcf;
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+/* ---- slider ---- */
+.slider {
+  width: 120px;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #4a2c7a;
+  border-radius: 10px;
+  outline: none;
+}
+
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #c8a2e8;
+  cursor: pointer;
+  border: 2px solid #100822;
+  box-shadow: 0 0 10px rgba(200, 162, 232, 0.4);
+}
+
+/* ---- badge ---- */
+.badge {
+  color: #c8a2e8;
+  background: #241748;
+  padding: 2px 14px;
+  border-radius: 40px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  min-width: 2em;
+  text-align: center;
+}
+
+.badge.glow { color: #c8a2e8; }
+.badge.gold { color: #d7b872; }
+.badge.mute { color: #6543a0; }
+
+/* ---- legend rows ---- */
+.color-legend {
+  display: flex;
+  justify-content: center;
+  gap: 1rem 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+}
+
+/* ---- preset buttons ---- */
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.preset-label {
+  color: #a48bcf;
+  font-size: 0.8rem;
+  margin-right: 0.15rem;
+}
+
+.preset-btn {
+  background: transparent;
+  border: 1px solid #4a2c7a;
+  color: #c8a2e8;
+  padding: 0.15rem 0.55rem;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  line-height: 1.5;
+}
+
+.preset-btn:hover {
+  border-color: #c8a2e8;
+  background: rgba(200, 162, 232, 0.08);
+}
+
+.preset-btn.active {
+  border-color: #d7b872;
+  background: rgba(215, 184, 114, 0.15);
+  color: #d7b872;
+}
+
+.divisor-info {
+  color: #d7b872;
+  font-size: 0.8rem;
+  margin-left: 0.5rem;
+  opacity: 0.85;
+}

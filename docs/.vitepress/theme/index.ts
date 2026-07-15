@@ -43,6 +43,12 @@ import DegreeScale from '@/components/rings/DegreeScale.vue'
 // 单卦静态图（书籍笔记专用，非环组件）
 import SingleGuaChart from '@/components/gua/SingleGuaChart.vue'
 
+// 数学概念文可视化组件（拆分独立）
+import PolygonViz from '@/components/viz/PolygonViz.vue'
+import DivChartViz from '@/components/viz/DivChartViz.vue'
+import TripleViz from '@/components/viz/TripleViz.vue'
+import ChongViz from '@/components/viz/ChongViz.vue'
+
 // 罗盘一览页（挂到 docs/compass/index.md，走默认主题 layout）
 import HomeView from '@/views/HomeView.vue'
 // 罗盘全屏 View（挂到 docs/compass/*.md，走 CompassLayout）
@@ -100,6 +106,10 @@ export default {
     app.component('MansionDegreeRing', MansionDegreeRing)
     app.component('DegreeScale', DegreeScale)
     app.component('SingleGuaChart', SingleGuaChart)
+    app.component('PolygonViz', PolygonViz)
+    app.component('DivChartViz', DivChartViz)
+    app.component('TripleViz', TripleViz)
+    app.component('ChongViz', ChongViz)
 
     // 罗盘 View 全局注册（供 docs/compass/*.md 直接调用）
     app.component('HomeView', HomeView)   // /compass/ 罗盘一览（page layout）

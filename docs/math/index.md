@@ -19,10 +19,11 @@ title: 观数
 - [整数对齐与分数概念](fractions) — 2026-07-14
 - [圆周归一化与空间对齐](circle-normalization) — 2026-07-14
 - [加法原语：一切运算的根本](addition-primitive) — 2026-07-14
+- [进位制与正多边形](base-and-polygon) — 2026-07-15
 
 ## 写作中
 
-- 进位制 · 阴阳爻与二进制 <span class="concept-todo">⏳</span>
+- 阴阳爻与二进制 <span class="concept-todo">⏳</span>
 - 同余 · 干支与模运算 <span class="concept-todo">⏳</span>
 - 六十四卦与布尔代数 <span class="concept-todo">⏳</span>
 
