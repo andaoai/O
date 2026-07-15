@@ -74,6 +74,12 @@ export function useAltDragPan(opts: AltDragPanOptions) {
     const rect = svg.getBoundingClientRect()
     const shortSide = Math.min(rect.width, rect.height)
     if (shortSide === 0) return 1
+    // 优先从 SVG viewBox 属性动态读取（支持 viewBox 变化，如全星官模式 3600×3600）
+    const vb = svg.getAttribute('viewBox')
+    if (vb) {
+      const parts = vb.split(/[\s,]+/).map(Number)
+      if (parts.length >= 3 && parts[2] !== undefined && parts[2] > 0) return parts[2] / shortSide
+    }
     // preserveAspectRatio="xMidYMid meet"：短边等于 viewBox 边长的映射
     return viewBoxSize / shortSide
   }

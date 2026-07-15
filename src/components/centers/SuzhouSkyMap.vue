@@ -13,6 +13,7 @@ import {
   POLARIS
 } from '@/utils/ziwei'
 import { MANSION_ASTERISMS } from '@/data/mansionStars'
+import { CHINESE_ASTERISMS, type ChineseAsterism } from '@/data/chineseStarCatalog'
 import { getMansionSpans } from '@/utils/planetMansion'
 import {
   project,
@@ -112,6 +113,22 @@ interface Props {
    *   · 'fixed-sky-suzhou'  苏图视角:井宿朝上 + 东西镜像,复原南宋石刻实物布局
    */
   orientation?: 'fixed-ground' | 'fixed-sky-coord' | 'fixed-sky-suzhou'
+  /**
+   * 星官显示模式：
+   *   · 'classic' 经典版：仅 28 宿主星官（当前默认）
+   *   · 'full'    全星官版：28 宿 + 附属星官 + 三垣墙
+   */
+  detailMode?: 'classic' | 'full'
+  /** 显示附属星官（仅 full 模式有效） */
+  showSubAsterisms?: boolean
+  /** 显示三垣墙（仅 full 模式有效） */
+  showEnclosures?: boolean
+  /**
+   * 画布缩放倍数（由 View 层传入，全星官模式为 3）。
+   * computeFullAsterismPoints 用此值等比放大星点半径和线宽，
+   * 保证不同 viewBox 下视觉效果一致。
+   */
+  canvasScale?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -133,7 +150,11 @@ const props = withDefaults(defineProps<Props>(), {
   showSun: true,
   showMoon: true,
   showPlanets: true,
-  orientation: 'fixed-ground'
+  orientation: 'fixed-ground',
+  detailMode: 'classic',
+  showSubAsterisms: true,
+  showEnclosures: true,
+  canvasScale: 1
 })
 
 /** ⚠️ 五层架构范式:确保 time 始终是响应式的 */
@@ -216,6 +237,34 @@ const mansionAsterisms = computed(() => {
   const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
   let slotCursor = 32 // 避开北斗（0-6）、紫微（8-24）
   return MANSION_ASTERISMS.map((asterism) => ({
+    ...asterism,
+    stars: asterism.stars.map((s) => {
+      const slot = slotCursor++
+      const eq = fixedStarEquatorial(timeRef.value, s.raJ2000, s.decJ2000, 200, slot)
+      const projAngle = normalizeAngle(lst - eq.ra + 90)
+      return {
+        ...s,
+        ra: eq.ra,
+        dec: eq.dec,
+        plane: project(projAngle, eq.dec)
+      }
+    })
+  }))
+})
+
+/**
+ * 全星官模式下的所有星官（从 chineseStarCatalog 读取）。
+ *
+ * 只在 detailMode === 'full' 时激活，避免不必要的计算。
+ * 处理所有 318 个星官条目（宿、附属星官、三垣墙）通过投影管道。
+ *
+ * ⚠️ slotCursor 从 1000 起步，避开北斗（0-6）与紫微（8-24）的占用范围。
+ */
+const fullAsterisms = computed(() => {
+  if (props.detailMode !== 'full') return []
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  let slotCursor = 1000
+  return CHINESE_ASTERISMS.map((asterism: ChineseAsterism) => ({
     ...asterism,
     stars: asterism.stars.map((s) => {
       const slot = slotCursor++
@@ -456,6 +505,176 @@ const computeMansionAsterismPoints = (actualRadius: number) => {
       distStar: stars[0]
     }
   })
+}
+
+/**
+ * 全星官模式 SVG 坐标。
+ *
+ * 对五种类型的星官分别控制渲染参数：
+ *   · mansion  : base=3.0 × canvasScale, 连线宽 0.9 × canvasScale, 不透明度 0.6
+ *   · sub      : base=1.2 × canvasScale, 连线宽 0.4 × canvasScale, 不透明度 0.35
+ *   · enclosure: base=2.0 × canvasScale, 连线宽 0.7 × canvasScale, 不透明度 0.45
+ *   · special  : 跳过（北斗、北极在别处渲染）
+ *   · cluster  : 星团/云气标记，不渲染星点连线，渲染芒尖虚线圆
+ *     angularSizePx 为固定图标大小（8 × canvasScale），非实际角直径缩放，
+ *     因为全天下 M44 1.6° 的实际角直径在投影中仅 ~1.6px（1200 viewBox），不可见。
+ *
+ * canvasScale 由 View 层传入，全星官模式为 3（3600×3600 viewBox），
+ * 乘以 canvasScale 保证星点/连线在屏幕上的视觉大小与经典模式（1200×1200）一致。
+ */
+const computeFullAsterismPoints = (actualRadius: number) => {
+  const scale = projectionScale(actualRadius)
+  const toSvg = makeToSvg(scale)
+  const vbScale = props.canvasScale ?? 1
+  return fullAsterisms.value
+    .filter((a) => {
+      if (a.type === 'special') return false
+      if (a.type === 'cluster') return true // always show clusters
+      if (a.type === 'sub' && !props.showSubAsterisms) return false
+      if (a.type === 'enclosure' && !props.showEnclosures) return false
+      return true
+    })
+    .map((a) => {
+      // ── cluster 类型：芒尖虚线圆标记 ──
+      if (a.type === 'cluster') {
+        const center = a.stars[0]
+        if (!center) return null
+        const svg = toSvg(center.plane)
+        const clusterR = 8 * vbScale // 固定图标大小，非实际角直径
+        const spikes: { x1: number; y1: number; x2: number; y2: number }[] = []
+        const spikeDirs: [number, number][] = [[0, -1], [0, 1], [-1, 0], [1, 0]]
+        for (const [dx, dy] of spikeDirs) {
+          const inner = clusterR + 2 * vbScale
+          const outer = inner + 5 * vbScale
+          spikes.push({
+            x1: svg.x + dx * inner,
+            y1: svg.y + dy * inner,
+            x2: svg.x + dx * outer,
+            y2: svg.y + dy * outer
+          })
+        }
+        return {
+          label: a.label,
+          english: a.english,
+          color: a.color,
+          type: 'cluster' as const,
+          cx: svg.x,
+          cy: svg.y,
+          radiusPx: clusterR,
+          lineWidth: 1.2 * vbScale,
+          spikes,
+          // 为兼容模板，提供空的 stars/lines
+          stars: [],
+          lines: [],
+          distStar: null
+        }
+      }
+
+      // ── 常规类型（mansion / sub / enclosure）──
+      const isSub = a.type === 'sub'
+      const isEnc = a.type === 'enclosure'
+      const baseR = (isSub ? 1.2 : isEnc ? 2.0 : 3.0) * vbScale
+      const lineW = (isSub ? 0.4 : isEnc ? 0.7 : 0.9) * vbScale
+      const lineOpacity = isSub ? 0.35 : isEnc ? 0.45 : 0.6
+      const starOpacity = isSub ? 0.75 : isEnc ? 0.85 : 1.0
+
+      const stars = a.stars.map((s) => ({
+        cnName: s.cnName,
+        mag: s.mag,
+        ...toSvg(s.plane),
+        r: magnitudeToRadius(s.mag ?? 5, baseR),
+        opacity: starOpacity
+      }))
+      const lines = a.connections.map(([i, j]) => ({
+        x1: stars[i]?.x ?? 0,
+        y1: stars[i]?.y ?? 0,
+        x2: stars[j]?.x ?? 0,
+        y2: stars[j]?.y ?? 0
+      }))
+      return {
+        label: a.label,
+        english: a.english,
+        color: a.color,
+        type: a.type,
+        stars,
+        lines,
+        lineWidth: lineW,
+        lineOpacity,
+        distStar: stars[0]
+      }
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null)
+}
+
+/**
+ * 为带有 angularSizeDeg 的常规星官（如昴宿、积尸）生成星团虚线外圈。
+ *
+ * 在 full 模式下，遍历所有星官数据，找到 type !== 'cluster' 且 angularSizeDeg 有值的星官，
+ * 计算其星点的投影包围圆，在 SVG 中画一个淡虚线圈。
+ *
+ * 半径策略：
+ *   - 多颗星（如昴宿 7 星）→ 从几何中心到最远星点的距离 + 边距
+ *   - 单颗星（如积尸 1 星）→ angularSizeDeg 换算 + 最小可见半径
+ * 这样可以保证圈的大小始终与实际星点分布成比例。
+ */
+const computeAngularSizeOverlays = (actualRadius: number) => {
+  if (props.detailMode !== 'full') return []
+  const scale = projectionScale(actualRadius)
+  const toSvg = makeToSvg(scale)
+  const lst = localSiderealTimeDeg(timeRef.value, props.observerLon)
+  let slotCursor = 1000
+  const vbScale = props.canvasScale ?? 1
+  const result: {
+    label: string
+    english: string
+    color: string
+    cx: number
+    cy: number
+    radiusPx: number
+    lineWidth: number
+  }[] = []
+
+  for (const asterism of CHINESE_ASTERISMS) {
+    if (asterism.type === 'special' || asterism.type === 'cluster') continue
+    if (!asterism.angularSizeDeg || asterism.stars.length === 0) continue
+    if (asterism.type === 'sub' && !props.showSubAsterisms) continue
+    if (asterism.type === 'enclosure' && !props.showEnclosures) continue
+
+    // 投影所有星点
+    const projected = asterism.stars.map((s) => {
+      const slot = slotCursor++
+      const eq = fixedStarEquatorial(timeRef.value, s.raJ2000, s.decJ2000, 200, slot)
+      const projAngle = normalizeAngle(lst - eq.ra + 90)
+      return toSvg(project(projAngle, eq.dec))
+    })
+
+    // 计算几何中心
+    const cx = projected.reduce((s, p) => s + p.x, 0) / projected.length
+    const cy = projected.reduce((s, p) => s + p.y, 0) / projected.length
+
+    let radiusPx: number
+
+    if (projected.length >= 2) {
+      // 多星：从几何中心到最远星点的距离 + 4px 边距
+      const maxDist = Math.max(...projected.map((p) => Math.hypot(p.x - cx, p.y - cy)))
+      radiusPx = maxDist + 4 * vbScale
+    } else {
+      // 单星：用 angularSizeDeg 换算（等距投影：1° = 1/90 平面单位）
+      const radiusSvg = (asterism.angularSizeDeg / 2) * (1 / 90) * scale
+      // 最小可见半径
+      const minR = 6 * vbScale
+      radiusPx = Math.max(radiusSvg, minR)
+    }
+
+    result.push({
+      label: asterism.label,
+      english: asterism.english,
+      color: asterism.color,
+      cx, cy, radiusPx,
+      lineWidth: 0.6 * vbScale
+    })
+  }
+  return result
 }
 
 /** 北斗七星 SVG 坐标（与 BeidouCenter 同一投影管道） */
@@ -745,7 +964,7 @@ const computeCardinals = (actualRadius: number) => {
              ③ 28 宿完整星官 + 星官连线(四象色系)
              ═════════════════════════════════════════════════════ -->
         <g
-          v-if="showMansionStars"
+          v-if="showMansionStars && detailMode !== 'full'"
           :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`"
         >
           <g
@@ -795,6 +1014,150 @@ const computeCardinals = (actualRadius: number) => {
                 stroke-width="2.2"
               >{{ s.cnName }}</text>
             </g>
+          </g>
+        </g>
+
+        <!-- ═════════════════════════════════════════════════════
+             ③a 全星官模式：附属星官 + 三垣墙
+             ═════════════════════════════════════════════════════ -->
+        <g
+          v-if="detailMode === 'full'"
+          :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`"
+        >
+          <g
+            v-for="asterism in computeFullAsterismPoints(actualRadius)"
+            :key="'fa-' + asterism.english"
+            class="full-asterism"
+            :class="asterism.type"
+          >
+            <!-- ── cluster 类型：星团/云气芒尖虚线圆 ── -->
+            <template v-if="asterism.type === 'cluster'">
+              <!-- 前光晕 -->
+              <circle
+                :cx="asterism.cx" :cy="asterism.cy"
+                :r="asterism.radiusPx + 4"
+                :fill="asterism.color"
+                opacity="0.10"
+              />
+              <!-- 芒尖圆主体：虚线圆 -->
+              <circle
+                :cx="asterism.cx" :cy="asterism.cy"
+                :r="asterism.radiusPx"
+                fill="none"
+                :stroke="asterism.color"
+                :stroke-width="asterism.lineWidth"
+                stroke-dasharray="4,3"
+                opacity="0.75"
+              />
+              <!-- 四方向芒尖 -->
+              <line
+                v-for="(sp, i) in asterism.spikes"
+                :key="'sp-' + i"
+                :x1="sp.x1" :y1="sp.y1"
+                :x2="sp.x2" :y2="sp.y2"
+                :stroke="asterism.color"
+                :stroke-width="asterism.lineWidth"
+                stroke-linecap="round"
+                opacity="0.75"
+              />
+              <!-- 中心标签 -->
+              <text
+                v-if="showLabels"
+                :x="asterism.cx"
+                :y="asterism.cy + 4"
+                :fill="asterism.color"
+                font-size="11"
+                font-weight="700"
+                text-anchor="middle"
+                dominant-baseline="middle"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="2.2"
+                opacity="0.95"
+                style="pointer-events: none;"
+              >{{ asterism.label }}</text>
+            </template>
+
+            <!-- ── 常规类型：连线 ── -->
+            <line
+              v-for="(ln, i) in asterism.lines"
+              :key="'fl-' + i"
+              :x1="ln.x1" :y1="ln.y1" :x2="ln.x2" :y2="ln.y2"
+              :stroke="asterism.color"
+              :stroke-width="asterism.lineWidth"
+              :opacity="asterism.lineOpacity"
+              stroke-linecap="round"
+            />
+
+            <!-- 星官名标签（hover 整组时显示，cluster 不在此渲染） -->
+            <text
+              v-if="showLabels && asterism.distStar"
+              class="asterism-label"
+              :x="asterism.distStar.x"
+              :y="asterism.distStar.y - 10"
+              :fill="asterism.color"
+              font-size="13"
+              font-weight="700"
+              text-anchor="middle"
+              paint-order="stroke"
+              stroke="#000"
+              stroke-width="2.2"
+              opacity="0.9"
+            >{{ asterism.label }}</text>
+
+            <!-- ── 常规类型：星点 ── -->
+            <template v-if="asterism.type !== 'cluster'">
+              <g
+                v-for="(s, j) in asterism.stars"
+                :key="'fs-' + j"
+                class="star-group"
+              >
+              <!-- 淡光晕 -->
+              <circle :cx="s.x" :cy="s.y" :r="s.r + 1" :fill="asterism.color" :opacity="s.opacity * 0.15" />
+              <!-- 星体 -->
+              <circle :cx="s.x" :cy="s.y" :r="s.r" :fill="asterism.color" :opacity="s.opacity" />
+              <!-- hit area（16px 确保鼠标易命中） -->
+              <circle
+                :cx="s.x" :cy="s.y"
+                :r="Math.max(s.r + 4, 16)"
+                fill="transparent"
+                pointer-events="all"
+              >
+                <!-- 原生浏览器 tooltip：星官名 · 星名 -->
+                <title>{{ asterism.label }} · {{ s.cnName }}</title>
+              </circle>
+              <!-- 星名（所有类型均渲染，CSS 控制 hover 显隐） -->
+              <text
+                class="star-label"
+                :x="s.x + s.r + 4"
+                :y="s.y + 4"
+                :fill="asterism.color"
+                font-size="9"
+                text-anchor="start"
+                paint-order="stroke"
+                stroke="#000"
+                stroke-width="1.6"
+                opacity="0.95"
+              >{{ s.cnName }}</text>
+            </g>
+          </template>
+          </g>
+
+          <!-- angularSize 星团外圈 overlay -->
+          <g
+            v-for="overlay in computeAngularSizeOverlays(actualRadius)"
+            :key="'ao-' + overlay.english"
+            class="angular-size-overlay"
+            opacity="0.4"
+          >
+            <circle
+              :cx="overlay.cx" :cy="overlay.cy"
+              :r="overlay.radiusPx"
+              fill="none"
+              :stroke="overlay.color"
+              :stroke-width="overlay.lineWidth"
+              stroke-dasharray="3,4"
+            />
           </g>
         </g>
 
@@ -875,10 +1238,12 @@ const computeCardinals = (actualRadius: number) => {
               <circle
                 :cx="sun.x"
                 :cy="sun.y"
-                :r="14"
+                :r="30"
                 fill="transparent"
                 pointer-events="all"
-              />
+              >
+                <title>☉ 日 · 太阳</title>
+              </circle>
               <text
                 v-if="showLabels"
                 :x="sun.x + 10"
@@ -907,10 +1272,12 @@ const computeCardinals = (actualRadius: number) => {
               <circle
                 :cx="moon.x"
                 :cy="moon.y"
-                :r="12"
+                :r="25"
                 fill="transparent"
                 pointer-events="all"
-              />
+              >
+                <title>☽ 月 · 月亮</title>
+              </circle>
               <text
                 v-if="showLabels"
                 :x="moon.x + 8"
@@ -942,10 +1309,12 @@ const computeCardinals = (actualRadius: number) => {
                 <circle
                   :cx="p.x"
                   :cy="p.y"
-                  :r="9"
+                  :r="20"
                   fill="transparent"
                   pointer-events="all"
-                />
+                >
+                  <title>{{ planet.symbol }} {{ planet.name }}</title>
+                </circle>
                 <text
                   v-if="showLabels"
                   :x="p.x + 6"
@@ -1161,6 +1530,27 @@ const computeCardinals = (actualRadius: number) => {
 .suzhou-sky-map .polaris:hover text,
 .suzhou-sky-map .beidou-star:hover text,
 .suzhou-sky-map .body:hover text {
+  opacity: 1;
+}
+
+/* ─── 全星官模式：星官名 + 星名双层 hover ─── */
+/* 星官名：hover 星官内任意区域时显示 */
+.suzhou-sky-map .full-asterism .asterism-label {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+  pointer-events: none;
+}
+.suzhou-sky-map .full-asterism:hover .asterism-label {
+  opacity: 1;
+}
+
+/* 星名：hover 具体星点时显示 */
+.suzhou-sky-map .full-asterism .star-group .star-label {
+  opacity: 0;
+  transition: opacity 0.18s ease-out;
+  pointer-events: none;
+}
+.suzhou-sky-map .full-asterism .star-group:hover .star-label {
   opacity: 1;
 }
 </style>

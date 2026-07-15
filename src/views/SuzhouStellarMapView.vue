@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
 import WorldMapCenter from '../components/centers/WorldMapCenter.vue'
 import RingStack from '../components/base/RingStack.vue'
@@ -47,8 +47,8 @@ const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 provideCompassContext({ time: controlledTime, viewport, onUserTimeChange })
 
-// 唯一配置常量:全圆盘外缘半径
-const DISK_OUTER_RADIUS = 580
+// 全圆盘外缘半径(全星官模式放大 3 倍)
+const DISK_OUTER_RADIUS = computed(() => 580 * canvasScale.value)
 
 /**
  * 观测点：优先浏览器定位,失败则回退到苏图底本汴京(北宋首都)。
@@ -94,6 +94,24 @@ const showHorizon = ref(true)
 /** 是否显示子午线 + 「子/午」标签(默认开) */
 const showMeridian = ref(true)
 
+/** 星官显示模式:经典版仅 28 宿,全星官版显示全部 283 星官 */
+const detailMode = ref<'classic' | 'full'>('classic')
+
+/** 是否显示附属星官(仅 full 模式有效) */
+const showSubAsterisms = ref(true)
+
+/** 是否显示三垣墙(仅 full 模式有效) */
+const showEnclosures = ref(true)
+
+/** 视口缩放倍数(全星官模式放大画布) */
+const canvasScale = computed(() => detailMode.value === 'full' ? 3 : 1)
+
+/** 切换模式时重置视口，防止之前模式的 zoom/offset 在新画布下"丢失"星图 */
+watch(detailMode, () => {
+  viewport.resetZoom()
+  viewport.resetOffset()
+})
+
 /** 已移除二十八宿外环：环的距星间距宿度与苏图传统古度宿度冲突，待厘清入度概念后再重新设计。 */
 </script>
 
@@ -109,6 +127,23 @@ const showMeridian = ref(true)
           <span class="observer-coord">
             φ {{ latitude.toFixed(2) }}° · λ {{ longitude.toFixed(2) }}°
           </span>
+        </div>
+      </div>
+
+      <!-- 🔹 显示模式切换：经典版 / 全星官版 -->
+      <div class="view-tool-group">
+        <label class="view-tool-label">星官密度</label>
+        <div class="orientation-toggle">
+          <button
+            :class="{ active: detailMode === 'classic' }"
+            @click="detailMode = 'classic'"
+            title="经典版：仅显示 28 宿主星官（~165 星）"
+          >28 宿</button>
+          <button
+            :class="{ active: detailMode === 'full' }"
+            @click="detailMode = 'full'"
+            title="全星官版：显示全部 283 星官（~1395 星），画布放大三倍"
+          >全星官</button>
         </div>
       </div>
 
@@ -157,12 +192,12 @@ const showMeridian = ref(true)
 
     <svg
       ref="svgRef"
-      viewBox="0 0 1200 1200"
+      :viewBox="`0 0 ${1200 * canvasScale} ${1200 * canvasScale}`"
       preserveAspectRatio="xMidYMid meet"
       class="sky-svg"
       :class="{ 'alt-hover': isAltPressed && !isDragging, 'alt-dragging': isDragging }"
     >
-      <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
+      <g :transform="`translate(${600 * canvasScale + offsetX}, ${600 * canvasScale + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <RingStack
           :outer-radius="DISK_OUTER_RADIUS"
           :rings="[]"
@@ -190,6 +225,10 @@ const showMeridian = ref(true)
               :observer-lon="longitude"
               :orientation="orientation"
               :show-horizon="showHorizon"
+              :detail-mode="detailMode"
+              :show-sub-asterisms="showSubAsterisms"
+              :show-enclosures="showEnclosures"
+              :canvas-scale="canvasScale"
             />
           </template>
         </RingStack>
