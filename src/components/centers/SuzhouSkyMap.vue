@@ -392,6 +392,23 @@ const dirSign = computed(() =>
 )
 
 /**
+ * 七曜闪烁次序延迟映射表。
+ *
+ * 传统七曜序（自《尚书·尧典》《史记·天官书》以来的一贯顺序）：
+ *   日 → 月 → 火 → 水 → 木 → 金 → 土
+ * 每曜间隔 0.6s，总周期 4.2s，与 body-twinkle 动画 5s 周期配合形成连续波。
+ */
+const QIYAO_DELAY: Record<string, string> = {
+  sun: '0s',
+  moon: '0.6s',
+  mars: '1.2s',
+  mercury: '1.8s',
+  jupiter: '2.4s',
+  venus: '3.0s',
+  saturn: '3.6s'
+}
+
+/**
  * 投影平面 → SVG 缩放系数工厂
  *
  * 让"赤道 δ=0°"（极径=1）落在 actualRadius 的 60% 处,这样：
@@ -1234,10 +1251,10 @@ const computeCardinals = (actualRadius: number) => {
             v-for="sun in [bodySvg(sunProj.projAngle, sunProj.dec, projectionScale(actualRadius), dirSign)]"
             :key="'sun'"
           >
-            <g class="body sun">
-              <circle :cx="sun.x" :cy="sun.y" :r="12" fill="#FFB84D" opacity="0.22" />
-              <circle :cx="sun.x" :cy="sun.y" :r="6" fill="#FFC94A" />
-              <circle :cx="sun.x" :cy="sun.y" :r="3.2" fill="#FFF3B0" />
+            <g class="body sun" :style="{ '--twinkle-delay': QIYAO_DELAY.sun }">
+              <circle :cx="sun.x" :cy="sun.y" :r="16" fill="#FFB84D" class="body-halo" />
+              <circle :cx="sun.x" :cy="sun.y" :r="8" fill="#FFC94A" class="body-core" />
+              <circle :cx="sun.x" :cy="sun.y" :r="4" fill="#FFF3B0" />
               <circle
                 :cx="sun.x"
                 :cy="sun.y"
@@ -1268,10 +1285,10 @@ const computeCardinals = (actualRadius: number) => {
             v-for="moon in [bodySvg(moonProj.projAngle, moonProj.dec, projectionScale(actualRadius), dirSign)]"
             :key="'moon'"
           >
-            <g class="body moon">
-              <circle :cx="moon.x" :cy="moon.y" :r="10" fill="#DCE6F0" opacity="0.22" />
-              <circle :cx="moon.x" :cy="moon.y" :r="5" fill="#EAF0F5" />
-              <circle :cx="moon.x" :cy="moon.y" :r="2.4" fill="#B7C4D0" />
+            <g class="body moon" :style="{ '--twinkle-delay': QIYAO_DELAY.moon }">
+              <circle :cx="moon.x" :cy="moon.y" :r="14" fill="#DCE6F0" class="body-halo" />
+              <circle :cx="moon.x" :cy="moon.y" :r="7" fill="#EAF0F5" class="body-core" />
+              <circle :cx="moon.x" :cy="moon.y" :r="3.5" fill="#B7C4D0" />
               <circle
                 :cx="moon.x"
                 :cy="moon.y"
@@ -1302,13 +1319,14 @@ const computeCardinals = (actualRadius: number) => {
               v-for="planet in planetsProj"
               :key="'p-' + planet.key"
               class="body planet"
+              :style="{ '--twinkle-delay': (QIYAO_DELAY[planet.key] ?? '0s') }"
             >
               <template
                 v-for="p in [bodySvg(planet.projAngle, planet.dec, projectionScale(actualRadius), dirSign)]"
                 :key="planet.key"
               >
-                <circle :cx="p.x" :cy="p.y" :r="6" :fill="planet.color" opacity="0.25" />
-                <circle :cx="p.x" :cy="p.y" :r="3" :fill="planet.color" />
+                <circle :cx="p.x" :cy="p.y" :r="8" :fill="planet.color" class="body-halo" />
+                <circle :cx="p.x" :cy="p.y" :r="4" :fill="planet.color" class="body-core" />
                 <circle
                   :cx="p.x"
                   :cy="p.y"
@@ -1590,6 +1608,36 @@ const computeCardinals = (actualRadius: number) => {
 }
 .suzhou-sky-map .full-asterism.has-twinkle .star-twinkle > circle:nth-child(2) {
   animation: twinkle 3.7s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+
+/* ─── 七曜（日月五星）波序闪烁动画 ─── *
+ * 日→月→火→水→木→金→土 依次亮起，形成亮度波沿七曜序传播的效果。
+ * body-halo 与此同步，让光晕随之呼吸。
+ */
+@keyframes body-twinkle {
+  0%, 100% { opacity: 0.45; }
+  12% { opacity: 1; }
+  24% { opacity: 0.7; }
+  36% { opacity: 0.9; }
+  48% { opacity: 0.4; }
+  100% { opacity: 0.45; }
+}
+@keyframes body-halo {
+  0%, 100% { opacity: 0.15; }
+  12% { opacity: 0.4; }
+  24% { opacity: 0.25; }
+  36% { opacity: 0.35; }
+  48% { opacity: 0.12; }
+  100% { opacity: 0.15; }
+}
+
+.suzhou-sky-map .body .body-halo {
+  animation: body-halo 5s ease-in-out infinite;
+  animation-delay: var(--twinkle-delay, 0s);
+}
+.suzhou-sky-map .body .body-core {
+  animation: body-twinkle 5s ease-in-out infinite;
   animation-delay: var(--twinkle-delay, 0s);
 }
 </style>
