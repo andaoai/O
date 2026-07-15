@@ -1616,28 +1616,30 @@ const computeCardinals = (actualRadius: number) => {
  * body-halo 与此同步，让光晕随之呼吸。
  */
 @keyframes body-twinkle {
-  0%, 100% { opacity: 0.45; }
-  12% { opacity: 1; }
-  24% { opacity: 0.7; }
-  36% { opacity: 0.9; }
-  48% { opacity: 0.4; }
-  100% { opacity: 0.45; }
+  0%, 100% { opacity: 0.85; }
+  10% { opacity: 1; }
+  25% { opacity: 0.6; }
+  40% { opacity: 1; }
+  55% { opacity: 0.5; }
+  70% { opacity: 1; }
+  85% { opacity: 0.7; }
 }
 @keyframes body-halo {
-  0%, 100% { opacity: 0.15; }
-  12% { opacity: 0.4; }
-  24% { opacity: 0.25; }
-  36% { opacity: 0.35; }
-  48% { opacity: 0.12; }
-  100% { opacity: 0.15; }
+  0%, 100% { opacity: 0.35; }
+  10% { opacity: 0.55; }
+  25% { opacity: 0.2; }
+  40% { opacity: 0.5; }
+  55% { opacity: 0.15; }
+  70% { opacity: 0.55; }
+  85% { opacity: 0.25; }
 }
 
 .suzhou-sky-map .body .body-halo {
-  animation: body-halo 5s ease-in-out infinite;
+  animation: body-halo 2.5s ease-in-out infinite;
   animation-delay: var(--twinkle-delay, 0s);
 }
 .suzhou-sky-map .body .body-core {
-  animation: body-twinkle 5s ease-in-out infinite;
+  animation: body-twinkle 2.5s ease-in-out infinite;
   animation-delay: var(--twinkle-delay, 0s);
 }
 </style>
