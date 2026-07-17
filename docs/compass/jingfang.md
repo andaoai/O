@@ -1,6 +1,6 @@
 ---
 layout: compass
-title: 京房十二消息卦盘
+title: 京房六日七分纳甲盘
 ---
 
 <ClientOnly>

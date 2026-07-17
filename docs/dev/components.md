@@ -904,7 +904,7 @@ export const compasses: CompassMeta[] = [
   { id: 'astronomy',           name: '中华天文圆环',       description: '360 度刻度、二十四节气……',      category: '天文' },
   { id: 'liushi-jiazi',        name: '六十甲子六环',       description: '年月日时分秒六柱……',            category: '干支历' },
   { id: 'sixty-four-gua',      name: '先天六十四卦盘',     description: '伏羲/邵雍先天圆图……',           category: '易学' },
-  { id: 'jingfang',            name: '京房十二消息卦盘',   description: '365 天刻度 + 60 卦六日七分……',  category: '易学' },
+  { id: 'jingfang',            name: '京房六日七分纳甲盘',   description: '365 天刻度 + 60 卦六日七分……',  category: '易学' },
   { id: 'planet-mansion',      name: '七曜入宿天象盘',     description: '天极投影盖天图……',              category: '天文' },
   { id: 'tropical-year',       name: '回归年闰月盘',       description: '365 天回归年 vs 360 度甲子……', category: '天文' },
   { id: 'guan-dou',            name: '观斗盘',             description: '圆心真实北斗 + 紫微垣 + 地平圈……', category: '天文' },
