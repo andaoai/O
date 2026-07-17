@@ -19,5 +19,5 @@ title: 干支 · 六十甲子
 </CompassFigure>
 
 ::: tip 联动罗盘
-六柱同时对照请前往 [六十甲子六环](/compass/liushi-jiazi)；结合天文分布请看 [中华天文圆环](/compass/astronomy)。
+六柱同时对照请前往 [六十甲子六环](/compass/liushi-jiazi)。
 :::

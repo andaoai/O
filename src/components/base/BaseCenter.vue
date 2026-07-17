@@ -16,7 +16,7 @@ import { computed, unref, type MaybeRef } from 'vue'
  * 使用方式：
  *   <template #center="{ innerRadius }">
  *     <BaseCenter :radius="innerRadius" :scale="0.8">
- *       <TaiChi :time="controlledTime" />
+ *       <BeidouCenter :time="controlledTime" />
  *     </BaseCenter>
  *   </template>
  *

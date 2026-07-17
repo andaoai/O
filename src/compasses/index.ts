@@ -6,7 +6,7 @@
  * 再在下方 compasses 数组加一项。
  */
 export interface CompassMeta {
-  /** 路由 path 片段，如 'astronomy' → /compass/astronomy */
+  /** 路由 path 片段，如 'liushi-jiazi' → /compass/liushi-jiazi */
   id: string
   /** 显示名（首页卡片标题） */
   name: string
@@ -17,12 +17,6 @@ export interface CompassMeta {
 }
 
 export const compasses: CompassMeta[] = [
-  {
-    id: 'astronomy',
-    name: '中华天文圆环',
-    description: '360度刻度、二十四节气、二十八星宿、六十甲子、五行纳音、十天干、天干空亡、十二长生、十二地支、八门、四象、日月五星黄道与太极',
-    category: '天文'
-  },
   {
     id: 'liushi-jiazi',
     name: '六十甲子六环',

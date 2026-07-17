@@ -18,8 +18,6 @@
   - [DataPointRing](#datapointring-数据驱动点圆环)
   - [DegreeScale](#degreescale-度数刻度环)
 - [天文组件](#天文组件)
-  - [SolarEcliptic](#solarecliptic-黄道天体组件)
-  - [TaiChi](#taichi-太极图组件)
 - [控制面板 · Sidebar](#控制面板--sidebar)
   - [CompassSidebar](#compasssidebar-罗盘左侧嵌入式-sidebar)
   - [View 专属工具位（Teleport）](#view-专属工具位teleport)
@@ -556,67 +554,7 @@ const allPlanetsRing = computed(() =>
 
 ## 天文组件
 
-### SolarEcliptic 黄道天体组件
-
-基于 astronomy-engine，按 `time` 计算并显示黄道上的天体——不仅太阳，还包含月亮、白道、五星与轨道交点（均可分别开关）。
-
-#### Props
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `radius` | number | 200 | 黄道半径 |
-| `time` | Date | new Date() | 观测时间 |
-| `sunPosition` | SunPosition? | — | 自定义太阳位置（不提供则按时间计算） |
-| `enableAnimation` | boolean | true | 启用动画 |
-| `animationSpeed` | number | 0.5 | 动画速度 |
-| `rotation` | number | 0 | 整体旋转角度 |
-| `showSunLabel` | boolean | true | 显示太阳标签 |
-| `showPlanets` | boolean | true | 显示五星 |
-| `showPlanetLabels` | boolean | true | 显示行星标签 |
-| `showMoon` | boolean | true | 显示月亮 |
-| `showWhiteWay` | boolean | true | 显示白道 |
-| `showMoonLabel` | boolean | true | 显示月亮标签 |
-| `showOrbitalNodes` | boolean | true | 显示轨道交点 |
-| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向 |
-
-```vue
-<SolarEcliptic
-  :radius="150"
-  :time="controlledTime"
-  :enable-animation="false"
-  :show-sun-label="true"
-  :rotation-direction="rotationDirection"
-/>
-```
-
-> ⚠️ 天体位置由 `time` 驱动，因此在天文盘面中**不应**对包裹它的 `<g>` 施加整体旋转动画——否则天体会绕中心乱转。`AstronomyView` 对该组件单独保留、不参与整盘旋转。
-
----
-
-### TaiChi 太极图组件
-
-随时间动态旋转的阴阳鱼太极图，反映天地阴阳消长。独立 SVG 绘制（不基于 `PolarCanvas`）。
-
-#### 特性
-- **时间驱动旋转** — 24 小时旋转 360 度（一天一圈）
-- **历史日期支持** — 可追溯至公元 1 年，角度连续累加不重置，避免旋转反转
-- **毫秒级精度** — 实时响应时间变化
-
-#### Props
-
-| 属性 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `radius` | number | 80 | 半径 |
-| `time` | Date | new Date() | 观测时间（决定旋转角度） |
-| `yinColor` / `yangColor` | string | '#000000' / '#FFFFFF' | 阴 / 阳色 |
-| `yinEyeColor` / `yangEyeColor` | string | '#FFFFFF' / '#000000' | 阴眼 / 阳眼色 |
-| `strokeColor` | string | '#666666' | 边框色 |
-| `strokeWidth` | number | 2 | 边框宽 |
-| `rotationDirection` | 'clockwise' \| 'counterclockwise' | 'clockwise' | 旋转方向 |
-
-```vue
-<TaiChi :radius="80" :time="controlledTime" :rotation-direction="rotationDirection" />
-```
+天文位置计算集中在 `utils/celestial.ts`（基于 astronomy-engine），上层通过 [`SevenLuminariesRing`](#sevenluminariesring-七曜环)、[`SkyChart`](#skychart-天球投影环)、[`MoonPhaseRing`](#moonphasering-月相环)、[`BeidouCenter`](#beidoucenter-北斗圆心) 等专用环 / 圆心组件消费。详见 [Astronomy Engine 集成](/dev/astronomy-engine)。
 
 ---
 
@@ -893,7 +831,7 @@ const { controlledTime, hasUrlTime, clearUrlTime } = useUrlTime()
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `id` | string | 页面 slug，`'astronomy'` → `/O/compass/astronomy` |
+| `id` | string | 页面 slug，`'liushi-jiazi'` → `/O/compass/liushi-jiazi` |
 | `name` | string | 显示名（首页卡片标题） |
 | `description` | string | 首页卡片描述 |
 | `category` | string? | 分类（天文 / 干支历 / 易学……），用于首页分组或筛选 |
@@ -901,7 +839,6 @@ const { controlledTime, hasUrlTime, clearUrlTime } = useUrlTime()
 ```typescript
 // src/compasses/index.ts —— 纯元数据，无 component 字段
 export const compasses: CompassMeta[] = [
-  { id: 'astronomy',           name: '中华天文圆环',       description: '360 度刻度、二十四节气……',      category: '天文' },
   { id: 'liushi-jiazi',        name: '六十甲子六环',       description: '年月日时分秒六柱……',            category: '干支历' },
   { id: 'sixty-four-gua',      name: '先天六十四卦盘',     description: '伏羲/邵雍先天圆图……',           category: '易学' },
   { id: 'jingfang',            name: '京房六日七分纳甲盘',   description: '365 天刻度 + 60 卦六日七分……',  category: '易学' },
@@ -910,6 +847,8 @@ export const compasses: CompassMeta[] = [
   { id: 'guan-dou',            name: '观斗盘',             description: '圆心真实北斗 + 紫微垣 + 地平圈……', category: '天文' },
   { id: 'gua-relation',        name: '卦关系盘',           description: '京房八宫 64 卦飞伏方向……',      category: '易学' },
   { id: 'suzhou-stellar-map',  name: '苏州石刻天文图',     description: '南宋 1247 年苏州府学石刻复原……', category: '天文' },
+  { id: 'fengshui24',          name: '二十四山风水盘',     description: '手机端磁力计驱动的风水罗盘……', category: '风水' },
+  { id: 'qi-men-dun-jia',      name: '阴阳遁九局盘',       description: '奇门遁甲阴阳遁九局体系可视化……', category: '术数' },
 ]
 ```
 
@@ -924,15 +863,15 @@ export const compasses: CompassMeta[] = [
    ```md
    ---
    layout: compass
-   title: 中华天文圆环
+   title: 六十甲子六环
    ---
 
    <ClientOnly>
-     <AstronomyView />
+     <LiushiJiaziView />
    </ClientOnly>
    ```
 
-`docs/.vitepress/theme/index.ts` 的 `enhanceApp` 里把 9 个 View + `HomeView` 全局注册；Layout 分派根据 `frontmatter.layout === 'compass'` 切换到 `CompassLayout`（全屏、隐藏 nav/sidebar/aside）。
+`docs/.vitepress/theme/index.ts` 的 `enhanceApp` 里把所有 View + `HomeView` 全局注册；Layout 分派根据 `frontmatter.layout === 'compass'` 切换到 `CompassLayout`（全屏、隐藏 nav/sidebar/aside）。
 
 ### URL 时间参数
 
@@ -1000,7 +939,7 @@ const { controlledTime } = useUrlTime()
 
 ### 新增一个罗盘页面
 
-1. 新建 `src/views/XxxView.vue`，参考 `AstronomyView.vue` / `LiushiJiaziView.vue`。
+1. 新建 `src/views/XxxView.vue`，参考 `LiushiJiaziView.vue` / `PlanetMansionView.vue`。
 2. 在 `src/compasses/index.ts` 的 `compasses` 数组追加一项。
 3. 首页卡片与路由自动生成。
 

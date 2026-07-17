@@ -23,7 +23,7 @@ import CompassSidebar from '@/components/sidebar/CompassSidebar.vue'
  *   layout: compass
  *   ---
  *   <ClientOnly>
- *     <AstronomyView />
+ *     <LiushiJiaziView />
  *   </ClientOnly>
  */
 </script>

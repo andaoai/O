@@ -10,7 +10,7 @@ import { XIANTIAN_64_GUA, GUA_STEP, type XiantianGuaItem } from '@/data/sixtyFou
  *
  * 区别于通用文字环 CircleRing：每个卦格要画出「卦象」——Unicode 卦符 + 六爻横线
  * （阳爻整条、阴爻断为两段）+ 卦名小字。属于特殊视觉环，故独立成组件
- * （与 TaiChi / SolarEcliptic 同例），不污染 CircleRing。
+ * （与 BeidouCenter / SuzhouSkyMap 同例），不污染 CircleRing。
  *
  * 数据全部来自 @/data/sixtyFourGua 的 XIANTIAN_64_GUA：每卦的圆周位置 pos、
  * SVG 空间圆心角、六爻数组、卦符、卦名均已算好，本组件只负责把它们画到极坐标上。

@@ -20,7 +20,7 @@ import type { RingData } from '@/data/rings/types'
  *    · 其余山（level=0）: 仅显示传统配色，不高亮。
  *
  *  数据来源：data/rings/twentyFourMountains.ts
- *  使用场景：FengShui24View.vue（手机罗盘）、AstronomyView.vue（天文盘）
+ *  使用场景：FengShui24View.vue（手机罗盘）
  *
  *  ⚠️ 五层架构：Layer 3 Domain Component
  *     接受 MaybeRef<Date>（太阳位置用），FengShui24View 中可不传 time

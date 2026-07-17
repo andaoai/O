@@ -179,7 +179,7 @@ const outerRings = [
                2. 中环：MansionDegreeRing → ConstellationsRing → SevenLuminariesRing
                          SolarTermsSkyRing → SiXiangRing
                3. 内环：SkyChart (自动填充剩余空间)
-               4. 圆心：#center slot (HelioOrbits / TaiChi 等)
+               4. 圆心：#center slot (HelioOrbits 等)
 
              设计原则：
                - 所有圆环 → outerRings 数组，永不手动计算半径
@@ -200,7 +200,6 @@ const outerRings = [
               3. 自动适配，永不与外层环碰撞
 
               当前示例：HelioOrbits 已内置于 SkyChart
-              如需替换为太极：<TaiChi :radius="innerRadius * 0.75" :time="controlledTime" />
             -->
           </template>
         </RingStack>

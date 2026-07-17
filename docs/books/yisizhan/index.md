@@ -50,7 +50,6 @@ category: 天文占候
 
 《乙巳占》所涉天文体系与本站以下罗盘直接相关：
 
-- [中华天文圆环](/compass/astronomy) — 卷一天象总论的可视化对应
 - [七曜入宿天象盘](/compass/planet-mansion) — 卷四五星占的入宿体系
 - [京房六日七分纳甲盘](/compass/jingfang) — 与卷首所述历数体系互参
 

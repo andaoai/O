@@ -93,5 +93,5 @@ created: 2026-07-03
 </CompassFigure>
 
 ::: info 交互提示
-上述罗盘会在 md 页面加载后由客户端实时渲染。若切换到全屏交互模式，请前往 [中华天文圆环](/compass/astronomy)。
+上述罗盘会在 md 页面加载后由客户端实时渲染。若切换到全屏交互模式，请前往 [七曜入宿天象盘](/compass/planet-mansion)。
 :::

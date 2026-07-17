@@ -32,7 +32,7 @@ features:
     linkText: 观数
   - icon: 🧭
     title: 罗盘可视化
-    details: 中华天文圆环、京房卦气、六十甲子、七曜入宿……九个全屏交互式罗盘，任意时刻皆可对应。
+    details: 六十甲子六环、京房卦气、七曜入宿、苏州石刻天文图……全屏交互式罗盘，任意时刻皆可对应。
     link: /compass/
     linkText: 观察罗盘
   - icon: 🌌

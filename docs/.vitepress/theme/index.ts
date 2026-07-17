@@ -52,7 +52,6 @@ import ChongViz from '@/components/viz/ChongViz.vue'
 // 罗盘一览页（挂到 docs/compass/index.md，走默认主题 layout）
 import HomeView from '@/views/HomeView.vue'
 // 罗盘全屏 View（挂到 docs/compass/*.md，走 CompassLayout）
-import AstronomyView from '@/views/AstronomyView.vue'
 import LiushiJiaziView from '@/views/LiushiJiaziView.vue'
 import SixtyFourGuaView from '@/views/SixtyFourGuaView.vue'
 import JingFangView from '@/views/JingFangView.vue'
@@ -114,7 +113,6 @@ export default {
 
     // 罗盘 View 全局注册（供 docs/compass/*.md 直接调用）
     app.component('HomeView', HomeView)   // /compass/ 罗盘一览（page layout）
-    app.component('AstronomyView', AstronomyView)
     app.component('LiushiJiaziView', LiushiJiaziView)
     app.component('SixtyFourGuaView', SixtyFourGuaView)
     app.component('JingFangView', JingFangView)

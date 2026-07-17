@@ -21,8 +21,8 @@
  *  │    ↳ 复合环：SkyChart (自动填充剩余空间)                    │
  *  │                                                             │
  *  │  【圆心区】#center slot (BaseCenter 统一管理)               │
- *  │    ↳ 圆心组件：TaiChi / HelioOrbits / ...                  │
- *  │    ↳ 支持多层嵌套：SolarEcliptic 包裹 TaiChi               │
+ *  │    ↳ 圆心组件：BeidouCenter / HelioOrbits / ...            │
+ *  │    ↳ 支持多层嵌套：SuzhouSkyMap 叠 WorldMapCenter            │
  *  └─────────────────────────────────────────────────────────────┘
  *
  * 🔹 核心特性：
@@ -122,7 +122,7 @@ const innerRadius = computed(() => {
          ══════════════════════════════════════════
          使用方式：
          <template #center="{ innerRadius }">
-           <TaiChi :radius="innerRadius * 0.8" />
+           <BeidouCenter :radius="innerRadius * 0.8" :time="controlledTime" />
          </template>
 
          设计原则：

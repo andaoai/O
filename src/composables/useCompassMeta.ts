@@ -4,7 +4,7 @@ import { compasses, type CompassMeta } from '@/compasses'
 /**
  * 从当前 URL 匹配罗盘元数据
  *
- * 站点 base 是 /O/，罗盘路径形如 /O/compass/astronomy/。
+ * 站点 base 是 /O/，罗盘路径形如 /O/compass/liushi-jiazi/。
  * 提取 id 段并查 compasses[] 得到 CompassMeta。
  *
  * SSR 阶段返回 null，客户端 onMounted 后立即读一次并同步。
