@@ -16,8 +16,10 @@
 - **七曜入宿天象盘** — 盖天投影，赤道·黄道·白道三道斜交，日月五星实时入二十八宿。
 - **回归年闰月盘** — 365 天回归年对 360 度甲子纪年，节气节/中气区分，农历闰月与月相实时可视化。
 - **观斗盘** — 圆心真实北斗七星（岁差修正）+ 紫微垣东西两藩 + 勾陈一 + 地平圈（浏览器定位），外裹月建/时辰赤道环、月将/七曜/节气黄道环——把北斗的方位读成时辰、季节与年岁。
-- **卦关系盘** — 京房八宫六十四卦飞伏关系，外圈京房八宫环，中央 64 条有向箭头从各卦指向 8 个纯卦，呈放射状收敛。
+- **卦关系盘** — 六十四卦多种关系可视化：飞伏、互卦、对卦、综卦、交卦五种关系可切换，中央有向箭头动态渲染，与京房八宫/先天布局自由组合。
 - **苏州石刻天文图** — 南宋淳祐七年（1247）王致远勒石于苏州府学的天文图数字复原：三规圆 + 二十八宿不等宽径向辐条 + 中央拱极北斗，斗柄随本地恒星时旋转。
+- **二十四山风水盘** — 手机端风水罗盘，利用 DeviceOrientation 磁力计 + WMM 地磁模型自动校正磁偏角，整盘随手机旋转始终正确指向真北，同步显示太阳在廿四山中的位置。
+- **阴阳遁九局盘** — 奇门遁甲阴阳遁九局体系：阳遁 1→9 顺行、阴遁 9→1 逆行，24 节气 × 3 元 × 5 天嵌套结构，上中下三元、九局对应、超神/接气/正授状态、奇门置闰段、360 天甲子日刻度，冬至 0° 起序。
 
 访问：<https://andaoai.github.io/O/>
 
@@ -70,18 +72,17 @@ npm run preview     # 预览生产产物
 │
 └─ src/                           # 组件库（被 VitePress 通过 @ alias 消费）
    ├─ compasses/index.ts          # 罗盘注册表（元数据，驱动一览页）
-   ├─ views/                      # Layer 2 组合层：9 个罗盘 View + HomeView
+   ├─ views/                      # Layer 2 组合层：10 个罗盘 View + HomeView
    ├─ components/
    │  ├─ base/                    # Layer 4 基础渲染层（PolarCanvas/CircleRing/PointRing/RingStack/BaseCenter）
-   │  ├─ rings/                   # 领域圆环组件（27 个）+ 3 个 Data* 数据包装器
-   │  ├─ centers/                 # 领域圆心组件（6 个）
+   │  ├─ rings/                   # 领域圆环组件（35+ 个）+ 3 个 Data* 数据包装器
+   │  ├─ centers/                 # 领域圆心组件（7 个）
    │  ├─ sidebar/                 # 罗盘左侧嵌入式 Sidebar（时间/视口/View 专属工具位）
-   │  ├─ gua-relation/                   # 飞伏图盘专用（64 条飞伏箭头径向叠加）
    │  ├─ gua/                     # 单卦静态图（SingleGuaChart，供古籍笔记内嵌）
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
-   ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / …
-   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / guaInfo / beidou / ziwei / jianJiang / guaRelationArrows / …）
+   ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / usePhoneOrientation / useMagneticDeclination / useGuaRelationInteraction / …
+   └─ utils/                      # Layer 5 纯函数（celestial / geometry / liushiJiazi / najia / guaInfo / beidou / ziwei / jianJiang / guaRelations / qimenDunJia / …）
 ```
 
 ## 📚 深入了解
