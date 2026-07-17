@@ -28,6 +28,10 @@ export interface RingItemBase {
   label: string
   /** 自定义颜色（同时影响点和标签，缺省用 style 默认） */
   color?: string
+  /** 扇形背景色（可选，与 color 解耦；仅段环 CircleRing 使用）
+   *  存在时，扇形背景 + 高亮扇形均用 bgColor；文字仍用 color。
+   *  用于「高亮时背景色 vs 文字色不同」的对比态。 */
+  bgColor?: string
   /** 自定义字号 */
   fontSize?: number
   /** 高亮：呼吸发光 + 文字脉动 */

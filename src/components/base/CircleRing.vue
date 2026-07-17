@@ -267,13 +267,14 @@ const labels = computed(() =>
           扇形区域（背景）
           每个项目对应一个扇形
           用于提供视觉上的分区效果
+          bgColor 优先于 color（允许背景与文字色解耦）
         -->
         <g v-if="showSectors">
           <path
             v-for="sector in sectors"
             :key="sector.startAngle"
             :d="sector.path"
-            :fill="sector.item.color || '#ffffff'"
+            :fill="sector.item.bgColor || sector.item.color || '#ffffff'"
             opacity="0.3"
           />
         </g>
@@ -282,13 +283,14 @@ const labels = computed(() =>
           高亮扇形（呼吸背景）
           仅 highlight 标记的格，独立于 showSectors，做缓慢明暗脉动
           以可视化「当前时间点正落在此格」
+          bgColor 优先于 color（允许背景与文字色解耦）
         -->
         <path
           v-for="hs in highlightSectors"
           :key="`hl-${hs.startAngle}`"
           :class="levelOf(hs.item) >= 3 ? 'highlight-sector-strong' : 'highlight-sector'"
           :d="hs.path"
-          :fill="hs.item.color || '#ffffff'"
+          :fill="hs.item.bgColor || hs.item.color || '#ffffff'"
         />
 
         <!--
