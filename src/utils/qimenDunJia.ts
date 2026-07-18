@@ -197,16 +197,19 @@ export const YUN_NAMES: readonly string[] = [
 /* ═══════════════════════════════════════════════════════════════
    节气在 360 天环上的定位
    ─────────────────────────────────────────────────────────────
-   环 0° = 上元甲子日（每年不同）
-   环上格 i (0-359) = upperYuanDate + i 天
+   环 0° = 上元甲子日（跟六轮甲子环共享物理布局，冬至位置每年变）
 
-   一个 360 天窗口横跨 2 个公历年。要覆盖窗口内的所有节气，
-   需扫描 [upperYuan.year - 1, upperYuan.year, upperYuan.year + 1]
-   3 个公历年的节气表，把每一个落在 [upperYuan, upperYuan+360) 内的
-   节气日期换算为环上的整数位置。
+   🔑 节气年份 = 冬至年（不是公历年、也不是甲子年）
+   ─────────────────────────────────────────────────────────────
+   奇门以冬至为一岁之始。节气环显示的 24 节气取自
+   「≤ today 的最近冬至 W」 → 「下一冬至 W'」区间的一整年，
+   过冬至那一刻自动切到下一岁的 24 节气。
 
-   ⚠️ 幂等保证：由于 upperYuan 是甲子日、循环 360 天，环上格 i 与
-   公历日期一一对应；节气日期归一到 00:00 后取整日差 = 环上位置。
+   由于 upperYuanDate（甲子）由固定历元派生、冬至相对甲子每年
+   漂移约 5.25 天，冬至在环上的位置每年不同——因此节气环的
+   物理起点 0° 不动，但**节气整体每年绕环滑动**，冬至位置
+   随年推移。一岁 ~365 天 > 环 360 天，末尾几个节气会绕环
+   回到 0 附近，与下一岁冬至无缝相接。
    ═══════════════════════════════════════════════════════════════ */
 
 /** 节气在六运环上的定位（相对 upperYuanDate 的整日偏移） */
@@ -217,10 +220,41 @@ export interface QiMenSolarTerm {
   tymeIndex: number
   /** 是否为中气（偶数索引） */
   isMidTerm: boolean
-  /** 在 360 环上的位置（0-359 整数） */
+  /** 在 360 环上的位置（0-359 整数，已对 360 取模允许绕环） */
   dayInRing: number
   /** 节气所在的公历日期（当日 00:00） */
   date: Date
+  /**
+   * 是否为「下一岁冬至」的锚点标记
+   * ─────────────────────────────────────────────
+   * 一岁 ~365 天 > 环 360 天，下一冬至位置 = 当年冬至位置 + 5 mod 360，
+   * 恰好落在当年冬至段的第 5 天上。此标记帮助环组件区分渲染。
+   */
+  isNextWinter?: boolean
+}
+
+/**
+ * 查找 today 当天或之前最近的一个冬至日（首日）。
+ *
+ * ⚠️ 用 tyme4ts SolarDay 逐日回溯：
+ *   - SolarDay.getTerm() 返回该日所在的节气段
+ *   - 冬至段的 tyme4ts 索引 = 0
+ *   - 冬至首日检测：today 属于冬至段，且 yesterday 不属于冬至段
+ *   - 一岁 365 天内必含一个冬至，扫 366 天窗口足以命中
+ */
+export function findLastWinterSolstice(today: Date): Date {
+  let sd = SolarDay.fromYmd(today.getFullYear(), today.getMonth() + 1, today.getDate())
+  for (let offset = 0; offset > -366; offset--) {
+    if (sd.getTerm().getIndex() === 0) {
+      const prev = sd.next(-1)
+      if (prev.getTerm().getIndex() !== 0) {
+        return new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+      }
+    }
+    sd = sd.next(-1)
+  }
+  // 理论不可达（1 年内必含冬至）
+  return startOfDay(today)
 }
 
 /**
@@ -234,27 +268,89 @@ export interface QiMenSolarTerm {
  */
 export function computeQiMenSolarTerms(today: Date): QiMenSolarTerm[] {
   const upperYuan = findUpperYuanJiaziDay(today)
-  const upperYear = upperYuan.getFullYear()
-  const results: QiMenSolarTerm[] = []
-  const seen = new Set<number>() // dayInRing 去重（跨年时同一节气可能被两年扫到）
+  const winter = findLastWinterSolstice(today)
+  const startYear = winter.getFullYear()
 
-  for (const y of [upperYear - 1, upperYear, upperYear + 1]) {
+  const collected: {
+    name: string
+    tymeIndex: number
+    isMidTerm: boolean
+    date: Date
+    daysFromWinter: number
+  }[] = []
+
+  // 从冬至所在年开始扫描，最多 2 个公历年即可覆盖完整一岁 24 节气
+  for (const y of [startYear, startYear + 1]) {
     const positions = getSolarTermPositions(y)
     for (const pos of positions) {
       const date = dateFromDayOfYear(y, pos.dayOfYear)
-      const dayInRing = diffDays(date, upperYuan)
-      if (dayInRing < 0 || dayInRing >= CYCLE_DAYS) continue
-      if (seen.has(dayInRing)) continue
-      seen.add(dayInRing)
-      results.push({
+      const daysFromWinter = diffDays(date, winter)
+      if (daysFromWinter < 0 || daysFromWinter >= 365) continue
+      collected.push({
         name: pos.name,
         tymeIndex: pos.tymeIndex,
         isMidTerm: pos.isMidTerm,
-        dayInRing,
-        date
+        date,
+        daysFromWinter
       })
     }
+    if (collected.length >= 24) break
   }
-  results.sort((a, b) => a.dayInRing - b.dayInRing)
+
+  // 从冬至起严格向后排列一岁 24 节气
+  collected.sort((a, b) => a.daysFromWinter - b.daysFromWinter)
+  const yearTerms = collected.slice(0, 24)
+
+  // 每个节气换算为环上位置（相对 upperYuan，对 360 取模允许绕环）。
+  // 冬至的 dayInRing 每年不同，节气整体每年在环上滑动 ~5 天。
+  const results: QiMenSolarTerm[] = []
+  for (const t of yearTerms) {
+    const rawIdx = diffDays(t.date, upperYuan)
+    const dayInRing = ((rawIdx % CYCLE_DAYS) + CYCLE_DAYS) % CYCLE_DAYS
+    results.push({
+      name: t.name,
+      tymeIndex: t.tymeIndex,
+      isMidTerm: t.isMidTerm,
+      dayInRing,
+      date: t.date
+    })
+  }
+
+  // ⚠️ 附加：把「下一岁冬至」作为独立锚点也塞入结果集。
+  //    它在环上的位置 = 当年冬至位置 + 5（因为一岁 ~365 > 环 360 = wrap 5 天）。
+  //    可视化上落在当年冬至段的第 5 天，直观展示"环装不下一岁"。
+  const nextWinterDate = findNextWinterSolstice(winter)
+  if (nextWinterDate) {
+    const rawIdx = diffDays(nextWinterDate, upperYuan)
+    const dayInRing = ((rawIdx % CYCLE_DAYS) + CYCLE_DAYS) % CYCLE_DAYS
+    results.push({
+      name: '冬至',
+      tymeIndex: 0,
+      isMidTerm: true,
+      dayInRing,
+      date: nextWinterDate,
+      isNextWinter: true
+    })
+  }
+
   return results
+}
+
+/**
+ * 查找 fromWinter 之后最近的下一个冬至日（首日）。
+ * 逻辑对称于 findLastWinterSolstice，方向反过来遍历 SolarDay.next(+1)。
+ */
+export function findNextWinterSolstice(fromWinter: Date): Date | null {
+  // 从冬至次日开始向后扫，最多 366 天窗口
+  let sd = SolarDay.fromYmd(fromWinter.getFullYear(), fromWinter.getMonth() + 1, fromWinter.getDate()).next(1)
+  for (let offset = 0; offset < 366; offset++) {
+    if (sd.getTerm().getIndex() === 0) {
+      const prev = sd.next(-1)
+      if (prev.getTerm().getIndex() !== 0) {
+        return new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+      }
+    }
+    sd = sd.next(1)
+  }
+  return null
 }
