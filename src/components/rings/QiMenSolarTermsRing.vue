@@ -111,6 +111,14 @@ const ringData = computed<RingData>(() => {
 
   const currentSeg = segAssignment.get(todayInRing) ?? null
 
+  // 🔑 判定「本岁冬至的三局数（15 天）是否已走完」
+  //    yearTerms[0] 恒为本岁冬至（岁首）；其段占 [winterDayInRing, +15) 15 天
+  //    今日 offsetFromWinter ≥ 15 → 冬至上/中/下三元全部走完 → 首日格转为灰色
+  const winterInfo = yearTerms.find(t => t.name === '冬至')
+  const winterSegmentEnded = winterInfo
+    ? (((todayInRing - winterInfo.dayInRing) % 360 + 360) % 360) >= 15
+    : false
+
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {
     const startInfo = startIdxOf.get(i)             // 该格是否为某节气首日（含下一冬至）
@@ -126,35 +134,64 @@ const ringData = computed<RingData>(() => {
     let label = ''
     let highlightLevel: 0 | 1 | 2 | 3 = 0
 
+    // 🎯 "岁首冬至"金色只能有一个：
+    //   · 本岁冬至的三元 15 天尚未走完 → 本岁冬至=金 / 下一岁冬至=紫
+    //   · 本岁冬至的三元 15 天已走完   → 本岁冬至=暗紫（保留"冬至"字）/ 下一岁冬至=金
+    const nextWinterIsGold = winterSegmentEnded
+    const thisWinterIsGold = !winterSegmentEnded
+
     if (isToday) {
-      // 今日格：金底黑字（若今日也是下一冬至，覆盖为紫金相融）
-      bgColor = startInfo?.isNextWinter ? '#8E44AD' : '#FFD700'
-      color = startInfo?.isNextWinter ? '#FFD700' : '#1a1a1a'
+      // 今日格：金/紫按当前岁首归属决定
+      if (startInfo?.isNextWinter) {
+        bgColor = nextWinterIsGold ? '#FFD700' : '#8E44AD'
+        color = nextWinterIsGold ? '#1a1a1a' : '#FFD700'
+      } else if (startInfo?.isWinter && !thisWinterIsGold) {
+        // 本岁冬至已让位、今日恰是本岁冬至（几乎只在冬至那天成立，不会走此分支）
+        bgColor = '#5B2C6F'
+        color = '#F5D0FA'
+      } else {
+        bgColor = '#FFD700'
+        color = '#1a1a1a'
+      }
       fontSize = 8
       highlightLevel = 3
       label = startInfo?.name ?? ''
     } else if (startInfo?.isNextWinter) {
-      // ⭐ 下一岁冬至：紫色标记（视觉最醒目，仅次于今日）
-      bgColor = '#8E44AD'                            // 紫色底
-      color = '#F5D0FA'                              // 浅紫字
+      // 下一岁冬至：默认紫，本岁三元走完后升格为金
+      if (nextWinterIsGold) {
+        bgColor = '#8B7500'                            // 金底
+        color = '#FFD700'
+      } else {
+        bgColor = '#8E44AD'                            // 紫底
+        color = '#F5D0FA'
+      }
       fontSize = 7
       highlightLevel = 3
       label = '冬至'
     } else if (isTermDay) {
       const info = startInfo!
-      bgColor = info.isWinter
-        ? '#8B7500'                                  // 本岁冬至 · 深金
-        : info.isMidTerm
-          ? '#1F4E79'                                // 中气 · 深蓝
-          : '#1F5F3A'                                // 节 · 深绿
-      color = info.isWinter
-        ? '#FFD700'
-        : info.isMidTerm
-          ? '#5DADE2'
-          : '#58D68D'
-      fontSize = 7
-      highlightLevel = 2
-      label = info.name
+      // 本岁冬至：三元走完后降级为暗紫，保留"冬至"字
+      if (info.isWinter && !info.isNextWinter && !thisWinterIsGold) {
+        bgColor = '#5B2C6F'                            // 暗紫底（比下一岁冬至的 #8E44AD 更暗）
+        color = '#D7BDE2'                              // 淡紫字
+        fontSize = 7
+        highlightLevel = 1
+        label = '冬至'
+      } else {
+        bgColor = info.isWinter
+          ? '#8B7500'                                  // 本岁冬至 · 深金
+          : info.isMidTerm
+            ? '#1F4E79'                                // 中气 · 深蓝
+            : '#1F5F3A'                                // 节 · 深绿
+        color = info.isWinter
+          ? '#FFD700'
+          : info.isMidTerm
+            ? '#5DADE2'
+            : '#58D68D'
+        fontSize = 7
+        highlightLevel = 2
+        label = info.name
+      }
     } else if (isCurrentSegDay) {
       bgColor = '#2a2a2a'
       color = '#555555'
