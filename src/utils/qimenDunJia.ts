@@ -1,607 +1,260 @@
 /**
- * 奇门遁甲阴阳遁九局 —— 纯函数工具层（Layer 5）
+ * 奇门遁甲 · 六轮甲子（六运）核心算法
  *
  * ═══════════════════════════════════════════════════════════════
- *  茅山道人排局规则（阴阳遁 + 三元 + 超神接气）：
- *   - 冬至→夏至前 12 节气 = 阳遁（局数顺行 1→9）
- *   - 夏至→冬至前 12 节气 = 阴遁（局数逆行 9→1）
- *   - 每节气三元：上元→中元→下元，各 5 天（60 时辰）
- *   - 符头 = 甲/己日；符头正对节气首日 → 正授
- *   - 符头早于节气首日 (0-8 天) → 超神；晚于 → 接气
- *   - 累积超神 ≥ 9 天 → 该芒种/大雪后置「闰奇门」15° 段
+ *  奇门排局的传统起点是「冬至上元甲子」——冬至节气前后最近的甲子日。
+ *  从这个甲子日起，60 甲子 × 6 轮 = 360 天完整循环。
  *
- *  一年 360 天（60 甲子 × 6 元 × 5 天/元 × 3 元/节气 × 24 节气）
- *  与回归年 365.2422 天差 5.24 天/年，即「奇门置闰」的天文根源。
+ *  六轮甲子在环上恰好平分为 6 段 60 天 = 60° 每段，
+ *  我们称这 6 段为「一运 / 二运 / 三运 / 四运 / 五运 / 六运」。
  *
- *  角度基准：**冬至 = 0°**（与京房卦气盘 LiuRiQiFenScaleRing 同步）
- *
- *  与 chineseCalendar.ts 差异：本模块用「冬至起序」（tyme4ts 原生），
- *  而 chineseCalendar 用「立春起序」（相差索引 3）。
+ *  由于上元甲子日相对冬至的偏移每年不同（超神最多提前 9 天、
+ *  接气最多滞后 15 天、正授差 1 天以内），所以「今天所在的运」
+ *  在不同年份可能落在不同数值上——这正是奇门置闰的天文根源。
  * ═══════════════════════════════════════════════════════════════
  */
-
 import { SolarDay } from 'tyme4ts'
-import { getSolarTermPositions, getDayOfYear, isGregorianLeapYear } from './chineseCalendar'
-import { getJiaziIndices, ganzhiName } from './liushiJiazi'
+import { getJiaziIndices } from './liushiJiazi'
+import { getSolarTermPositions, dateFromDayOfYear } from './chineseCalendar'
+import { ganzhiName } from './constants/ganzhi'
 
-// ══════════════════════════════════════════════════════════════
-//  常量
-// ══════════════════════════════════════════════════════════════
+/** 一运 / 二运 / … / 六运 */
+export type YunIndex = 1 | 2 | 3 | 4 | 5 | 6
 
-/** 24 节气，冬至=0 起序（tyme4ts 原生顺序） */
-export const SOLAR_TERMS_FROM_DONGZHI: readonly string[] = [
-  '冬至', '小寒', '大寒', '立春', '雨水', '惊蛰',
-  '春分', '清明', '谷雨', '立夏', '小满', '芒种',
-  '夏至', '小暑', '大暑', '立秋', '处暑', '白露',
-  '秋分', '寒露', '霜降', '立冬', '小雪', '大雪'
-] as const
-
-/** 阳遁 12 节气三元局数 [上元, 中元, 下元] */
-export const YANG_DUN_MAP: Record<string, readonly [number, number, number]> = {
-  冬至: [1, 7, 4], 小寒: [2, 8, 5], 大寒: [3, 9, 6],
-  立春: [8, 5, 2], 雨水: [9, 6, 3], 惊蛰: [1, 7, 4],
-  春分: [3, 9, 6], 清明: [4, 1, 7], 谷雨: [5, 2, 8],
-  立夏: [4, 1, 7], 小满: [5, 2, 8], 芒种: [6, 3, 9]
+/** 六运汇总信息 */
+export interface SixYunInfo {
+  /** 上元甲子日（环 0° 对应的日期，00:00 时刻） */
+  upperYuanDate: Date
+  /** today 所在运的甲子日（= 上元甲子日 + (currentYunIndex - 1) × 60 天） */
+  currentJiaziDate: Date
+  /** 当前运号：1-6 */
+  currentYunIndex: YunIndex
+  /** today 在 360 环上的格 index（0-359） */
+  dayInRing: number
+  /** today 距离所在运甲子日的天数（0-59） */
+  daysSinceCurrentJiazi: number
+  /** today 距离上元甲子日的天数（0-359） */
+  daysSinceUpperYuan: number
+  /** 上元甲子日的六十甲子干支名（永远是「甲子」，此字段用于对称展示） */
+  upperYuanGanzhi: string
+  /** 当前运甲子日的六十甲子干支名（永远是「甲子」） */
+  currentJiaziGanzhi: string
 }
 
-/** 阴遁 12 节气三元局数 [上元, 中元, 下元] */
-export const YIN_DUN_MAP: Record<string, readonly [number, number, number]> = {
-  夏至: [9, 3, 6], 小暑: [8, 2, 5], 大暑: [7, 1, 4],
-  立秋: [2, 5, 8], 处暑: [1, 4, 7], 白露: [9, 3, 6],
-  秋分: [7, 1, 4], 寒露: [6, 9, 3], 霜降: [5, 8, 2],
-  立冬: [6, 9, 3], 小雪: [5, 8, 2], 大雪: [4, 7, 1]
-}
-
-/** 九星紫白配色（1白/2黑/3碧/4绿/5黄/6白/7赤/8白/9紫） */
-export const JIU_XING_COLORS: Record<number, string> = {
-  1: '#F5F5F5', 2: '#2C3E50', 3: '#16A085',
-  4: '#27AE60', 5: '#F1C40F', 6: '#ECF0F1',
-  7: '#C0392B', 8: '#FFFFFF', 9: '#8E44AD'
-}
-
-/** 九星名 */
-export const JIU_XING_NAMES: readonly string[] = [
-  '', '一白', '二黑', '三碧', '四绿', '五黄', '六白', '七赤', '八白', '九紫'
-] as const
-
-/** 局数汉字（一~九） */
-export const JU_HANZI: readonly string[] = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九'] as const
-
-/** 后天八卦方位（冬至=坎北=0° 起，顺时针） */
-export const HOU_TIAN_BAGUA: readonly { name: string; symbol: string; startAngle: number }[] = [
-  { name: '坎', symbol: '☵', startAngle: 0 },     // 北，冬 → 冬至/小寒/大寒
-  { name: '艮', symbol: '☶', startAngle: 45 },    // 东北，冬春过渡 → 立春/雨水/惊蛰
-  { name: '震', symbol: '☳', startAngle: 90 },    // 东，春 → 春分/清明/谷雨
-  { name: '巽', symbol: '☴', startAngle: 135 },   // 东南 → 立夏/小满/芒种
-  { name: '离', symbol: '☲', startAngle: 180 },   // 南，夏 → 夏至/小暑/大暑
-  { name: '坤', symbol: '☷', startAngle: 225 },   // 西南 → 立秋/处暑/白露
-  { name: '兑', symbol: '☱', startAngle: 270 },   // 西，秋 → 秋分/寒露/霜降
-  { name: '乾', symbol: '☰', startAngle: 315 }    // 西北 → 立冬/小雪/大雪
-] as const
-
-/** 四象（冬=坎/艮，春=震/巽，夏=离/坤，秋=兑/乾） */
-export const FOUR_SYMBOLS: readonly { name: string; label: string; color: string; startAngle: number }[] = [
-  { name: 'winter', label: '冬', color: '#3498DB', startAngle: 0 },
-  { name: 'spring', label: '春', color: '#2ECC71', startAngle: 90 },
-  { name: 'summer', label: '夏', color: '#E74C3C', startAngle: 180 },
-  { name: 'autumn', label: '秋', color: '#F1C40F', startAngle: 270 }
-] as const
-
-/** 阴阳两遁 */
-export const YIN_YANG_DUN: readonly { name: string; label: string; color: string; startAngle: number }[] = [
-  { name: 'yang', label: '阳遁', color: '#E74C3C', startAngle: 0 },   // 冬至→夏至前 0-180°
-  { name: 'yin', label: '阴遁', color: '#3498DB', startAngle: 180 }   // 夏至→冬至前 180-360°
-] as const
-
-// ══════════════════════════════════════════════════════════════
-//  节气 / 遁 / 局 派生函数
-// ══════════════════════════════════════════════════════════════
-
-/**
- * 当前节气索引（冬至=0 起序）。tyme4ts 原生返回冬至=0。
- * 失败兜底：按 dayOfYear 粗估（每 15.22 天一个节气）。
- */
-export function getSolarTermIndex(date: Date): number {
-  try {
-    const sd = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
-    return sd.getTerm().getIndex()
-  } catch {
-    // fallback: 冬至约在 12/22，dayOfYear≈356；用相对冬至的偏移粗估
-    const doy = getDayOfYear(date)
-    const yearLen = isGregorianLeapYear(date.getFullYear()) ? 366 : 365
-    const winterDoy = 356
-    const offset = ((doy - winterDoy) % yearLen + yearLen) % yearLen
-    return Math.floor(offset / (yearLen / 24)) % 24
-  }
-}
-
-/** 当前节气名 */
-export function getSolarTermName(date: Date): string {
-  return SOLAR_TERMS_FROM_DONGZHI[getSolarTermIndex(date)] ?? '冬至'
-}
-
-/** 是否阳遁（冬至→芒种，即 termIndex 0-11） */
-export function isYangDun(termIndex: number): boolean {
-  return termIndex >= 0 && termIndex < 12
-}
-
-/** 阴阳遁标签 */
-export function getYinYangDunLabel(date: Date): '阳遁' | '阴遁' {
-  return isYangDun(getSolarTermIndex(date)) ? '阳遁' : '阴遁'
-}
-
-/** 四象索引（0=冬 1=春 2=夏 3=秋，与 FOUR_SYMBOLS 一致） */
-export function getFourSymbolIndex(termIndex: number): number {
-  // termIndex 0-5 = 冬(坎艮), 6-11 = 春夏交 → 需按 90° 划：
-  //   冬(坎/艮)  = 0-5   → 0
-  //   春(震/巽)  = 6-11  → 1
-  //   夏(离/坤)  = 12-17 → 2
-  //   秋(兑/乾)  = 18-23 → 3
-  return Math.floor(termIndex / 6)
-}
-
-/** 八卦索引（0-7，与 HOU_TIAN_BAGUA 一致） */
-export function getBaguaIndex(termIndex: number): number {
-  return Math.floor(termIndex / 3)
-}
-
-// ══════════════════════════════════════════════════════════════
-//  三元 / 局数 / 超神接气
-// ══════════════════════════════════════════════════════════════
-
-/** 从某天前后向前搜索最近的甲/己日（日干支索引 %10 === 0 或 5），返回搜到的 SolarDay */
-function findNearestSymbolDayBefore(date: Date): Date {
-  // 甲/己日的日干序号：甲=0, 己=5
-  for (let offset = 0; offset < 15; offset++) {
-    const d = new Date(date.getTime() - offset * 86400000)
-    const dayIdx = getJiaziIndices(d).day
-    if (dayIdx % 10 === 0 || dayIdx % 10 === 5) return d
-  }
-  return date  // 兜底：15 天内必命中，理论不会到这
-}
-
-/** 向前 60 天内搜索最近的甲子日（含当日）；60 天内必命中 */
-function findJiaziOnOrBefore(center: Date): Date {
-  for (let offset = 0; offset < 60; offset++) {
-    const d = new Date(center.getTime() - offset * 86400000)
-    if (getJiaziIndices(d).day === 0) return d
-  }
-  return center
-}
-
-/** 取某年冬至公历日（找不到返回 null） */
-function getWinterDateOfYear(year: number): Date | null {
-  const winter = getSolarTermPositions(year).find(p => p.name === '冬至')
-  if (!winter) return null
-  const d = new Date(year, 0, 1)
-  d.setDate(winter.dayOfYear)
-  return d
+/** 将日期归一到当日 00:00:00.000 */
+function startOfDay(d: Date): Date {
+  const r = new Date(d.getTime())
+  r.setHours(0, 0, 0, 0)
+  return r
 }
 
 /**
- * 上元甲子锚点（冬至周期 360 日环的起点） + 对应冬至日。
+ * 两个日期的整日差（正值 = later - earlier）
  *
- * 传统奇门以「冬至日前（含当日）最近的甲子日」为排局锚点。从下一年冬至
- * 向前扫 4 年，取第一个 ≤ today 的上元甲子。当 today 距上元甲子 ≥ 360 天
- * 时落在「闰奇门」期（冬至→冬至间隔 420 天），锚点每 60 天前推一次进入
- * 「第 7 轮甲子」，视觉上保持连续，不跳回第 1 轮。
- *
- * 单次扫描同时返回 upperYuan 与对应冬至日，供三个导出函数复用。
+ * ⚠️ 用 tyme4ts SolarDay.subtract 而不是 (later.ms - earlier.ms) / 86400000。
+ *    直接毫秒相除在跨 1900~1928 中国时区标准化（LMT → CST，跳 344 秒）
+ *    的场景下有 1 天误差风险。SolarDay.subtract 走的是儒略日整数运算，
+ *    永远精确。
  */
-function resolveUpperYuanAnchor(today: Date): { upperYuan: Date; winter: Date } {
-  const year = today.getFullYear()
-  for (const y of [year + 1, year, year - 1, year - 2]) {
-    const winter = getWinterDateOfYear(y)
-    if (!winter) continue
-    let upperYuan = findJiaziOnOrBefore(winter)
-    if (upperYuan.getTime() > today.getTime()) continue
-    let daysSince = Math.round((today.getTime() - upperYuan.getTime()) / 86400000)
-    while (daysSince >= 360) {
-      upperYuan = new Date(
-        upperYuan.getFullYear(),
-        upperYuan.getMonth(),
-        upperYuan.getDate() + 60
-      )
-      daysSince -= 60
-    }
-    return { upperYuan, winter }
+function diffDays(later: Date, earlier: Date): number {
+  const a = SolarDay.fromYmd(later.getFullYear(), later.getMonth() + 1, later.getDate())
+  const b = SolarDay.fromYmd(earlier.getFullYear(), earlier.getMonth() + 1, earlier.getDate())
+  return a.subtract(b)
+}
+
+/**
+ * 查找 anchor 当天或之前最近的一个甲子日（干支序号 = 0）。
+ *
+ * ⚠️ 用 tyme4ts SolarDay.next(-1) 逐日回溯（而非 Date - 86400000）。
+ *    这一点至关重要：JS Date 累加会在 1900~1928 年间中国时区标准化
+ *    （LMT UTC+8:05:43 → CST UTC+8）时吞掉约 5 分 43 秒，
+ *    导致跨阈值的那一天被 tyme4ts 判到前一日 → 干支跳格丢失。
+ *
+ * 60 甲子每 60 天循环 → 60 天窗口内必然含一个甲子日，返回值必然是甲子。
+ */
+export function findLastJiaziOnOrBefore(anchor: Date): Date {
+  let sd = SolarDay.fromYmd(anchor.getFullYear(), anchor.getMonth() + 1, anchor.getDate())
+  for (let offset = 0; offset > -60; offset--) {
+    const y = sd.getYear(), m = sd.getMonth(), d = sd.getDay()
+    const jsDate = new Date(y, m - 1, d)
+    if (getJiaziIndices(jsDate).day === 0) return jsDate
+    sd = sd.next(-1)
   }
-  return { upperYuan: findJiaziOnOrBefore(today), winter: today }
+  // 理论不可达
+  return startOfDay(anchor)
 }
 
 /**
- * 上元甲子日 = 冬至日前（含当日）最近的甲子日，传统奇门排局锚点。
- * 与 QiMenLiuJiaziRing 的环起点同为此日期，保证「元」严格对齐甲子日。
- * 详见 {@link resolveUpperYuanAnchor}。
- */
-export function getUpperYuanJiaziDay(today: Date): Date {
-  return resolveUpperYuanAnchor(today).upperYuan
-}
-
-/** 该冬至周期对应的冬至日（配合 upperYuan 定位「超神天数」） */
-export function getUpperYuanWinterDate(today: Date): Date {
-  return resolveUpperYuanAnchor(today).winter
-}
-
-/** 计算两 Date 之间的整数天数差（正数=b 晚于 a） */
-function daysBetween(a: Date, b: Date): number {
-  const a0 = new Date(a.getFullYear(), a.getMonth(), a.getDate()).getTime()
-  const b0 = new Date(b.getFullYear(), b.getMonth(), b.getDate()).getTime()
-  return Math.round((b0 - a0) / 86400000)
-}
-
-/** 从上元甲子日起的天数（0-359）；锚点已处理闰奇门前推，此处无需 mod */
-export function getDaysSinceUpperYuan(today: Date): number {
-  const d = daysBetween(getUpperYuanJiaziDay(today), today)
-  return Math.max(0, Math.min(359, d))
-}
-
-/**
- * 当前甲子轮次信息：一个冬至周期 = 60 甲子 × 6 轮 = 360 天，
- * 冬至日相对上元甲子的偏移（0-59）即该年「超神天数」。
+ * 历元锚点：**1900 年冬至** 前最近的一个甲子日（≤ 冬至）。
  *
- * @returns
- *   - roundIndex:   0-5，第几轮甲子（从 0 起计）
- *   - roundLabel:   「第 N 轮甲子」（N: 一二三四五六）
- *   - dayInRound:   1-60，本轮内的第几日
- *   - winterOffset: 冬至日相对上元甲子的天数（0-59，该年超神天数）
+ * ═══════════════════════════════════════════════════════════════
+ *  🔑 为什么要用「固定历元」而不是「每年重新锚定」
+ *  ─────────────────────────────────────────────────────────────
+ *  旧版每年冬至处强制重设 上元甲子 → 冬至永远停在一运附近，
+ *  违反奇门时空的真实运转规律。
+ *
+ *  ✅ 新模型：从一个历元甲子（1900 年冬至前甲子）开始，
+ *     360 天为一个完整循环，冬至相对于环上位置每年自然
+ *     漂移 +5.25 天（一年 365.25 天 - 一个循环 360 天）：
+ *       · 累积 ~12 年 ≈ 63 天 ≈ 跨过一个「运」
+ *       · 累积 ~68 年 ≈ 360 天 ≈ 冬至穿越 一→二→…→六 一整轮
+ *
+ *  由于 360 % 60 == 0，EPOCH + N × 360 天永远是甲子日，
+ *  确保上元甲子始终有效、环体永不旋转。
+ * ═══════════════════════════════════════════════════════════════
  */
-export function getJiaziRoundInfo(today: Date): {
-  roundIndex: number
-  roundLabel: string
-  dayInRound: number
-  winterOffset: number
-} {
-  const { upperYuan, winter } = resolveUpperYuanAnchor(today)
-  const days = Math.max(0, Math.min(359, daysBetween(upperYuan, today)))
-  const roundIndex = Math.floor(days / 60)
-  const dayInRound = (days % 60) + 1
-  const HANZI = ['一', '二', '三', '四', '五', '六']
+const HISTORICAL_ANCHOR_DATE = new Date(1900, 11, 22) // 1900-12-22 前后的冬至
+const EPOCH_UPPER_YUAN = findLastJiaziOnOrBefore(HISTORICAL_ANCHOR_DATE)
+
+/** 每一循环的天数（60 甲子 × 6 轮） */
+const CYCLE_DAYS = 360
+
+/**
+ * 找出「上元甲子日」：以固定历元 1900 冬至前甲子日为基准，
+ * 向前推 N 个 360 天循环，使 today 落在 [0, 360) 天区间内。
+ *
+ * ⚠️ 使用 tyme4ts SolarDay.next(n) 而不是 Date + n*86400000：
+ *    避开 1900~1928 中国时区标准化的时刻偏移，保证任何跨年、
+ *    跨时区历史点都不会丢失一日。
+ */
+export function findUpperYuanJiaziDay(today: Date): Date {
+  const daysSinceEpoch = diffDays(today, EPOCH_UPPER_YUAN)
+  const cycleN = Math.floor(daysSinceEpoch / CYCLE_DAYS)
+  const epochSD = SolarDay.fromYmd(
+    EPOCH_UPPER_YUAN.getFullYear(),
+    EPOCH_UPPER_YUAN.getMonth() + 1,
+    EPOCH_UPPER_YUAN.getDate()
+  )
+  const target = epochSD.next(cycleN * CYCLE_DAYS)
+  return new Date(target.getYear(), target.getMonth() - 1, target.getDay())
+}
+
+/** 由 upperYuan 派生环上第 i 天（i ∈ [0, 360)）的 Date，走 SolarDay.next(i) 抗时区。 */
+export function dateOfRingIndex(upperYuan: Date, i: number): Date {
+  const sd = SolarDay
+    .fromYmd(upperYuan.getFullYear(), upperYuan.getMonth() + 1, upperYuan.getDate())
+    .next(i)
+  return new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+}
+
+/**
+ * 已知 upperYuanDate 是甲子日（index = 0）→ 环上第 i 天的干支序号恒等于
+ * `i % 60`。这是**纯数学恒等**，不再逐日反查 tyme4ts——
+ * 从根源消除"癸亥被跳过"这类 Date 累加丢日 bug。
+ */
+export function jiaziIndexAt(i: number): number {
+  return ((i % 60) + 60) % 60
+}
+
+/**
+ * @deprecated 保留以兼容旧引用，内部一律走 findLastJiaziOnOrBefore。
+ *             ±30 天窗口的近搜索已知会遗漏 32±5 天偏移的甲子日，勿用于新代码。
+ */
+export function findNearestJiaziDay(center: Date): Date {
+  return findLastJiaziOnOrBefore(center)
+}
+
+/** 计算 today 的六运汇总信息 */
+export function computeSixYun(date: Date): SixYunInfo {
+  const upperYuanDate = findUpperYuanJiaziDay(date)
+  const daysSinceUpperYuan = diffDays(date, upperYuanDate)
+  const clamped = Math.max(0, Math.min(359, daysSinceUpperYuan))
+  const yunIdx = (Math.floor(clamped / 60) + 1) as YunIndex
+  const daysSinceCurrentJiazi = clamped % 60
+  const currentJiaziDate = new Date(
+    upperYuanDate.getTime() + (yunIdx - 1) * 60 * 86400000
+  )
   return {
-    roundIndex,
-    roundLabel: `第${HANZI[roundIndex] ?? '一'}轮甲子`,
-    dayInRound,
-    winterOffset: Math.floor((winter.getTime() - upperYuan.getTime()) / 86400000)
+    upperYuanDate,
+    currentJiaziDate,
+    currentYunIndex: yunIdx,
+    dayInRing: clamped,
+    daysSinceCurrentJiazi,
+    daysSinceUpperYuan: clamped,
+    upperYuanGanzhi: ganzhiName(0),
+    currentJiaziGanzhi: ganzhiName(0)
   }
 }
 
-/** 当前元序号（0-71）：从上元甲子日起每 5 天为一元 */
-export function getElementIndex(today: Date): number {
-  return Math.floor(getDaysSinceUpperYuan(today) / 5)
-}
-
 /**
- * 阴阳遁 24 节气 × 3 元的局数总表（72 元，按元序循环）
- * 起点：冬至上元 → 冬至中元 → 冬至下元 → 小寒上元 → ... → 芒种下元 → 夏至上元 → ... → 大雪下元
- * 每元 5 天，与 Ring 1 甲子日环的 5 格严格对齐。
+ * 六运色板（一运深 → 六运浅），暗示「一阳来复」的时间流。
+ * 与 QiMenLiuJiaziRing 的 ROUND_COLORS 一一对应。
  */
-export const BUREAU_BY_ELEMENT: readonly number[] = (() => {
-  const arr: number[] = []
-  for (let t = 0; t < 24; t++) {
-    const termName = SOLAR_TERMS_FROM_DONGZHI[t]!
-    const map = isYangDun(t) ? YANG_DUN_MAP : YIN_DUN_MAP
-    const triple = map[termName]
-    if (triple) {
-      arr.push(triple[0], triple[1], triple[2])
-    } else {
-      arr.push(1, 1, 1)
-    }
-  }
-  return arr
-})()
+export const YUN_COLORS: readonly string[] = [
+  '#3498DB', // 一运 · 冬（水青）
+  '#2ECC71', // 二运 · 春（木绿）
+  '#F1C40F', // 三运 · 夏（土黄）
+  '#E67E22', // 四运 · 夏末（火橙）
+  '#E74C3C', // 五运 · 秋（金红）
+  '#8E44AD'  // 六运 · 冬前（水紫）
+] as const
 
-/** 元索引 → 局数（1-9） */
-export function getBureauFromElement(elementIdx: number): number {
-  return BUREAU_BY_ELEMENT[elementIdx % 72] ?? 1
-}
+/** 六运名称 */
+export const YUN_NAMES: readonly string[] = [
+  '一运', '二运', '三运', '四运', '五运', '六运'
+] as const
 
-/** 元索引 → 所属节气索引（冬至=0） */
-export function getTermIndexFromElement(elementIdx: number): number {
-  return Math.floor((elementIdx % 72) / 3)
-}
+/* ═══════════════════════════════════════════════════════════════
+   节气在 360 天环上的定位
+   ─────────────────────────────────────────────────────────────
+   环 0° = 上元甲子日（每年不同）
+   环上格 i (0-359) = upperYuanDate + i 天
 
-/** 元索引 → 三元位置（0=上 1=中 2=下） */
-export function getYuanFromElement(elementIdx: number): 0 | 1 | 2 {
-  return ((elementIdx % 72) % 3) as 0 | 1 | 2
-}
+   一个 360 天窗口横跨 2 个公历年。要覆盖窗口内的所有节气，
+   需扫描 [upperYuan.year - 1, upperYuan.year, upperYuan.year + 1]
+   3 个公历年的节气表，把每一个落在 [upperYuan, upperYuan+360) 内的
+   节气日期换算为环上的整数位置。
 
-/**
- * 24 节气在「上元甲子日 = 0°」坐标系下的角度位置。
- *
- * 每个节气交节日 → 距上元甲子日的天数 → 对应角度（1° = 1 天）
- * 用于让节气环、三元环、局数环、超神接气环全部与 Ring 1 甲子日环
- * 精确对齐到同一坐标系。
- *
- * 节气段边界与"元 5° 段边界"存在的偏差 = 超神/接气天数（可视化天文错位）。
- *
- * @returns 24 个节气的角度（度），冬至可能不在 0°（在冬至最近的甲子日为 0°）
- */
-export function getSolarTermAnglesFromUpperYuan(today: Date): {
+   ⚠️ 幂等保证：由于 upperYuan 是甲子日、循环 360 天，环上格 i 与
+   公历日期一一对应；节气日期归一到 00:00 后取整日差 = 环上位置。
+   ═══════════════════════════════════════════════════════════════ */
+
+/** 节气在六运环上的定位（相对 upperYuanDate 的整日偏移） */
+export interface QiMenSolarTerm {
+  /** 节气名称（立春/雨水/…） */
   name: string
-  termIndex: number
-  angle: number  // 0-360
-}[] {
-  const upperYuan = getUpperYuanJiaziDay(today)
-  const results: { name: string; termIndex: number; angle: number }[] = []
+  /** tyme4ts 节气索引（冬至=0） */
+  tymeIndex: number
+  /** 是否为中气（偶数索引） */
+  isMidTerm: boolean
+  /** 在 360 环上的位置（0-359 整数） */
+  dayInRing: number
+  /** 节气所在的公历日期（当日 00:00） */
+  date: Date
+}
 
-  // 从上元甲子日起，扫描 24 个节气
-  const year = upperYuan.getFullYear()
-  for (const y of [year, year + 1]) {
+/**
+ * 计算当前 360-天窗口内所有节气在环上的位置。
+ *
+ * @param today 当前时间；实际以 findUpperYuanJiaziDay(today) 派生的
+ *              360 天窗口为准
+ * @returns 落在 [upperYuan, upperYuan+360) 内的节气列表，
+ *          按 dayInRing 升序排序（typically 24 个，跨年可能 25 个，
+ *          在此裁剪到严格落在窗口内的）
+ */
+export function computeQiMenSolarTerms(today: Date): QiMenSolarTerm[] {
+  const upperYuan = findUpperYuanJiaziDay(today)
+  const upperYear = upperYuan.getFullYear()
+  const results: QiMenSolarTerm[] = []
+  const seen = new Set<number>() // dayInRing 去重（跨年时同一节气可能被两年扫到）
+
+  for (const y of [upperYear - 1, upperYear, upperYear + 1]) {
     const positions = getSolarTermPositions(y)
     for (const pos of positions) {
-      const termDate = new Date(y, 0, 1)
-      termDate.setDate(pos.dayOfYear)
-      const daysDiff = Math.floor((termDate.getTime() - upperYuan.getTime()) / 86400000)
-      if (daysDiff >= 0 && daysDiff < 360) {
-        const termIdx = SOLAR_TERMS_FROM_DONGZHI.indexOf(pos.name)
-        if (termIdx >= 0) {
-          results.push({
-            name: pos.name,
-            termIndex: termIdx,
-            angle: daysDiff  // 1 天 = 1°
-          })
-        }
-      }
+      const date = dateFromDayOfYear(y, pos.dayOfYear)
+      const dayInRing = diffDays(date, upperYuan)
+      if (dayInRing < 0 || dayInRing >= CYCLE_DAYS) continue
+      if (seen.has(dayInRing)) continue
+      seen.add(dayInRing)
+      results.push({
+        name: pos.name,
+        tymeIndex: pos.tymeIndex,
+        isMidTerm: pos.isMidTerm,
+        dayInRing,
+        date
+      })
     }
   }
-  // 去重（跨年可能重复取），按 angle 排序
-  const seen = new Set<string>()
-  const deduped = results.filter(r => {
-    if (seen.has(r.name)) return false
-    seen.add(r.name)
-    return true
-  })
-  return deduped.sort((a, b) => a.angle - b.angle)
-}
-
-
-/** 获取当前节气的起始公历日（首日 dayOfYear → Date） */
-function getCurrentTermStartDate(date: Date): Date {
-  const year = date.getFullYear()
-  const termIdx = getSolarTermIndex(date)
-  const termName = SOLAR_TERMS_FROM_DONGZHI[termIdx]!
-  const positions = getSolarTermPositions(year)
-  const pos = positions.find(p => p.name === termName)
-  if (pos) {
-    const d = new Date(year, 0, 1)
-    d.setDate(pos.dayOfYear)
-    return d
-  }
-  // fallback: 往前找到节气变更点
-  for (let i = 0; i < 20; i++) {
-    const prev = new Date(date.getTime() - i * 86400000)
-    if (getSolarTermIndex(prev) !== termIdx) {
-      return new Date(prev.getTime() + 86400000)
-    }
-  }
-  return date
-}
-
-/** 当前三元（上/中/下元）—— 严格按 5 天一元切换（对齐甲子日周期） */
-export function getCurrentYuan(date: Date): '上元' | '中元' | '下元' {
-  const yuanIdx = getYuanFromElement(getElementIndex(date))
-  const list = ['上元', '中元', '下元'] as const
-  return list[yuanIdx] ?? '上元'
-}
-
-/** 当前元索引（0=上 1=中 2=下） */
-export function getYuanIndex(date: Date): 0 | 1 | 2 {
-  return getYuanFromElement(getElementIndex(date))
-}
-
-/** 当前局数（1-9）—— 严格按元序表派生 */
-export function getBureauNumber(date: Date): number {
-  return getBureauFromElement(getElementIndex(date))
-}
-
-/** 超神/接气/正授判定（当前节气） */
-export function getChaoShenJieQi(date: Date): '超神' | '接气' | '正授' {
-  const termName = getSolarTermName(date)
-  return getChaoShenJieQiForTerm(termName, date.getFullYear()).status
-}
-
-/**
- * 判定某个具体节气的超神/接气/正授状态。
- *
- * 规则（按传统奇门排局 + 用户明确的三分判定）：
- *   1. 找到该节气日**前后** 15 天内最近的甲/己日（符头日）
- *   2. diff = 符头日相对节气日的天数
- *      - diff = 0  → 正授（节气日 = 符头日，完美对齐）
- *      - diff > 0  → 超神（符头在节气**之前**，即甲子日先来节气后到）
- *      - diff < 0  → 接气（符头在节气**之后**，即节气先到甲子日后来）
- */
-export function getChaoShenJieQiForTerm(termName: string, year: number): {
-  status: '超神' | '接气' | '正授'
-  diffDays: number         // 符头日相对节气日的天数（正=超神，负=接气，0=正授）
-  termDate: Date
-  symbolDate: Date
-} {
-  const positions = getSolarTermPositions(year)
-  const pos = positions.find(p => p.name === termName)
-  const termDate = new Date(year, 0, 1)
-  if (pos) termDate.setDate(pos.dayOfYear)
-
-  // 前后各扫 15 天找最近的甲/己日
-  let bestSymbol = termDate
-  let bestDiff = Infinity
-  for (let offset = -15; offset <= 15; offset++) {
-    const d = new Date(termDate.getTime() + offset * 86400000)
-    const dayIdx = getJiaziIndices(d).day
-    if (dayIdx % 10 === 0 || dayIdx % 10 === 5) {
-      if (Math.abs(offset) < Math.abs(bestDiff)) {
-        bestDiff = offset
-        bestSymbol = d
-      }
-    }
-  }
-
-  // diffDays = termDate - symbolDate 的天数
-  //   符头在节气之前（offset < 0）→ diffDays > 0 → 超神
-  //   符头在节气之后（offset > 0）→ diffDays < 0 → 接气
-  const diffDays = -bestDiff
-  let status: '超神' | '接气' | '正授'
-  if (diffDays === 0) status = '正授'
-  else if (diffDays > 0) status = '超神'
-  else status = '接气'
-
-  return { status, diffDays, termDate, symbolDate: bestSymbol }
-}
-
-/** 距下一节气天数 */
-export function getDaysToNextTerm(date: Date): number {
-  const year = date.getFullYear()
-  const termIdx = getSolarTermIndex(date)
-  const positions = getSolarTermPositions(year)
-  const nextTermIdx = (termIdx + 1) % 24
-  const nextName = SOLAR_TERMS_FROM_DONGZHI[nextTermIdx]!
-
-  // 当年查
-  let nextPos = positions.find(p => p.name === nextName)
-  if (nextPos) {
-    const nextDate = new Date(year, 0, 1)
-    nextDate.setDate(nextPos.dayOfYear)
-    const diff = daysBetween(date, nextDate)
-    if (diff >= 0) return diff
-  }
-  // 跨年查（次年冬至/小寒等）
-  const nextYearPositions = getSolarTermPositions(year + 1)
-  nextPos = nextYearPositions.find(p => p.name === nextName)
-  if (nextPos) {
-    const nextDate = new Date(year + 1, 0, 1)
-    nextDate.setDate(nextPos.dayOfYear)
-    return daysBetween(date, nextDate)
-  }
-  return 15  // 兜底
-}
-
-/** 距当前节气起点天数 */
-export function getDaysSinceTermStart(date: Date): number {
-  const termStart = getCurrentTermStartDate(date)
-  return daysBetween(termStart, date)
-}
-
-// ══════════════════════════════════════════════════════════════
-//  日干支 / 甲子日 / 冬至锚点
-// ══════════════════════════════════════════════════════════════
-
-/** 日干支两字 */
-export function getDayGanzhi(date: Date): string {
-  return ganzhiName(getJiaziIndices(date).day)
-}
-
-/** 日干支在 60 甲子中的索引 (0-59) */
-export function getJiaziDayIndex(date: Date): number {
-  return getJiaziIndices(date).day
-}
-
-/** 相对当年冬至的天数偏移 (0-364/365) */
-export function getDayOfYearFromDongzhi(date: Date): number {
-  const year = date.getFullYear()
-  const positions = getSolarTermPositions(year)
-  const winterPos = positions.find(p => p.name === '冬至')
-  const winterDoy = winterPos?.dayOfYear ?? 356
-  const curDoy = getDayOfYear(date)
-  const yearLen = isGregorianLeapYear(year) ? 366 : 365
-  return ((curDoy - winterDoy) % yearLen + yearLen) % yearLen
-}
-
-// ══════════════════════════════════════════════════════════════
-//  奇门置闰（Qimen leap）
-// ══════════════════════════════════════════════════════════════
-
-/**
- * 奇门置闰状态：累积超神天数 ≥ 9 天时，在芒种下元后（阳遁末）或大雪下元后（阴遁末）
- * 插入 15° 的「闰奇门」段。
- *
- * 简化算法：以当年冬至为起点，扫描 24 节气各自的超神天数总和；
- * 阳遁段（0-11）累积用于「闰芒种」，阴遁段（12-23）累积用于「闰大雪」。
- */
-export function getQimenLeapStatus(year: number): {
-  hasLeap: boolean
-  leapName?: '闰芒种' | '闰大雪'
-  leapStartAngle?: number
-  leapEndAngle?: number
-} {
-  const positions = getSolarTermPositions(year)
-  let yangCumulative = 0  // 阳遁段累积超神天数
-  let yinCumulative = 0
-
-  for (const pos of positions) {
-    const termStart = new Date(year, 0, 1)
-    termStart.setDate(pos.dayOfYear)
-    const symbol = findNearestSymbolDayBefore(termStart)
-    const diff = daysBetween(symbol, termStart)
-    if (diff > 0 && diff < 9) {
-      // 超神：累积
-      const termIdx = SOLAR_TERMS_FROM_DONGZHI.indexOf(pos.name)
-      if (isYangDun(termIdx)) yangCumulative += diff
-      else yinCumulative += diff
-    }
-  }
-
-  // 阳遁末（芒种）位置：termIdx 11 → 起始角 165°，宽 15°
-  if (yangCumulative >= 9) {
-    return {
-      hasLeap: true,
-      leapName: '闰芒种',
-      leapStartAngle: 165,
-      leapEndAngle: 180
-    }
-  }
-  // 阴遁末（大雪）位置：termIdx 23 → 起始角 345°，宽 15°
-  if (yinCumulative >= 9) {
-    return {
-      hasLeap: true,
-      leapName: '闰大雪',
-      leapStartAngle: 345,
-      leapEndAngle: 360
-    }
-  }
-  return { hasLeap: false }
-}
-
-// ══════════════════════════════════════════════════════════════
-//  6 个甲子日锚点（60° 大刻度）
-// ══════════════════════════════════════════════════════════════
-
-/** 甲子系列 6 个锚点名（甲子/甲戌/甲申/甲午/甲辰/甲寅） */
-export const JIAZI_ANCHORS: readonly string[] = ['甲子', '甲戌', '甲申', '甲午', '甲辰', '甲寅'] as const
-
-// ══════════════════════════════════════════════════════════════
-//  冬至锚点信息（冬至日在六甲段中的定位）
-// ══════════════════════════════════════════════════════════════
-
-/**
- * 冬至日在「上元甲子 → 360 日循环」中的定位信息。
- *
- * 冬至日必落在六甲段（甲子/甲戌/甲申/甲午/甲辰/甲寅）中某一段里，
- * 用于圆心信息卡与外环标注。
- *
- * @returns
- *   - date:         冬至日期（Date，仅年月日）
- *   - dayGz:        冬至日干支（如「己未」）
- *   - offset:       冬至距上元甲子日的天数（0-59，即该年「超神天数」）
- *   - segmentIdx:   冬至所在六甲段索引（0-5，对应 JIAZI_ANCHORS）
- *   - segmentName:  所在段名（如「甲戌」）
- *   - dayInSegment: 段内第几日（1-10）
- */
-export function getWinterSolsticeAnchor(today: Date): {
-  date: Date
-  dayGz: string
-  offset: number
-  segmentIdx: number
-  segmentName: string
-  dayInSegment: number
-} {
-  const { upperYuan, winter } = resolveUpperYuanAnchor(today)
-  const offset = Math.floor((winter.getTime() - upperYuan.getTime()) / 86400000)
-  const segmentIdx = Math.floor(offset / 10) % 6
-  return {
-    date: winter,
-    dayGz: getDayGanzhi(winter),
-    offset,
-    segmentIdx,
-    segmentName: JIAZI_ANCHORS[segmentIdx] ?? '甲子',
-    dayInSegment: (offset % 10) + 1
-  }
+  results.sort((a, b) => a.dayInRing - b.dayInRing)
+  return results
 }

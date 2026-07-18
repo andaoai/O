@@ -1,27 +1,26 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import QiMenSolarTermsRing from '../components/rings/QiMenSolarTermsRing.vue'
-import QiMenLiuJiaziRing from '../components/rings/QiMenLiuJiaziRing.vue'
 import RingStack from '../components/base/RingStack.vue'
+import QiMenLiuJiaziRing from '../components/rings/QiMenLiuJiaziRing.vue'
+import QiMenSolarTermsRing from '../components/rings/QiMenSolarTermsRing.vue'
+import QiMenInfoCenter from '../components/centers/QiMenInfoCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 
 /**
- * 阴阳遁九局盘 —— 奇门遁甲可视化（🚧 重构中，最小观察态）
+ * 阴阳遁九局盘 —— 奇门遁甲可视化
  *
  * ═══════════════════════════════════════════════════════════════
- *  🔑 当前仅保留两个基础环用于对齐观察：
+ *  当前第一环：六轮甲子日环（60 甲子 × 6 轮 = 360 天）
+ *  0° 起点 = 「上元甲子日」（冬至前后最近的甲子日）
+ *  360° 均匀 6 段 = 一运 / 二运 / … / 六运
  *
- *   环1  30px QiMenLiuJiaziRing     六轮甲子日环（360 段，60 甲子 × 6 轮）
- *   环2  16px QiMenSolarTermsRing   24 节气点环（每节气 1 tick，落在具体那一天）
- *
- *  其余环（九局数 / 三元 / 超神接气 / 后天八卦 / 四象 / 阴阳两遁）
- *  以及圆心信息卡均已暂时移除，等待逐个添加回来验证对齐关系。
+ *  中央 QiMenInfoCenter 显示当前所在的运号、距上元甲子/本运
+ *  甲子的天数、以及两个甲子的公历日期。
  * ═══════════════════════════════════════════════════════════════
  */
-
 const { controlledTime } = useUrlTime()
 
 const viewport = useViewport()
@@ -32,11 +31,31 @@ const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 provideCompassContext({ time: controlledTime, viewport })
 
+/** 最外环外缘半径 */
+const OUTER_RADIUS = 560
+
+/** 六轮甲子日环共享参考点（屏幕正上方） */
+const START_DEGREE = -90
+
+/** 由外到内的环配置 */
 const rings = [
-  // 最外：六轮甲子日环（360 段）
-  { component: markRaw(QiMenLiuJiaziRing),   thickness: 30, props: { time: controlledTime } },
-  // 24 节气点环（每节气 1 tick，落在具体那一天）
-  { component: markRaw(QiMenSolarTermsRing), thickness: 16, props: { time: controlledTime } }
+  {
+    component: markRaw(QiMenLiuJiaziRing),
+    thickness: 30,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  },
+  {
+    component: markRaw(QiMenSolarTermsRing),
+    thickness: 26,
+    gapBefore: 2,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  }
 ]
 </script>
 
@@ -51,11 +70,19 @@ const rings = [
     >
       <g :transform="`translate(${600 + offsetX}, ${600 + offsetY}) scale(${zoom}) rotate(${rotationAngle})`">
         <RingStack
-          :outer-radius="480"
+          :outer-radius="OUTER_RADIUS"
           :gap="2"
           :rings="rings"
           :rotation-direction="rotationDirection"
-        />
+        >
+          <template #center="{ innerRadius }">
+            <QiMenInfoCenter
+              :radius="innerRadius * 0.85"
+              :time="controlledTime"
+              :rotation-angle="rotationAngle"
+            />
+          </template>
+        </RingStack>
       </g>
     </svg>
   </div>
