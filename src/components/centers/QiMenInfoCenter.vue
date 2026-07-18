@@ -1,19 +1,32 @@
 <script setup lang="ts">
 /**
- * ⚫ 奇门信息圆心组件 —— 六运 + 干支四柱 + 节气 信息卡
+ * ⚫ 奇门信息圆心组件 —— 三元九局 + 六运 + 干支四柱 + 节气
  *
  * ⚠️ 圆心组件规范：
  *   - 仅声明 radius，禁止声明 innerRadius
  *   - 通过 RingStack #center slot 注入 radius 自动适配
  *
  * 显示内容（从上到下）：
- *   ① 当前运号（大字，用运号饱和色）
- *   ② 干支四柱：年 / 月 / 日 / 时（五行配色，两字纵排）
- *   ③ 节气：当前节气名 · 距下节气天数
- *   ④ 距上元甲子/本运甲子天数 + 两个甲子日的公历日期
+ *   ① 局数大字（阳/阴遁 · N 局，局数色）
+ *   ② 副标（上元/中元/下元 · 节气名 · 超神/接气/正授）
+ *   ③ 六运名 + 甲子锚说明
+ *   ④ 干支四柱（年/月/日/时，五行配色）
+ *   ⑤ 节气进度（距下节气 X 天）
+ *   ⑥ 距上元甲子/本运甲子天数 + 两个甲子日日期
  */
 import { computed, unref, type MaybeRef } from 'vue'
-import { computeSixYun, YUN_COLORS, YUN_NAMES } from '@/utils/qimenDunJia'
+import { SolarDay } from 'tyme4ts'
+import {
+  computeSixYun,
+  computeQiMenSolarTerms,
+  computeChaoshenState,
+  findUpperYuanJiaziDay,
+  getYuanJuAt,
+  YUN_COLORS,
+  YUN_NAMES,
+  YUAN_NAMES,
+  JU_COLORS
+} from '@/utils/qimenDunJia'
 import { getGanzhiInfo, getSolarTermInfo } from '@/utils/chineseCalendar'
 import { WUXING_COLORS, STEM_ELEMENTS } from '@/utils/wuxing'
 import { STEMS } from '@/utils/constants/ganzhi'
@@ -34,19 +47,71 @@ const props = withDefaults(defineProps<Props>(), {
 
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
-const info = computed(() => computeSixYun(timeRef.value))
+/** 走 tyme4ts 儒略日的整日差 */
+function diffDays(later: Date, earlier: Date): number {
+  const a = SolarDay.fromYmd(later.getFullYear(), later.getMonth() + 1, later.getDate())
+  const b = SolarDay.fromYmd(earlier.getFullYear(), earlier.getMonth() + 1, earlier.getDate())
+  return a.subtract(b)
+}
+
+const sixYun = computed(() => computeSixYun(timeRef.value))
 const ganzhi = computed(() => getGanzhiInfo(timeRef.value))
 const solarTerm = computed(() => getSolarTermInfo(timeRef.value))
+const chaoshen = computed(() => computeChaoshenState(timeRef.value))
 
-const yunColor = computed(() => YUN_COLORS[info.value.currentYunIndex - 1] ?? '#FFD700')
-const yunName = computed(() => YUN_NAMES[info.value.currentYunIndex - 1] ?? '一运')
+const yuanJu = computed(() => {
+  const now = timeRef.value
+  const upperYuan = findUpperYuanJiaziDay(now)
+  const terms = computeQiMenSolarTerms(now)
+  const todayInRing = ((diffDays(now, upperYuan) % 360) + 360) % 360
+  return getYuanJuAt(todayInRing, terms)
+})
+
+const yunColor = computed(() => YUN_COLORS[sixYun.value.currentYunIndex - 1] ?? '#FFD700')
+const yunName = computed(() => YUN_NAMES[sixYun.value.currentYunIndex - 1] ?? '一运')
+
+/** 局数大字色 */
+const juColor = computed(() => {
+  const info = yuanJu.value
+  if (!info) return '#FFD700'
+  return JU_COLORS[info.ju] ?? '#FFD700'
+})
+
+/** 局数中文数字 */
+const CHINESE_NUM = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
+const juText = computed(() => {
+  const info = yuanJu.value
+  if (!info) return '—'
+  return `${info.isYang ? '阳遁' : '阴遁'} · ${CHINESE_NUM[info.ju]}局`
+})
+
+/** 三元位 + 节气 副标 */
+const yuanTermText = computed(() => {
+  const info = yuanJu.value
+  if (!info) return '—'
+  return `${YUAN_NAMES[info.yuanPos]} · ${info.termName}`
+})
+
+/** 超神/接气/正授 */
+const chaoshenText = computed(() => {
+  const s = chaoshen.value
+  if (s.label === '正授') return '正授'
+  return `${s.label} ${s.days} 天`
+})
+
+const chaoshenColor = computed(() => {
+  const s = chaoshen.value
+  if (s.label === '正授') return '#F1C40F'
+  if (s.label === '超神') return '#E67E22'
+  return '#3498DB'
+})
 
 /** 干支柱：以天干为主色（五行配色） */
 interface Pillar {
-  label: string    // 年/月/日/时
-  stem: string     // 甲/乙/…
-  branch: string   // 子/丑/…
-  color: string    // 天干五行色
+  label: string
+  stem: string
+  branch: string
+  color: string
 }
 
 const pillars = computed<Pillar[]>(() => {
@@ -64,10 +129,8 @@ const pillars = computed<Pillar[]>(() => {
   ]
 })
 
-/** 4 柱在水平方向的 x 位置（相对圆心） */
 const pillarX = computed(() => {
   const half = props.radius * 0.32
-  // -half, -half/3, +half/3, +half → 均分四列
   return [-half, -half / 3, half / 3, half]
 })
 
@@ -79,41 +142,52 @@ function fmt(d: Date): string {
   return `${y}-${m}-${day}`
 }
 
-const upperYuanText = computed(() => fmt(info.value.upperYuanDate))
-const currentJiaziText = computed(() => fmt(info.value.currentJiaziDate))
+const upperYuanText = computed(() => fmt(sixYun.value.upperYuanDate))
+const currentJiaziText = computed(() => fmt(sixYun.value.currentJiaziDate))
 
 const termText = computed(() => {
   const t = solarTerm.value
   if (!t) return '节气：—'
-  return `节气：${t.name} · 距${t.nextTermName} ${t.daysToNext} 天`
+  return `距 ${t.nextTermName} ${t.daysToNext} 天`
 })
 </script>
 
 <template>
   <!-- 🔑 反向旋转：抵消外层 SVG rotate(rotationAngle)，文字始终正向 -->
   <g :transform="`rotate(${-rotationAngle})`">
-    <!-- ① 顶部：当前运号（大字） -->
+    <!-- ① 局数大字 -->
     <text
       :x="0"
-      :y="-radius * 0.62"
+      :y="-radius * 0.7"
       text-anchor="middle"
-      :fill="yunColor"
-      :font-size="radius * 0.2"
+      :fill="juColor"
+      :font-size="radius * 0.22"
       font-family="serif"
       font-weight="bold"
     >
-      {{ yunName }}
+      {{ juText }}
     </text>
 
-    <!-- 副标题：当前所在 · 甲子锚 -->
+    <!-- ② 三元 · 节气 副标 -->
     <text
       :x="0"
-      :y="-radius * 0.46"
+      :y="-radius * 0.54"
       text-anchor="middle"
-      fill="#aaaaaa"
+      fill="#dddddd"
+      :font-size="radius * 0.08"
+    >
+      {{ yuanTermText }}
+    </text>
+
+    <!-- ③ 超神 / 接气 / 正授 -->
+    <text
+      :x="0"
+      :y="-radius * 0.44"
+      text-anchor="middle"
+      :fill="chaoshenColor"
       :font-size="radius * 0.06"
     >
-      当前所在 · 甲子锚
+      {{ chaoshenText }}
     </text>
 
     <!-- 分隔线 1 -->
@@ -126,38 +200,46 @@ const termText = computed(() => {
       stroke-width="0.5"
     />
 
-    <!-- ② 干支四柱 -->
+    <!-- ④ 六运名（小字） -->
+    <text
+      :x="0"
+      :y="-radius * 0.3"
+      text-anchor="middle"
+      :fill="yunColor"
+      :font-size="radius * 0.06"
+    >
+      {{ yunName }} · 甲子锚
+    </text>
+
+    <!-- ⑤ 干支四柱 -->
     <g>
       <g v-for="(p, i) in pillars" :key="p.label" :transform="`translate(${pillarX[i]}, 0)`">
-        <!-- 柱标签 年/月/日/时 -->
         <text
           :x="0"
-          :y="-radius * 0.26"
+          :y="-radius * 0.18"
           text-anchor="middle"
           fill="#888888"
-          :font-size="radius * 0.055"
+          :font-size="radius * 0.05"
         >
           {{ p.label }}
         </text>
-        <!-- 天干 -->
         <text
           :x="0"
-          :y="-radius * 0.12"
+          :y="-radius * 0.06"
           text-anchor="middle"
           :fill="p.color"
-          :font-size="radius * 0.12"
+          :font-size="radius * 0.11"
           font-family="serif"
           font-weight="bold"
         >
           {{ p.stem }}
         </text>
-        <!-- 地支 -->
         <text
           :x="0"
-          :y="radius * 0.02"
+          :y="radius * 0.06"
           text-anchor="middle"
           :fill="p.color"
-          :font-size="radius * 0.12"
+          :font-size="radius * 0.11"
           font-family="serif"
           font-weight="bold"
         >
@@ -169,72 +251,62 @@ const termText = computed(() => {
     <!-- 分隔线 2 -->
     <line
       :x1="-radius * 0.5"
-      :y1="radius * 0.1"
+      :y1="radius * 0.14"
       :x2="radius * 0.5"
-      :y2="radius * 0.1"
+      :y2="radius * 0.14"
       stroke="#444"
       stroke-width="0.5"
     />
 
-    <!-- ③ 节气 -->
+    <!-- ⑥ 节气进度 -->
     <text
       :x="0"
-      :y="radius * 0.2"
+      :y="radius * 0.22"
       text-anchor="middle"
       fill="#F1C40F"
-      :font-size="radius * 0.06"
+      :font-size="radius * 0.055"
     >
       {{ termText }}
     </text>
 
-    <!-- 分隔线 3 -->
-    <line
-      :x1="-radius * 0.5"
-      :y1="radius * 0.28"
-      :x2="radius * 0.5"
-      :y2="radius * 0.28"
-      stroke="#444"
-      stroke-width="0.5"
-    />
-
-    <!-- ④ 距上元甲子 · 距本运甲子（同一行左右分列） -->
+    <!-- ⑦ 距上元 · 距本运 -->
     <text
       :x="-radius * 0.25"
-      :y="radius * 0.4"
+      :y="radius * 0.34"
       text-anchor="middle"
       fill="#dddddd"
-      :font-size="radius * 0.058"
+      :font-size="radius * 0.05"
     >
-      距上元 {{ info.daysSinceUpperYuan }}天
+      距上元 {{ sixYun.daysSinceUpperYuan }}天
     </text>
     <text
       :x="radius * 0.25"
-      :y="radius * 0.4"
+      :y="radius * 0.34"
       text-anchor="middle"
       fill="#dddddd"
-      :font-size="radius * 0.058"
+      :font-size="radius * 0.05"
     >
-      距本运 {{ info.daysSinceCurrentJiazi }}天
+      距本运 {{ sixYun.daysSinceCurrentJiazi }}天
     </text>
 
-    <!-- 本运甲子日期 -->
+    <!-- ⑧ 本运甲子日期 -->
     <text
       :x="0"
-      :y="radius * 0.52"
+      :y="radius * 0.46"
       text-anchor="middle"
       fill="#888888"
-      :font-size="radius * 0.05"
+      :font-size="radius * 0.045"
     >
       本运甲子：{{ currentJiaziText }}
     </text>
 
-    <!-- 上元甲子日期 -->
+    <!-- ⑨ 上元甲子日期 -->
     <text
       :x="0"
-      :y="radius * 0.62"
+      :y="radius * 0.56"
       text-anchor="middle"
       fill="#666666"
-      :font-size="radius * 0.048"
+      :font-size="radius * 0.045"
     >
       上元甲子：{{ upperYuanText }}
     </text>
