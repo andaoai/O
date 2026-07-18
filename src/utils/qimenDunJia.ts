@@ -160,40 +160,67 @@ function findNearestSymbolDayBefore(date: Date): Date {
   return date  // 兜底：15 天内必命中，理论不会到这
 }
 
-/** 在 [center-30, center+30] 天内找最近的甲子日（干支索引=0） */
-function findNearestJiaziDay(center: Date): Date {
-  let best = center
-  let minAbs = Infinity
-  for (let offset = -30; offset <= 30; offset++) {
-    const d = new Date(center.getTime() + offset * 86400000)
-    if (getJiaziIndices(d).day === 0) {
-      const abs = Math.abs(offset)
-      if (abs < minAbs) {
-        minAbs = abs
-        best = d
-      }
-    }
+/** 向前 60 天内搜索最近的甲子日（含当日）；60 天内必命中 */
+function findJiaziOnOrBefore(center: Date): Date {
+  for (let offset = 0; offset < 60; offset++) {
+    const d = new Date(center.getTime() - offset * 86400000)
+    if (getJiaziIndices(d).day === 0) return d
   }
-  return best
+  return center
+}
+
+/** 取某年冬至公历日（找不到返回 null） */
+function getWinterDateOfYear(year: number): Date | null {
+  const winter = getSolarTermPositions(year).find(p => p.name === '冬至')
+  if (!winter) return null
+  const d = new Date(year, 0, 1)
+  d.setDate(winter.dayOfYear)
+  return d
 }
 
 /**
- * 上元甲子日：冬至前后最近的甲子日，且 today 落在该日起 [0, 360) 天内。
- * 与 QiMenLiuJiaziRing 的环起点是同一个日期，保证「元」严格对齐甲子日。
+ * 上元甲子锚点（冬至周期 360 日环的起点） + 对应冬至日。
+ *
+ * 传统奇门以「冬至日前（含当日）最近的甲子日」为排局锚点。从下一年冬至
+ * 向前扫 4 年，取第一个 ≤ today 的上元甲子。当 today 距上元甲子 ≥ 360 天
+ * 时落在「闰奇门」期（冬至→冬至间隔 420 天），锚点每 60 天前推一次进入
+ * 「第 7 轮甲子」，视觉上保持连续，不跳回第 1 轮。
+ *
+ * 单次扫描同时返回 upperYuan 与对应冬至日，供三个导出函数复用。
+ */
+function resolveUpperYuanAnchor(today: Date): { upperYuan: Date; winter: Date } {
+  const year = today.getFullYear()
+  for (const y of [year + 1, year, year - 1, year - 2]) {
+    const winter = getWinterDateOfYear(y)
+    if (!winter) continue
+    let upperYuan = findJiaziOnOrBefore(winter)
+    if (upperYuan.getTime() > today.getTime()) continue
+    let daysSince = Math.round((today.getTime() - upperYuan.getTime()) / 86400000)
+    while (daysSince >= 360) {
+      upperYuan = new Date(
+        upperYuan.getFullYear(),
+        upperYuan.getMonth(),
+        upperYuan.getDate() + 60
+      )
+      daysSince -= 60
+    }
+    return { upperYuan, winter }
+  }
+  return { upperYuan: findJiaziOnOrBefore(today), winter: today }
+}
+
+/**
+ * 上元甲子日 = 冬至日前（含当日）最近的甲子日，传统奇门排局锚点。
+ * 与 QiMenLiuJiaziRing 的环起点同为此日期，保证「元」严格对齐甲子日。
+ * 详见 {@link resolveUpperYuanAnchor}。
  */
 export function getUpperYuanJiaziDay(today: Date): Date {
-  const year = today.getFullYear()
-  for (const y of [year, year - 1]) {
-    const positions = getSolarTermPositions(y)
-    const winter = positions.find(p => p.name === '冬至')
-    if (!winter) continue
-    const winterDate = new Date(y, 0, 1)
-    winterDate.setDate(winter.dayOfYear)
-    const upperYuan = findNearestJiaziDay(winterDate)
-    const daysSince = Math.floor((today.getTime() - upperYuan.getTime()) / 86400000)
-    if (daysSince >= 0 && daysSince < 360) return upperYuan
-  }
-  return findNearestJiaziDay(today)
+  return resolveUpperYuanAnchor(today).upperYuan
+}
+
+/** 该冬至周期对应的冬至日（配合 upperYuan 定位「超神天数」） */
+export function getUpperYuanWinterDate(today: Date): Date {
+  return resolveUpperYuanAnchor(today).winter
 }
 
 /** 计算两 Date 之间的整数天数差（正数=b 晚于 a） */
@@ -203,11 +230,39 @@ function daysBetween(a: Date, b: Date): number {
   return Math.round((b0 - a0) / 86400000)
 }
 
-/** 从上元甲子日起的天数（0-359） */
+/** 从上元甲子日起的天数（0-359）；锚点已处理闰奇门前推，此处无需 mod */
 export function getDaysSinceUpperYuan(today: Date): number {
-  const upperYuan = getUpperYuanJiaziDay(today)
-  const d = daysBetween(upperYuan, today)
+  const d = daysBetween(getUpperYuanJiaziDay(today), today)
   return Math.max(0, Math.min(359, d))
+}
+
+/**
+ * 当前甲子轮次信息：一个冬至周期 = 60 甲子 × 6 轮 = 360 天，
+ * 冬至日相对上元甲子的偏移（0-59）即该年「超神天数」。
+ *
+ * @returns
+ *   - roundIndex:   0-5，第几轮甲子（从 0 起计）
+ *   - roundLabel:   「第 N 轮甲子」（N: 一二三四五六）
+ *   - dayInRound:   1-60，本轮内的第几日
+ *   - winterOffset: 冬至日相对上元甲子的天数（0-59，该年超神天数）
+ */
+export function getJiaziRoundInfo(today: Date): {
+  roundIndex: number
+  roundLabel: string
+  dayInRound: number
+  winterOffset: number
+} {
+  const { upperYuan, winter } = resolveUpperYuanAnchor(today)
+  const days = Math.max(0, Math.min(359, daysBetween(upperYuan, today)))
+  const roundIndex = Math.floor(days / 60)
+  const dayInRound = (days % 60) + 1
+  const HANZI = ['一', '二', '三', '四', '五', '六']
+  return {
+    roundIndex,
+    roundLabel: `第${HANZI[roundIndex] ?? '一'}轮甲子`,
+    dayInRound,
+    winterOffset: Math.floor((winter.getTime() - upperYuan.getTime()) / 86400000)
+  }
 }
 
 /** 当前元序号（0-71）：从上元甲子日起每 5 天为一元 */
@@ -511,3 +566,42 @@ export function getQimenLeapStatus(year: number): {
 
 /** 甲子系列 6 个锚点名（甲子/甲戌/甲申/甲午/甲辰/甲寅） */
 export const JIAZI_ANCHORS: readonly string[] = ['甲子', '甲戌', '甲申', '甲午', '甲辰', '甲寅'] as const
+
+// ══════════════════════════════════════════════════════════════
+//  冬至锚点信息（冬至日在六甲段中的定位）
+// ══════════════════════════════════════════════════════════════
+
+/**
+ * 冬至日在「上元甲子 → 360 日循环」中的定位信息。
+ *
+ * 冬至日必落在六甲段（甲子/甲戌/甲申/甲午/甲辰/甲寅）中某一段里，
+ * 用于圆心信息卡与外环标注。
+ *
+ * @returns
+ *   - date:         冬至日期（Date，仅年月日）
+ *   - dayGz:        冬至日干支（如「己未」）
+ *   - offset:       冬至距上元甲子日的天数（0-59，即该年「超神天数」）
+ *   - segmentIdx:   冬至所在六甲段索引（0-5，对应 JIAZI_ANCHORS）
+ *   - segmentName:  所在段名（如「甲戌」）
+ *   - dayInSegment: 段内第几日（1-10）
+ */
+export function getWinterSolsticeAnchor(today: Date): {
+  date: Date
+  dayGz: string
+  offset: number
+  segmentIdx: number
+  segmentName: string
+  dayInSegment: number
+} {
+  const { upperYuan, winter } = resolveUpperYuanAnchor(today)
+  const offset = Math.floor((winter.getTime() - upperYuan.getTime()) / 86400000)
+  const segmentIdx = Math.floor(offset / 10) % 6
+  return {
+    date: winter,
+    dayGz: getDayGanzhi(winter),
+    offset,
+    segmentIdx,
+    segmentName: JIAZI_ANCHORS[segmentIdx] ?? '甲子',
+    dayInSegment: (offset % 10) + 1
+  }
+}
