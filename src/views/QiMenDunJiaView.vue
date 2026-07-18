@@ -5,8 +5,6 @@ import QiMenLiuJiaziRing from '../components/rings/QiMenLiuJiaziRing.vue'
 import QiMenSolarTermsRing from '../components/rings/QiMenSolarTermsRing.vue'
 import QiMenSanYuanRing from '../components/rings/QiMenSanYuanRing.vue'
 import QiMenJuShuRing from '../components/rings/QiMenJuShuRing.vue'
-import QiMenChaoShenRing from '../components/rings/QiMenChaoShenRing.vue'
-import QiMenYinYangRing from '../components/rings/QiMenYinYangRing.vue'
 import QiMenInfoCenter from '../components/centers/QiMenInfoCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
@@ -79,26 +77,6 @@ const rings = [
   {
     component: markRaw(QiMenJuShuRing),
     thickness: 24,
-    gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  },
-  // ⑤ 超神/接气/正授段环
-  {
-    component: markRaw(QiMenChaoShenRing),
-    thickness: 22,
-    gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  },
-  // ⑥ 阴阳两遁段环
-  {
-    component: markRaw(QiMenYinYangRing),
-    thickness: 22,
     gapBefore: 2,
     props: {
       time: controlledTime,
