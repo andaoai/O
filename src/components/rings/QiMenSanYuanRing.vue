@@ -60,16 +60,11 @@ const ringData = computed<RingData>(() => {
   const upperYuan = findUpperYuanJiaziDay(now)
   const terms = computeQiMenSolarTerms(now)
   const todayInRing = ((diffDays(now, upperYuan) % 360) + 360) % 360
-  const todayInfo = getYuanJuAt(todayInRing, terms)
 
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {
     const info = getYuanJuAt(i, terms)
     const isToday = i === todayInRing
-    const isCurrentYuan =
-      !!info && !!todayInfo &&
-      info.termName === todayInfo.termName &&
-      info.yuanPos === todayInfo.yuanPos
     const isYuanFirst = info && info.daysFromTermStart % 5 === 0
       && (info.yuanPos === 0
           ? info.daysFromTermStart === 0
@@ -93,29 +88,14 @@ const ringData = computed<RingData>(() => {
       color = '#1a1a1a'
       fontSize = 8
       highlightLevel = 3
-      label = YUAN_NAMES[info.yuanPos]!.charAt(0)  // 「上/中/下」
-    } else if (isCurrentYuan) {
-      // 当前元段其余日：饱和底 + 白字 + 中亮呼吸
-      bgColor = YUAN_COLORS[info.yuanPos]!
-      color = '#FFFFFF'
-      fontSize = isYuanFirst ? 7 : 5
-      highlightLevel = 2
-      label = isYuanFirst ? YUAN_NAMES[info.yuanPos]! : ''
-    } else if (isYuanFirst) {
-      // 元首日（本环 72 个格）：饱和底 + 白字
-      bgColor = YUAN_COLORS[info.yuanPos]!
-      color = '#FFFFFF'
-      fontSize = 7
-      highlightLevel = 1
-      label = YUAN_NAMES[info.yuanPos]!
+      label = YUAN_NAMES[info.yuanPos]!.charAt(0)
     } else {
-      // 元段中间日：暗化饱和色
+      // 未到（含过去、当前元段其余日、未来）：统一暗下去，字色用同色系暗色，非白色
       const c = YUAN_COLORS[info.yuanPos]!
-      bgColor = c + '55'  // 加透明感（DataRing 未必支持 alpha，做深色替代）
-      // 用手工加深：拆 RGB * 0.5
-      bgColor = darken(c, 0.55)
-      color = '#888888'
-      fontSize = 3
+      bgColor = darken(c, 0.18)
+      color = darken(c, isYuanFirst ? 0.7 : 0.5)
+      fontSize = isYuanFirst ? 7 : 4
+      label = YUAN_NAMES[info.yuanPos]!.charAt(0)
     }
 
     items.push({
@@ -124,7 +104,7 @@ const ringData = computed<RingData>(() => {
       color,
       startAngle: i,
       endAngle: i + 1,
-      highlight: !!(isToday || isYuanFirst),
+      highlight: !!isToday,
       highlightLevel,
       fontSize
     })

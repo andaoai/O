@@ -61,7 +61,6 @@ const ringData = computed<RingData>(() => {
   const upperYuan = findUpperYuanJiaziDay(now)
   const terms = computeQiMenSolarTerms(now)
   const todayInRing = ((diffDays(now, upperYuan) % 360) + 360) % 360
-  const todayInfo = getYuanJuAt(todayInRing, terms)
 
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {
@@ -72,10 +71,6 @@ const ringData = computed<RingData>(() => {
       : info.yuanPos === 1 ? info.daysFromTermStart === 5
       : info.daysFromTermStart === 10
     )
-    const isCurrentYuan =
-      !!info && !!todayInfo &&
-      info.termName === todayInfo.termName &&
-      info.yuanPos === todayInfo.yuanPos
 
     let bgColor: string
     let color: string
@@ -92,29 +87,18 @@ const ringData = computed<RingData>(() => {
       const juColor = JU_COLORS[ju] ?? '#555'
 
       if (isToday) {
+        // 今日格：金底黑字 + 强呼吸
         bgColor = '#FFD700'
         color = '#1a1a1a'
         fontSize = 9
         highlightLevel = 3
         label = CHINESE_NUM[ju]!
-      } else if (isCurrentYuan) {
-        bgColor = juColor
-        // 判断是否是浅色底 → 用深字
-        color = isLightBg(juColor) ? '#1a1a1a' : '#FFFFFF'
-        fontSize = isYuanFirst ? 8 : 5
-        highlightLevel = 2
-        label = isYuanFirst ? CHINESE_NUM[ju]! : ''
-      } else if (isYuanFirst) {
-        bgColor = juColor
-        color = isLightBg(juColor) ? '#1a1a1a' : '#FFFFFF'
-        fontSize = 7
-        highlightLevel = 1
-        label = CHINESE_NUM[ju]!
       } else {
-        // 元段中间日：暗化底
-        bgColor = darken(juColor, 0.45)
-        color = '#888888'
-        fontSize = 3
+        // 未到（含过去、未来）：统一暗下去，字色用同色系暗色，非白色
+        bgColor = darken(juColor, 0.15)
+        color = darken(juColor, isYuanFirst ? 0.7 : 0.5)
+        fontSize = isYuanFirst ? 7 : 4
+        label = CHINESE_NUM[ju]!
       }
     }
 
@@ -124,7 +108,7 @@ const ringData = computed<RingData>(() => {
       color,
       startAngle: i,
       endAngle: i + 1,
-      highlight: !!(isToday || isYuanFirst),
+      highlight: !!isToday,
       highlightLevel,
       fontSize
     })
@@ -142,16 +126,6 @@ const ringData = computed<RingData>(() => {
     tickWidth: 0.2
   }
 })
-
-/** 判断颜色是不是浅色（用于选深/浅字） */
-function isLightBg(hex: string): boolean {
-  const h = hex.replace('#', '')
-  const r = parseInt(h.substring(0, 2), 16)
-  const g = parseInt(h.substring(2, 4), 16)
-  const b = parseInt(h.substring(4, 6), 16)
-  const luma = 0.299 * r + 0.587 * g + 0.114 * b
-  return luma > 170
-}
 
 /** hex 颜色变暗（factor: 0-1） */
 function darken(hex: string, factor: number): string {
