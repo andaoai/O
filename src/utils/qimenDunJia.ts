@@ -558,6 +558,169 @@ export interface ChaoshenState {
   days: number
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   农历环工具：环上第 i 天 → 农历标签
+   ─────────────────────────────────────────────────────────────
+   🔑 与 24 节气环同步：以「≤ today 的最近冬至 W1」为岁首起点。
+     过冬至那一刻，整个环整体切换到下一岁的农历。
+
+   环格 i ↔ 岁内偏移 k 的映射：
+     · 环 0° = upperYuan 甲子日（物理坐标不动，跟六轮甲子环共享）
+     · 冬至 W1 落在环上 D1 = (W1 − upperYuan) 天
+     · 环第 i 格对应岁内第 k 天：k = (i − D1 + 360) mod 360
+       日期 = W1.next(k)
+     · 一岁 365 天 > 环 360 天，多出 5 天：本岁末尾 W1+360..W1+364
+       在环上位置回卷到 D1..D1+4，与本岁头 5 天共格
+       → 挂到 overlay 字段，供组件径向内层绘制
+   ═══════════════════════════════════════════════════════════════ */
+export interface LunarRingEntry {
+  /** 环上索引 0-359 */
+  index: number
+  /** 对应的公历日期（本岁第 k 天，k = (index − D1 + 360) mod 360） */
+  solarDate: Date
+  /** 该日农历日名（初一/初二/…/三十） */
+  lunarDayName: string
+  /** 是否为农历初一（月首日） */
+  isMonthFirst: boolean
+  /** 农历月名（isMonthFirst=true 时使用，如「正月/闰四月/腊月」） */
+  lunarMonthName: string
+  /** 是否为闰月的初一 */
+  isLeapMonthFirst: boolean
+  /**
+   * 冬至叠加信息（仅本岁 [D1..D1+4] 5 格具有）：
+   * 记录「本岁末尾 5 天」（W1+360..W1+364）的农历标签，供组件径向内层绘制。
+   * 与外层「本岁头 5 天」共享同一环格。
+   */
+  overlay?: {
+    solarDate: Date
+    lunarDayName: string
+    isMonthFirst: boolean
+    lunarMonthName: string
+    isLeapMonthFirst: boolean
+  }
+}
+
+/** 内部：给定公历 Date → LunarDay 摘要（tyme4ts） */
+function lunarSummary(date: Date): {
+  dayName: string
+  monthName: string
+  isMonthFirst: boolean
+  isLeapMonthFirst: boolean
+} {
+  const sd = SolarDay.fromYmd(date.getFullYear(), date.getMonth() + 1, date.getDate())
+  const ld = sd.getLunarDay()
+  const lm = ld.getLunarMonth()
+  const day = ld.getDay()
+  return {
+    dayName: ld.getName(),                  // "初一"…"三十"
+    monthName: lm.getName(),                // "正月"/"闰四月"/"腊月"
+    isMonthFirst: day === 1,
+    isLeapMonthFirst: day === 1 && lm.isLeap()
+  }
+}
+
+/**
+ * 计算 360 环的农历标签数组。
+ *
+ * 🔑 与 24 节气环完全同步：使用 `computeQiMenSolarTerms(today)` 获取
+ *   本岁冬至 W1（第一项）与下一岁冬至 W2（isNextWinter 标记项）。
+ *   过冬至那一刻整个环切换到下一岁。
+ *
+ * 主返回：环第 i 格 → W1.next((i − D1 + 360) mod 360) 的农历
+ * 副返回（overlay）：
+ *   一岁实际长度 = diffDays(W2, W1)，约 365.2422 天；
+ *   环仅 360 格，overflow = 年长 − 360 格＝5~6 天。
+ *   这 overflow 天在环上与本岁首 overflow 天位置重叠，
+ *   挂载到对应格的 overlay 内层显示。
+ *   W2 冬至日本身也加入 overlay，与 24 节气环的下一冬至 marker 对齐。
+ */
+export function computeQiMenLunarRing(today: Date): LunarRingEntry[] {
+  const upperYuan = findUpperYuanJiaziDay(today)
+  const terms = computeQiMenSolarTerms(today)
+  const yearTerms = terms.filter(t => !t.isNextWinter)
+  const nextWinter = terms.find(t => t.isNextWinter)
+  if (yearTerms.length === 0 || !nextWinter) return []
+
+  const winter = yearTerms[0]!                      // 本岁冬至（W1）
+  const D1 = winter.dayInRing                       // 环上位置（与 24 节气环完全一致）
+  const W2 = nextWinter.date                        // 下一岁冬至实际日期
+
+  const winterSD = SolarDay.fromYmd(
+    winter.date.getFullYear(), winter.date.getMonth() + 1, winter.date.getDate()
+  )
+  const nextWinterSD = SolarDay.fromYmd(
+    W2.getFullYear(), W2.getMonth() + 1, W2.getDate()
+  )
+
+  // 实际年长 = diffDays(W2, W1) —— 365 或 366 天
+  const yearLength = diffDays(W2, winter.date)
+  // 超出 360 格的天数 = 5 或 6
+  const overflow = yearLength - CYCLE_DAYS
+
+  // 主循环：环第 i 格 → 岁内第 k=(i−D1) mod 360 天
+  const entries: LunarRingEntry[] = new Array(CYCLE_DAYS)
+  for (let i = 0; i < CYCLE_DAYS; i++) {
+    const k = ((i - D1) % CYCLE_DAYS + CYCLE_DAYS) % CYCLE_DAYS
+    const sd = winterSD.next(k)
+    const date = new Date(sd.getYear(), sd.getMonth() - 1, sd.getDay())
+    const s = lunarSummary(date)
+    entries[i] = {
+      index: i,
+      solarDate: date,
+      lunarDayName: s.dayName,
+      isMonthFirst: s.isMonthFirst,
+      lunarMonthName: s.monthName,
+      isLeapMonthFirst: s.isLeapMonthFirst
+    }
+  }
+
+  // 叠加：W2-overflow..W2-1（岁末溢出天数）+ W2 冬至日
+  // 总格数 = overflow + 1 = 6 或 7
+  for (let k = 0; k < overflow + 1; k++) {
+    const tailSD = k < overflow ? nextWinterSD.next(-overflow + k) : nextWinterSD
+    const tailDate = new Date(tailSD.getYear(), tailSD.getMonth() - 1, tailSD.getDay())
+    const ringIdx = ((diffDays(tailDate, upperYuan) % CYCLE_DAYS) + CYCLE_DAYS) % CYCLE_DAYS
+    const s = lunarSummary(tailDate)
+    entries[ringIdx]!.overlay = {
+      solarDate: tailDate,
+      lunarDayName: s.dayName,
+      isMonthFirst: s.isMonthFirst,
+      lunarMonthName: s.monthName,
+      isLeapMonthFirst: s.isLeapMonthFirst
+    }
+  }
+  return entries
+}
+
+/**
+ * 冬至叠加区在环上的位置区间（供组件识别哪些格需要径向切分）。
+ * 返回 (overflow + 1) 个索引：W2-overflow..W2-1 + W2。
+ */
+export function getWinterOverlayIndices(today: Date): number[] {
+  const upperYuan = findUpperYuanJiaziDay(today)
+  const terms = computeQiMenSolarTerms(today)
+  const yearTerms = terms.filter(t => !t.isNextWinter)
+  const nextWinter = terms.find(t => t.isNextWinter)
+  if (yearTerms.length === 0 || !nextWinter) return []
+
+  const W1 = yearTerms[0]!.date
+  const W2 = nextWinter.date
+  const yearLength = diffDays(W2, W1)
+  const overflow = yearLength - CYCLE_DAYS
+
+  const nextWinterSD = SolarDay.fromYmd(
+    W2.getFullYear(), W2.getMonth() + 1, W2.getDate()
+  )
+  const indices: number[] = []
+  for (let k = 0; k < overflow + 1; k++) {
+    const tailSD = k < overflow ? nextWinterSD.next(-overflow + k) : nextWinterSD
+    const tailDate = new Date(tailSD.getYear(), tailSD.getMonth() - 1, tailSD.getDay())
+    const ringIdx = ((diffDays(tailDate, upperYuan) % CYCLE_DAYS) + CYCLE_DAYS) % CYCLE_DAYS
+    indices.push(ringIdx)
+  }
+  return indices
+}
+
 export function computeChaoshenState(today: Date): ChaoshenState {
   const terms = computeQiMenSolarTerms(today)
   const upperYuan = findUpperYuanJiaziDay(today)
