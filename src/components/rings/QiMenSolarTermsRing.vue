@@ -9,8 +9,15 @@
  *  🔑 节气切换以冬至为准：过冬至那天翻页到下一岁 24 节气
  *
  *  一环 360 天 = 360° = 每天 1°，段环模式（DataRing）：
- *   · 每格 [i, i+1) 对应一个具体日期 = upperYuanDate + i 天
- *   · 节气首日格（24 格）：亮色（冬至=金 / 中气=蓝 / 节=绿）
+ *   · 24 节气首日格 = 每节气的「上元第一天」= 符头位置（网格节气日）
+ *   · 符头颜色由「网格 vs 真实天文」偏差决定：
+ *       对齐（正授，diff=0） → 绿色符头
+ *       不对齐（超神/接气） → 符头保持灰色，
+ *         真实天文节气日那一格另外标色：
+ *           超神（天文提前，diff<0） → 红色
+ *           接气（天文延后，diff>0） → 蓝色
+ *       特殊：本岁冬至永远正授 → 金色（岁首标）
+ *              下一岁冬至锚点 → 紫色（提前预告）
  *   · 节气段内其余 14 天：中灰 #2a2a2a
  *   · 未被 24 节气覆盖的绕环缝隙（一岁 365 - 环 360 = 5 天）：极暗
  *   · 今日格：金色高亮 + 呼吸
@@ -58,6 +65,13 @@ interface TermSlot {
   isMidTerm: boolean
   isWinter: boolean
   isNextWinter: boolean
+  /**
+   * 网格 vs 天文偏差判定的符头状态：
+   *   'zhengshou' 正授（对齐）→ 绿
+   *   'chaoshen'  超神（天文提前）→ 红
+   *   'jieqi'     接气（天文延后）→ 蓝
+   */
+  chaoshenLabel: 'zhengshou' | 'chaoshen' | 'jieqi'
 }
 
 const ringData = computed<RingData>(() => {
@@ -70,15 +84,46 @@ const ringData = computed<RingData>(() => {
   const yearTerms = terms.filter(t => !t.isNextWinter)
   const nextWinter = terms.find(t => t.isNextWinter) ?? null
 
+  // 本岁冬至真实日期 = yearTerms[0].date（网格锚点，永远正授）
+  const winterRealDate = yearTerms[0]?.date ?? null
+
+  /**
+   * 计算某节气的符头状态：
+   *   网格节气日 = 本岁冬至日 + n × 15 天
+   *   真实天文节气日 = t.date
+   *   diff = real - grid（天）
+   *   diff > 0 → 接气（网格已到、天文尚未到 = 天文延后）
+   *   diff < 0 → 超神（网格未到、天文已到 = 天文提前）
+   *   diff = 0 → 正授
+   */
+  const computeChaoshenLabel = (
+    idx: number,
+    real: Date
+  ): 'zhengshou' | 'chaoshen' | 'jieqi' => {
+    if (!winterRealDate) return 'zhengshou'
+    if (idx === 0) return 'zhengshou'  // 冬至本身作锚点，恒正授
+    const gridDate = new Date(
+      winterRealDate.getFullYear(),
+      winterRealDate.getMonth(),
+      winterRealDate.getDate() + idx * 15
+    )
+    const diff = diffDays(real, gridDate)
+    if (diff > 0) return 'jieqi'
+    if (diff < 0) return 'chaoshen'
+    return 'zhengshou'
+  }
+
   // 首日索引表：dayInRing → TermSlot。
   // 下一冬至优先级最高（它会落在冬至段末端某天，用紫色抢占该格）。
   const startIdxOf = new Map<number, TermSlot>()
-  for (const t of yearTerms) {
+  for (let n = 0; n < yearTerms.length; n++) {
+    const t = yearTerms[n]!
     startIdxOf.set(t.dayInRing, {
       name: t.name,
       isMidTerm: t.isMidTerm,
       isWinter: t.name === '冬至',
-      isNextWinter: false
+      isNextWinter: false,
+      chaoshenLabel: computeChaoshenLabel(n, t.date)
     })
   }
   if (nextWinter) {
@@ -86,8 +131,38 @@ const ringData = computed<RingData>(() => {
       name: '冬至·下岁',
       isMidTerm: true,
       isWinter: true,
-      isNextWinter: true
+      isNextWinter: true,
+      chaoshenLabel: 'zhengshou'
     })
+  }
+
+  /**
+   * 🎯 真实节气日索引表：dayInRing → 该节气在天文真实日期落到的环格。
+   *   ── 与符头（网格首日）区分开：
+   *      · 符头是 winter + n × 15 的固定网格格（是否对齐 → 绿或灰）
+   *      · 真实节气日 = t.date 换算到环上，可能与符头错开若干天
+   *   ── 用于把超神红 / 接气蓝色画到「天文真实位置」那一格上，
+   *      而不是错误地染到符头。
+   *
+   *   跳过 chaoshenLabel === 'zhengshou' 的节气（正授时真实日 = 符头日，
+   *   由符头绿色代表；也跳过冬至锚点，冬至符头恒为岁首金色不覆盖）。
+   */
+  interface RealTermMark {
+    name: string
+    chaoshenLabel: 'chaoshen' | 'jieqi'
+  }
+  const realTermIdxOf = new Map<number, RealTermMark>()
+  for (let n = 0; n < yearTerms.length; n++) {
+    const t = yearTerms[n]!
+    if (t.name === '冬至') continue
+    const label = computeChaoshenLabel(n, t.date)
+    if (label === 'zhengshou') continue
+    const realDayInRing = ((diffDays(t.date, upperYuan) % 360) + 360) % 360
+    // 该格若已被某节气符头占用则让位（符头优先），只染剩余段内格
+    if (startIdxOf.has(realDayInRing)) continue
+    if (!realTermIdxOf.has(realDayInRing)) {
+      realTermIdxOf.set(realDayInRing, { name: t.name, chaoshenLabel: label })
+    }
   }
 
   // 分段填色：按时间序把每个节气段的实际公历跨度沿环填入。
@@ -101,7 +176,8 @@ const ringData = computed<RingData>(() => {
       name: t.name,
       isMidTerm: t.isMidTerm,
       isWinter: t.name === '冬至',
-      isNextWinter: false
+      isNextWinter: false,
+      chaoshenLabel: computeChaoshenLabel(k, t.date)
     }
     for (let d = 0; d < segDays; d++) {
       const idx = (t.dayInRing + d) % 360
@@ -122,8 +198,10 @@ const ringData = computed<RingData>(() => {
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {
     const startInfo = startIdxOf.get(i)             // 该格是否为某节气首日（含下一冬至）
+    const realMark = realTermIdxOf.get(i)           // 该格是否为某节气真实天文日（错位标记）
     const seg = segAssignment.get(i) ?? null
     const isTermDay = !!startInfo
+    const isRealTermDay = !!realMark && !isTermDay
     const isToday = i === todayInRing
     const isCurrentSegDay =
       !!currentSeg && !!seg && seg.name === currentSeg.name
@@ -155,7 +233,7 @@ const ringData = computed<RingData>(() => {
       }
       fontSize = 8
       highlightLevel = 3
-      label = startInfo?.name ?? ''
+      label = startInfo?.name ?? realMark?.name ?? ''
     } else if (startInfo?.isNextWinter) {
       // 下一岁冬至：默认紫，本岁三元走完后升格为金
       if (nextWinterIsGold) {
@@ -177,21 +255,42 @@ const ringData = computed<RingData>(() => {
         fontSize = 7
         highlightLevel = 1
         label = '冬至'
-      } else {
-        bgColor = info.isWinter
-          ? '#8B7500'                                  // 本岁冬至 · 深金
-          : info.isMidTerm
-            ? '#1F4E79'                                // 中气 · 深蓝
-            : '#1F5F3A'                                // 节 · 深绿
-        color = info.isWinter
-          ? '#FFD700'
-          : info.isMidTerm
-            ? '#5DADE2'
-            : '#58D68D'
+      } else if (info.isWinter) {
+        // 本岁冬至 · 深金（岁首锚点，恒正授）
+        bgColor = '#8B7500'
+        color = '#FFD700'
         fontSize = 7
         highlightLevel = 2
         label = info.name
+      } else if (info.chaoshenLabel === 'zhengshou') {
+        // 🎯 符头对齐真实节气 → 正授 · 绿
+        bgColor = '#1F5F3A'                            // 深绿底
+        color = '#58D68D'                              // 亮绿字
+        fontSize = 7
+        highlightLevel = 2
+        label = info.name
+      } else {
+        // 🎯 符头未对齐（超神 / 接气）→ 符头本身灰色，
+        //    红 / 蓝色画在真实节气日那一格（见下方 isRealTermDay 分支）
+        bgColor = '#3a3a3a'                            // 中灰底
+        color = '#9a9a9a'                              // 淡灰字
+        fontSize = 7
+        highlightLevel = 1
+        label = info.name
       }
+    } else if (isRealTermDay) {
+      // 🎯 真实节气日格（与符头错开的天文位置）→ 超神红 / 接气蓝
+      const mark = realMark!
+      if (mark.chaoshenLabel === 'chaoshen') {
+        bgColor = '#7B241C'                            // 超神 · 深红底
+        color = '#F1948A'                              // 亮红字
+      } else {
+        bgColor = '#1F4E79'                            // 接气 · 深蓝底
+        color = '#5DADE2'                              // 亮蓝字
+      }
+      fontSize = 7
+      highlightLevel = 2
+      label = mark.name
     } else if (isCurrentSegDay) {
       bgColor = '#2a2a2a'
       color = '#555555'
@@ -212,7 +311,7 @@ const ringData = computed<RingData>(() => {
       color,
       startAngle: i,
       endAngle: i + 1,
-      highlight: isToday || isTermDay,
+      highlight: isToday || isTermDay || isRealTermDay,
       highlightLevel,
       fontSize
     })
