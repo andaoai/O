@@ -578,6 +578,8 @@ export interface LunarRingEntry {
   index: number
   /** 对应的公历日期（本岁第 k 天，k = (index − D1 + 360) mod 360） */
   solarDate: Date
+  /** 距本岁冬至 W1 的天数（0..359），用于「年头金色渐变」判定 */
+  daysFromYearStart: number
   /** 该日农历日名（初一/初二/…/三十） */
   lunarDayName: string
   /** 是否为农历初一（月首日） */
@@ -597,6 +599,11 @@ export interface LunarRingEntry {
     isMonthFirst: boolean
     lunarMonthName: string
     isLeapMonthFirst: boolean
+    /**
+     * 距下一冬至 W2 的天数（0 = W2 本身，1..overflow = 岁末倒数第几天）
+     * 用于「年尾紫色渐变」判定 —— 越靠近 W2 紫色越深
+     */
+    daysBeforeYearEnd: number
   }
 }
 
@@ -667,6 +674,7 @@ export function computeQiMenLunarRing(today: Date): LunarRingEntry[] {
     entries[i] = {
       index: i,
       solarDate: date,
+      daysFromYearStart: k,
       lunarDayName: s.dayName,
       isMonthFirst: s.isMonthFirst,
       lunarMonthName: s.monthName,
@@ -681,12 +689,17 @@ export function computeQiMenLunarRing(today: Date): LunarRingEntry[] {
     const tailDate = new Date(tailSD.getYear(), tailSD.getMonth() - 1, tailSD.getDay())
     const ringIdx = ((diffDays(tailDate, upperYuan) % CYCLE_DAYS) + CYCLE_DAYS) % CYCLE_DAYS
     const s = lunarSummary(tailDate)
+    // daysBeforeYearEnd: 距 W2 的天数
+    //   k = 0..overflow-1 → 岁末天（W2-overflow..W2-1）→ overflow..1
+    //   k = overflow      → W2 本身 → 0
+    const daysBeforeYearEnd = k < overflow ? overflow - k : 0
     entries[ringIdx]!.overlay = {
       solarDate: tailDate,
       lunarDayName: s.dayName,
       isMonthFirst: s.isMonthFirst,
       lunarMonthName: s.monthName,
-      isLeapMonthFirst: s.isLeapMonthFirst
+      isLeapMonthFirst: s.isLeapMonthFirst,
+      daysBeforeYearEnd
     }
   }
   return entries

@@ -32,6 +32,7 @@ import {
   computeQiMenLunarRing,
   findUpperYuanJiaziDay,
   findLastWinterSolstice,
+  findNextWinterSolstice,
   getWinterOverlayIndices,
   type LunarRingEntry
 } from '@/utils/qimenDunJia'
@@ -76,6 +77,17 @@ const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 const entries = computed<LunarRingEntry[]>(() => computeQiMenLunarRing(timeRef.value))
 const overlaySet = computed<Set<number>>(() => new Set(getWinterOverlayIndices(timeRef.value)))
 
+/** 本岁实际年长（365 或 366 天），用于「主层末 10 天紫色渐变」判定 */
+const yearLength = computed<number>(() => {
+  const now = timeRef.value
+  const winter = findLastWinterSolstice(now)
+  const next = findNextWinterSolstice(winter)
+  if (!next) return 365
+  const a = SolarDay.fromYmd(next.getFullYear(), next.getMonth() + 1, next.getDate())
+  const b = SolarDay.fromYmd(winter.getFullYear(), winter.getMonth() + 1, winter.getDate())
+  return a.subtract(b)
+})
+
 /**
  * 今日在环上的定位。
  *  - index: 环格 0-359（= (D1 + k_today) mod 360）
@@ -108,6 +120,28 @@ interface Cell {
   }
 }
 
+/**
+ * 十六进制颜色线性插值：t=0 返回 a，t=1 返回 b，中间线性混合。
+ * 用于生成"年头金→暗金"和"年尾暗紫→亮紫"两个渐变。
+ */
+function lerpHex(a: string, b: string, t: number): string {
+  const ah = a.replace('#', '')
+  const bh = b.replace('#', '')
+  const ar = parseInt(ah.substring(0, 2), 16)
+  const ag = parseInt(ah.substring(2, 4), 16)
+  const ab = parseInt(ah.substring(4, 6), 16)
+  const br = parseInt(bh.substring(0, 2), 16)
+  const bg = parseInt(bh.substring(2, 4), 16)
+  const bb = parseInt(bh.substring(4, 6), 16)
+  const r = Math.round(ar + (br - ar) * t)
+  const g = Math.round(ag + (bg - ag) * t)
+  const bl = Math.round(ab + (bb - ab) * t)
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
+}
+
+/** 年头/年尾视觉渐变窗口大小（天） */
+const YEAR_EDGE_WINDOW = 10
+
 const cells = computed<Cell[]>(() => {
   const arr = entries.value
   const now = todayPos.value
@@ -139,6 +173,37 @@ const cells = computed<Cell[]>(() => {
       labelColor = '#7F8C8D'
       fontSize = 5
     }
+
+    // 🎨 年头「金→暗金」渐变：本岁开头 YEAR_EDGE_WINDOW 天从冬至向后
+    //    第 0 天 = 冬至日本身（金色最亮）→ 第 9 天 = 微暗金色
+    //    初一格不覆盖（月名标记优先级更高）
+    if (!e.isMonthFirst && e.daysFromYearStart < YEAR_EDGE_WINDOW) {
+      const t = e.daysFromYearStart / YEAR_EDGE_WINDOW
+      bgColor = lerpHex('#8B7500', '#3A2E10', t)   // 金 → 暗金
+      labelColor = lerpHex('#FFD700', '#B8860B', t)
+      fontSize = 5
+    }
+
+    // 🎨 年尾「淡紫→深紫」渐变：主层末 YEAR_EDGE_WINDOW 天，越靠近 W2 越深
+    //    daysBeforeW2 = yearLength - daysFromYearStart
+    //    overlay 层已吃掉 overflow (≤ overflow) 天，主层剩余那几格：
+    //      k ∈ [yearLength - YEAR_EDGE_WINDOW, yearLength - overflow)
+    //    初一格不覆盖（月名优先）
+    const overflow = yearLength.value - 360
+    const daysBeforeW2 = yearLength.value - e.daysFromYearStart
+    const inTailWindow =
+      !e.isMonthFirst &&
+      !isOverlayCell &&                                 // 排除 overlay 区（另有紫色渐变）
+      daysBeforeW2 > overflow &&                        // 已过溢出区
+      daysBeforeW2 <= YEAR_EDGE_WINDOW                  // 且落在末 10 天
+    if (inTailWindow) {
+      // t：距 W2 越远越接近 0（淡紫），越近越接近 1（较深紫，与 overlay 无缝衔接）
+      const t = 1 - (daysBeforeW2 - overflow) / Math.max(1, YEAR_EDGE_WINDOW - overflow)
+      bgColor = lerpHex('#2C1F3A', '#6C1E8F', t)         // 暗紫 → 中深紫
+      labelColor = lerpHex('#8E7AB5', '#F5D0FA', t)
+      fontSize = 5
+    }
+
     if (todayOnMain) {
       // 今日格（落在主层）：金底黑字
       bgColor = '#FFD700'
@@ -155,7 +220,7 @@ const cells = computed<Cell[]>(() => {
       highlight: todayOnMain || todayOnOverlay
     }
 
-    // 叠加层：本岁末 5 天（W1+360..W1+364）
+    // 叠加层：本岁末 (overflow) 天 + W2 冬至日
     if (isOverlayCell && e.overlay) {
       const o = e.overlay
       let ol_label: string
@@ -164,13 +229,18 @@ const cells = computed<Cell[]>(() => {
       let ol_fontSize: number
       if (o.isMonthFirst) {
         ol_label = o.lunarMonthName
-        ol_bgColor = o.isLeapMonthFirst ? '#5B2C6F' : '#5B2C6F'  // 暗紫
+        ol_bgColor = '#5B2C6F'  // 暗紫（保持月名底色）
         ol_labelColor = o.isLeapMonthFirst ? '#F5B7B1' : '#F5D0FA'
         ol_fontSize = 6
       } else {
         ol_label = o.lunarDayName
-        ol_bgColor = '#2C1F3A'                                    // 暗紫底
-        ol_labelColor = '#B39DDB'
+        // 🎨 overlay 层「深紫（W2）→ 稍浅紫」：与主层末 10 天渐变无缝衔接
+        //   daysBeforeYearEnd: 0 (W2 本身) → overflow (岁末第一天)
+        //   t=0 深紫 `#6C1E8F`（与主层 daysBeforeW2 = overflow 那一格颜色一致）
+        //   t=1 主层 YEAR_EDGE_WINDOW 边界紫色
+        const t = Math.min(1, o.daysBeforeYearEnd / Math.max(1, overflow))
+        ol_bgColor = lerpHex('#8E44AD', '#6C1E8F', t)      // 亮紫 → 深紫
+        ol_labelColor = lerpHex('#FFFFFF', '#F5D0FA', t)
         ol_fontSize = 5
       }
       if (todayOnOverlay) {
