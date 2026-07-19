@@ -65,8 +65,8 @@ function draw() {
 
   // 十二边形淡线
   ctx.beginPath()
-  ctx.moveTo(pts[0].x, pts[0].y)
-  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y)
+  ctx.moveTo(pts[0]!.x, pts[0]!.y)
+  for (let i = 1; i < n; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y)
   ctx.closePath()
   ctx.strokeStyle = 'rgba(200,162,232,0.12)'
   ctx.lineWidth = 1
@@ -75,16 +75,16 @@ function draw() {
   // 六冲直径线
   for (const p of pairs) {
     ctx.beginPath()
-    ctx.moveTo(pts[p.a].x, pts[p.a].y)
-    ctx.lineTo(pts[p.b].x, pts[p.b].y)
+    ctx.moveTo(pts[p.a]!.x, pts[p.a]!.y)
+    ctx.lineTo(pts[p.b]!.x, pts[p.b]!.y)
     ctx.strokeStyle = p.color
     ctx.lineWidth = 2.5
     ctx.stroke()
 
     // 光晕
     ctx.beginPath()
-    ctx.moveTo(pts[p.a].x, pts[p.a].y)
-    ctx.lineTo(pts[p.b].x, pts[p.b].y)
+    ctx.moveTo(pts[p.a]!.x, pts[p.a]!.y)
+    ctx.lineTo(pts[p.b]!.x, pts[p.b]!.y)
     ctx.strokeStyle = p.color + '33'
     ctx.lineWidth = 8
     ctx.stroke()
@@ -92,11 +92,11 @@ function draw() {
     // 端点高亮
     for (const idx of [p.a, p.b]) {
       ctx.beginPath()
-      ctx.arc(pts[idx].x, pts[idx].y, 5, 0, 2 * Math.PI)
+      ctx.arc(pts[idx]!.x, pts[idx]!.y, 5, 0, 2 * Math.PI)
       ctx.fillStyle = p.color
       ctx.fill()
       ctx.beginPath()
-      ctx.arc(pts[idx].x, pts[idx].y, 8, 0, 2 * Math.PI)
+      ctx.arc(pts[idx]!.x, pts[idx]!.y, 8, 0, 2 * Math.PI)
       ctx.fillStyle = p.color + '44'
       ctx.fill()
     }
@@ -115,7 +115,7 @@ function draw() {
     const lr = R - 34
     const lx = cx + lr * Math.cos(start + i * angle)
     const ly = cy + lr * Math.sin(start + i * angle)
-    ctx.fillText(diZhi[i], lx, ly)
+    ctx.fillText(diZhi[i]!, lx, ly)
   }
 
   // 中心点

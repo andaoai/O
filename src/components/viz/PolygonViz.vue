@@ -93,7 +93,7 @@ function draw(n: number) {
     for (let i = 0; i < n; i++) {
       ctx.beginPath()
       ctx.moveTo(cx, cy)
-      ctx.lineTo(pts[i].x, pts[i].y)
+      ctx.lineTo(pts[i]!.x, pts[i]!.y)
       ctx.strokeStyle = 'rgba(200, 162, 232, 0.25)'
       ctx.lineWidth = 1.2
       ctx.stroke()
@@ -104,21 +104,21 @@ function draw(n: number) {
   if (n === 1) {
     ctx.beginPath()
     ctx.moveTo(cx, cy)
-    ctx.lineTo(pts[0].x, pts[0].y)
+    ctx.lineTo(pts[0]!.x, pts[0]!.y)
     ctx.strokeStyle = '#c8a2e8'
     ctx.lineWidth = 3
     ctx.stroke()
   } else if (n === 2) {
     ctx.beginPath()
-    ctx.moveTo(pts[0].x, pts[0].y)
-    ctx.lineTo(pts[1].x, pts[1].y)
+    ctx.moveTo(pts[0]!.x, pts[0]!.y)
+    ctx.lineTo(pts[1]!.x, pts[1]!.y)
     ctx.strokeStyle = '#c8a2e8'
     ctx.lineWidth = 3
     ctx.stroke()
   } else {
     ctx.beginPath()
-    ctx.moveTo(pts[0].x, pts[0].y)
-    for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y)
+    ctx.moveTo(pts[0]!.x, pts[0]!.y)
+    for (let i = 1; i < n; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y)
     ctx.closePath()
     ctx.strokeStyle = '#c8a2e8'
     ctx.lineWidth = 3
@@ -170,7 +170,7 @@ function draw(n: number) {
   const maxDots = Math.min(n, 60)
   for (let i = 0; i < maxDots; i++) {
     ctx.beginPath()
-    ctx.arc(pts[i].x, pts[i].y, 2.5, 0, 2 * Math.PI)
+    ctx.arc(pts[i]!.x, pts[i]!.y, 2.5, 0, 2 * Math.PI)
     ctx.fillStyle = '#c8a2e8'
     ctx.fill()
   }

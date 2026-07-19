@@ -61,8 +61,8 @@ function draw() {
 
   // 十二边形淡线
   ctx.beginPath()
-  ctx.moveTo(pts[0].x, pts[0].y)
-  for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y)
+  ctx.moveTo(pts[0]!.x, pts[0]!.y)
+  for (let i = 1; i < n; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y)
   ctx.closePath()
   ctx.strokeStyle = 'rgba(200,162,232,0.15)'
   ctx.lineWidth = 1
@@ -71,9 +71,9 @@ function draw() {
   // 三合三角形
   for (const t of triples) {
     ctx.beginPath()
-    ctx.moveTo(pts[t.idx[0]].x, pts[t.idx[0]].y)
-    ctx.lineTo(pts[t.idx[1]].x, pts[t.idx[1]].y)
-    ctx.lineTo(pts[t.idx[2]].x, pts[t.idx[2]].y)
+    ctx.moveTo(pts[t.idx[0]!]!.x, pts[t.idx[0]!]!.y)
+    ctx.lineTo(pts[t.idx[1]!]!.x, pts[t.idx[1]!]!.y)
+    ctx.lineTo(pts[t.idx[2]!]!.x, pts[t.idx[2]!]!.y)
     ctx.closePath()
     ctx.fillStyle = t.fill
     ctx.fill()
@@ -100,7 +100,7 @@ function draw() {
       }
     }
     if (!inTriple) ctx.fillStyle = '#4a2c7a'
-    ctx.fillText(diZhi[i], lx, ly)
+    ctx.fillText(diZhi[i]!, lx, ly)
   }
 
   // 顶点
@@ -110,7 +110,7 @@ function draw() {
       if (t.idx.includes(i)) { color = t.stroke; break }
     }
     ctx.beginPath()
-    ctx.arc(pts[i].x, pts[i].y, 3, 0, 2 * Math.PI)
+    ctx.arc(pts[i]!.x, pts[i]!.y, 3, 0, 2 * Math.PI)
     ctx.fillStyle = color
     ctx.fill()
   }

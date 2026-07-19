@@ -41,7 +41,7 @@ function draw() {
     const yes = 360 % nn === 0
     ctx.beginPath()
     ctx.moveTo(cx, cy)
-    ctx.lineTo(pts[i].x, pts[i].y)
+    ctx.lineTo(pts[i]!.x, pts[i]!.y)
     ctx.strokeStyle = yes ? 'rgba(200, 162, 232, 0.5)' : 'rgba(74, 44, 122, 0.5)'
     ctx.lineWidth = 1.5
     ctx.stroke()
@@ -52,7 +52,7 @@ function draw() {
     const nn = i + 1
     const yes = 360 % nn === 0
     ctx.beginPath()
-    ctx.arc(pts[i].x, pts[i].y, 4, 0, 2 * Math.PI)
+    ctx.arc(pts[i]!.x, pts[i]!.y, 4, 0, 2 * Math.PI)
     ctx.fillStyle = yes ? '#c8a2e8' : '#4a2c7a'
     ctx.fill()
 
