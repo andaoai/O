@@ -207,6 +207,13 @@ export default defineConfig({
                 { "text": "䷽ 小过", "link": "/books/京氏易傳/小过卦" },
                 { "text": "䷵ 归妹", "link": "/books/京氏易傳/归妹卦" }
               ]
+            },
+            {
+              "text": "卷下 · 易例总论",
+              "collapsed": false,
+              "items": [
+                { "text": "象数纲领与八宫卦序", "link": "/books/京氏易傳/京氏易傳卷下" }
+              ]
             }
           ],
         },
