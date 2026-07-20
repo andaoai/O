@@ -46,10 +46,11 @@ const {
   stepTime,
   stepMonth,
   stepYear,
+  stepSui,
   applyTime
 } = useTimeController(timeRef, { onUserChange: notifyUserChange })
 
-useTimeShortcuts({ togglePlayPause, resetToNow, stepYear, stepMonth, stepTime })
+useTimeShortcuts({ togglePlayPause, resetToNow, stepYear, stepMonth, stepTime, stepSui })
 
 const chineseCalendar = computed(() => getChineseCalendarInfo(props.time))
 const dynastyInfo = computed(() => getDynastyInfo(props.time))
@@ -175,6 +176,14 @@ const applyInputTime = () => {
     :collapsed="collapsed.step"
     @toggle="emit('toggle-section', 'step')"
   >
+    <div class="sui-row">
+      <SidebarButton variant="accent" key-hint="⇧G" title="Shift+G · 一岁 = 360 天" @click="stepSui(-1)">
+        -1岁
+      </SidebarButton>
+      <SidebarButton variant="accent" key-hint="G" title="G 键 · 一岁 = 360 天" @click="stepSui(1)">
+        +1岁
+      </SidebarButton>
+    </div>
     <div class="step-grid">
       <SidebarButton variant="accent" key-hint="⇧Y" title="Shift+Y" @click="stepYear(-1)">
         -1年
@@ -323,6 +332,13 @@ const applyInputTime = () => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 3px;
+}
+
+.sui-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  margin-bottom: 6px;
 }
 
 .time-inputs {

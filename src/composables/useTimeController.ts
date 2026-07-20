@@ -33,11 +33,15 @@ export interface UseTimeControllerReturn {
   stepTime: (seconds: number) => void
   stepMonth: (months: number) => void
   stepYear: (years: number) => void
+  /** 步进「岁」（干支纪年周天）：每岁固定 360 天，与公历年 ≈365.25 天区分 */
+  stepSui: (sui: number) => void
   /** 直接设置时间（例如输入框解析出新时间后调用） */
   applyTime: (t: Date) => void
 }
 
 const MAX_FRAME_DT_MS = 100 // 单帧增量上限：抑制 tab 冻结/长掉帧导致的瞬跳
+const SUI_DAYS = 360 // 一岁 = 360 天（干支纪年周天，六十甲子 × 6 循环）
+const MS_PER_DAY = 86400 * 1000
 
 export function useTimeController(
   time: Ref<Date>,
@@ -138,6 +142,16 @@ export function useTimeController(
     applyTime(newTime)
   }
 
+  /**
+   * 步进「岁」：每岁 360 天，直接在毫秒级增量。
+   * 与 stepYear（公历年 ≈365.25 天）区分——本项目里干支纪年周天为 360 天，
+   * 六十甲子 × 6 = 360 日 / 岁，恰对应「一岁一周天」的古法。
+   */
+  const stepSui = (sui: number) => {
+    pause()
+    applyTime(new Date(time.value.getTime() + sui * SUI_DAYS * MS_PER_DAY))
+  }
+
   // ─── tab 隐藏/显示：重置 lastFrameAt 避免瞬跳 ──────────
   const onVisibilityChange = () => {
     if (document.hidden) return
@@ -164,6 +178,7 @@ export function useTimeController(
     stepTime,
     stepMonth,
     stepYear,
+    stepSui,
     applyTime
   }
 }

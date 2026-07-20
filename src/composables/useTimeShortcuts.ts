@@ -28,12 +28,14 @@ export interface TimeShortcutActions {
   stepYear: (n: number) => void
   stepMonth: (n: number) => void
   stepTime: (seconds: number) => void
+  stepSui: (n: number) => void
 }
 
 /**
  * 时间控制快捷键
  *   Space / R          播放暂停 / 回到当下
  *   Y / M / D / H / N / S   前进；+Shift 后退
+ *   G                  前进 1 岁（360 天）；+Shift 后退
  */
 export function useTimeShortcuts(actions: TimeShortcutActions) {
   const onKeyDown = (e: KeyboardEvent) => {
@@ -80,6 +82,11 @@ export function useTimeShortcuts(actions: TimeShortcutActions) {
       case 'S':
         e.preventDefault()
         actions.stepTime(e.shiftKey ? -1 : 1)
+        break
+      case 'g':
+      case 'G':
+        e.preventDefault()
+        actions.stepSui(e.shiftKey ? -1 : 1)
         break
     }
   }
