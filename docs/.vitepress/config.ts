@@ -193,6 +193,20 @@ export default defineConfig({
                 { "text": "䷅ 讼", "link": "/books/京氏易傳/讼卦" },
                 { "text": "䷌ 同人", "link": "/books/京氏易傳/同人卦" }
               ]
+            },
+            {
+              "text": "卷中 · ☱ · 兑宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷹ 兑", "link": "/books/京氏易傳/兑卦" },
+                { "text": "䷮ 困", "link": "/books/京氏易傳/困卦" },
+                { "text": "䷬ 萃", "link": "/books/京氏易傳/萃卦" },
+                { "text": "䷞ 咸", "link": "/books/京氏易傳/咸卦" },
+                { "text": "䷦ 蹇", "link": "/books/京氏易傳/蹇卦" },
+                { "text": "䷎ 谦", "link": "/books/京氏易傳/谦卦" },
+                { "text": "䷽ 小过", "link": "/books/京氏易傳/小过卦" },
+                { "text": "䷵ 归妹", "link": "/books/京氏易傳/归妹卦" }
+              ]
             }
           ],
         },
