@@ -153,7 +153,7 @@ export default defineConfig({
               ]
             },
             {
-              "text": "卷下 · ☷ · 坤宫",
+              "text": "卷中 · ☷ · 坤宫",
               "collapsed": false,
               "items": [
                 { "text": "䷁ 坤", "link": "/books/京氏易傳/坤卦" },
@@ -167,7 +167,7 @@ export default defineConfig({
               ]
             },
             {
-              "text": "卷下 · ☴ · 巽宫",
+              "text": "卷中 · ☴ · 巽宫",
               "collapsed": false,
               "items": [
                 { "text": "䷸ 巽", "link": "/books/京氏易傳/巽卦" },
@@ -178,6 +178,20 @@ export default defineConfig({
                 { "text": "䷔ 噬嗑", "link": "/books/京氏易傳/噬嗑卦" },
                 { "text": "䷚ 颐", "link": "/books/京氏易傳/颐卦" },
                 { "text": "䷑ 蛊", "link": "/books/京氏易傳/蛊卦" }
+              ]
+            },
+            {
+              "text": "卷中 · ☲ · 离宫",
+              "collapsed": false,
+              "items": [
+                { "text": "䷝ 离", "link": "/books/京氏易傳/离卦" },
+                { "text": "䷷ 旅", "link": "/books/京氏易傳/旅卦" },
+                { "text": "䷱ 鼎", "link": "/books/京氏易傳/鼎卦" },
+                { "text": "䷿ 未济", "link": "/books/京氏易傳/未济卦" },
+                { "text": "䷃ 蒙", "link": "/books/京氏易傳/蒙卦" },
+                { "text": "䷺ 涣", "link": "/books/京氏易傳/涣卦" },
+                { "text": "䷅ 讼", "link": "/books/京氏易傳/讼卦" },
+                { "text": "䷌ 同人", "link": "/books/京氏易傳/同人卦" }
               ]
             }
           ],
