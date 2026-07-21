@@ -86,10 +86,12 @@ const items = computed(() => {
     const meta = WENWANG_GUA_BY_VALUE[value]!
     const active = interaction.isNodeActive(value)
     const match = interaction.isNodeMatch(value)
+    const focused = interaction.isFocused(value)
 
-    // 计算不透明度
+    // 计算不透明度（聚焦卦永远高亮）
     let opacity: number
-    if (!active) opacity = 0.04       // 不在筛选范围
+    if (focused) opacity = 1
+    else if (!active) opacity = 0.04       // 不在筛选范围
     else if (isHov && !match) opacity = 0.08 // hover中但不匹配
     else if (isHov && match) opacity = 1     // hover中且匹配
     else opacity = 0.5                       // 正常
@@ -104,7 +106,9 @@ const items = computed(() => {
         label = meta.name
         // 纯卦特殊着色仅限 feifu 模式
         const specialPureColor = isFeifuMode.value && interaction.isPureGua(value) ? '#66CCFF' : null
-        if (match) {
+        if (focused) {
+          color = '#E5D0FF'
+        } else if (match) {
           color = specialPureColor
             ?? (props.usePaletteColorFallback ? getGuaPaletteColor(value) : '#FFD700')
         } else {
@@ -116,13 +120,17 @@ const items = computed(() => {
 
       case 'element':
         label = getGuaElement(value)
-        color = match ? getGuaPaletteColor(value) : (active ? '#555' : '#1a1a1a')
+        color = focused
+          ? '#E5D0FF'
+          : match ? getGuaPaletteColor(value) : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(8, Math.round(r * 0.024))
         break
 
       case 'unicode':
         label = getUnicodeHexagram(meta.wenwangOrder)
-        if (match) {
+        if (focused) {
+          color = '#E5D0FF'
+        } else if (match) {
           color = isFeifuMode.value && interaction.isPureGua(value) ? '#66CCFF' : getGuaPaletteColor(value)
         } else {
           color = active ? '#555' : '#1a1a1a'
@@ -132,13 +140,17 @@ const items = computed(() => {
 
       case 'innerElement':
         label = BAGUA_ELEMENT[value & 0b111] || ''
-        color = match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
+        color = focused
+          ? '#E5D0FF'
+          : match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
       case 'outerElement':
         label = BAGUA_ELEMENT[(value >> 3) & 0b111] || ''
-        color = match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
+        color = focused
+          ? '#E5D0FF'
+          : match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
         break
 
@@ -156,13 +168,14 @@ const items = computed(() => {
       label,
       color,
       fontSize,
-      fontWeight: (isHov && match) ? 'bold' as const : 'normal' as const,
-      opacity
+      fontWeight: focused || (isHov && match) ? 'bold' as const : 'normal' as const,
+      opacity,
+      focused,
     }
   })
 })
 
-// ─── Hover ───
+// ─── Hover / Click ───
 
 function onTextEnter(value: number) {
   interaction.setHovered(value)
@@ -170,6 +183,13 @@ function onTextEnter(value: number) {
 
 function onTextLeave() {
   interaction.setHovered(null)
+}
+
+/** 点击卦名 → 聚焦模式下切换选中卦 */
+function onTextClick(value: number) {
+  if (interaction.mode.value === 'focus') {
+    interaction.toggleFocused(value)
+  }
 }
 </script>
 
@@ -195,8 +215,10 @@ function onTextLeave() {
           dominant-baseline="central"
           :transform="`rotate(${item.rot} ${item.x} ${item.y})`"
           class="gua-relation-node-text"
+          :class="{ 'focused-gua': item.focused }"
           @mouseenter="onTextEnter(item.value)"
           @mouseleave="onTextLeave"
+          @click="onTextClick(item.value)"
         >
           {{ item.label }}
         </text>
@@ -211,5 +233,8 @@ function onTextLeave() {
   pointer-events: all;
   cursor: pointer;
   transition: opacity 0.2s ease, fill 0.2s ease;
+}
+.gua-relation-node-text.focused-gua {
+  filter: drop-shadow(0 0 4px #9B59B6) drop-shadow(0 0 8px rgba(155, 89, 182, 0.6));
 }
 </style>

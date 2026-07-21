@@ -12,16 +12,21 @@ import RingStack from '@/components/base/RingStack.vue'
 import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
 import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
 import type { GuaRelationTextLayer } from '@/components/rings/GuaRelationTextRing.vue'
-import { useGuaRelationInteraction, GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
+import { useGuaRelationInteraction, GUA_RELATION_KEY, type GuaRelationMode } from '@/composables/useGuaRelationInteraction'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 import { PALACES } from '@/data/rings/jingFangEightPalaces'
+import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import {
+  RELATION_METAS,
   RELATION_METAS_LIST,
   RELATION_COLORS,
+  getArrowColor,
+  type FocusRelationEntry,
+  type GuaRelationEntry,
   type GuaRelationType,
 } from '@/utils/guaRelations'
 
@@ -50,6 +55,43 @@ provideCompassContext({ time: controlledTime, viewport })
 
 const relationType = ref<GuaRelationType>('feifu')
 
+// ─── 模式切换：全局 / 聚焦 ───
+
+const mode = ref<GuaRelationMode>('global')
+/** 聚焦模式下选中的卦 value（点盘上任意卦） */
+const focusedValue = ref<number | null>(null)
+/** 聚焦模式下要显示的关系类型集合，默认互/综/错/变 */
+const focusRelationTypes = ref<Set<GuaRelationType>>(
+  new Set<GuaRelationType>(['hugua', 'zonggua', 'duigua', 'biangua'])
+)
+/** 动爻位（0=初爻…5=上爻），仅在勾选 biangua 时生效 */
+const movingLines = ref<Set<number>>(new Set<number>())
+
+function toggleFocusRelation(t: GuaRelationType) {
+  const next = new Set(focusRelationTypes.value)
+  if (next.has(t)) next.delete(t)
+  else next.add(t)
+  focusRelationTypes.value = next
+}
+
+function toggleMovingLine(line: number) {
+  const next = new Set(movingLines.value)
+  if (next.has(line)) next.delete(line)
+  else next.add(line)
+  movingLines.value = next
+}
+
+/** 六爻位标签：0=初爻，5=上爻 */
+const YAO_LABELS = ['初', '二', '三', '四', '五', '上'] as const
+
+/** 聚焦卦的显示名 */
+const focusedGuaLabel = computed(() => {
+  if (focusedValue.value === null) return null
+  const meta = WENWANG_GUA_BY_VALUE[focusedValue.value]
+  if (!meta) return null
+  return { unicode: getUnicodeHexagram(meta.wenwangOrder), name: meta.name }
+})
+
 // ─── 交互状态 ───
 
 const shiyingFilter = ref<ShiyingType[]>([])
@@ -60,10 +102,56 @@ const interaction = useGuaRelationInteraction({
   shiyingFilter,
   palaceFilter,
   relationType,
+  mode,
+  focusedValue,
+  focusRelationTypes,
+  movingLines,
 })
 
 // 提供 GUA_RELATION_KEY 给 GuaRelationCenter / GuaRelationTextRing
 provide(GUA_RELATION_KEY, interaction)
+
+// ─── 详情面板派生（HTML 浮层用） ───
+
+/**
+ * 全局模式悬停配对：hoveredValue 找到 relationTable 中第一条匹配 entry
+ * 聚焦模式此值为 null（改由 focusSummary 展示）
+ */
+const hoveredPair = computed<GuaRelationEntry | null>(() => {
+  if (mode.value !== 'global') return null
+  const hv = interaction.hoveredValue.value
+  if (hv === null) return null
+  return interaction.relationTable.value.find(
+    e => e.sourceValue === hv || e.targetValue === hv,
+  ) as GuaRelationEntry | null ?? null
+})
+
+/** 全局模式当前关系元信息 */
+const hoveredRelationMeta = computed(() => RELATION_METAS[relationType.value])
+
+/** 聚焦模式：焦点卦 + 所有目标卦汇总（hover 预览时使用 effectiveFocusedValue） */
+const focusSummary = computed(() => {
+  if (mode.value !== 'focus') return null
+  if (interaction.effectiveFocusedValue.value === null) return null
+  const items = interaction.relationTable.value.filter(
+    e => 'type' in e,
+  ) as FocusRelationEntry[]
+  if (items.length === 0) return null
+  const source = items[0]!
+  const movingList = Array.from(movingLines.value).sort((a, b) => a - b)
+  const movingText = movingList.length === 0 ? '无' : movingList.map(i => YAO_LABELS[i]).join('、')
+  return {
+    sourceUnicode: source.sourceUnicode,
+    sourceName: source.sourceName,
+    sourcePalace: source.palace,
+    sourceColor: source.color,
+    sourceShiying: source.shiyingType,
+    movingText,
+    items,
+    /** 是否为固定焦点（true）还是 hover 预览（false） */
+    isPinned: focusedValue.value !== null,
+  }
+})
 
 // ─── 图层显隐 ───
 
@@ -200,10 +288,33 @@ function selectPalace(palace: string) {
   <div class="container">
     <!-- 筛选器 Teleport 到 Sidebar 的"视图选项"区块 -->
     <Teleport to="#sidebar-view-tools">
-      <!-- ─── 卦关系类型选择 ─── -->
+      <!-- ─── 模式切换 ─── -->
       <div class="view-tool-group">
-        <label class="view-tool-label">卦关系</label>
+        <label class="view-tool-label">显示模式</label>
         <div class="filter-row">
+          <button
+            class="filter-btn"
+            :class="{ active: mode === 'global' }"
+            :style="{ '--btn-color': '#F1C40F' }"
+            @click="mode = 'global'"
+          >
+            全局
+          </button>
+          <button
+            class="filter-btn"
+            :class="{ active: mode === 'focus' }"
+            :style="{ '--btn-color': '#9B59B6' }"
+            @click="mode = 'focus'"
+          >
+            聚焦
+          </button>
+        </div>
+      </div>
+
+      <!-- ─── 全局模式：卦关系单选 ─── -->
+      <div v-if="mode === 'global'" class="view-tool-group">
+        <label class="view-tool-label">卦关系</label>
+        <div class="filter-row filter-row--wrap">
           <button
             v-for="meta in RELATION_METAS_LIST"
             :key="meta.type"
@@ -220,6 +331,70 @@ function selectPalace(palace: string) {
           </button>
         </div>
       </div>
+
+      <!-- ─── 聚焦模式：焦点卦 + 关系多选 + 动爻 ─── -->
+      <template v-if="mode === 'focus'">
+        <div class="view-tool-group">
+          <label class="view-tool-label">焦点卦</label>
+          <div v-if="focusedGuaLabel" class="focus-display">
+            <span class="focus-symbol">{{ focusedGuaLabel.unicode }}</span>
+            <span class="focus-name">{{ focusedGuaLabel.name }}</span>
+            <button
+              class="filter-btn filter-btn--sm focus-clear"
+              :style="{ '--btn-color': '#888' }"
+              @click="focusedValue = null"
+            >
+              清除
+            </button>
+          </div>
+          <div v-else class="focus-hint">
+            点击盘面任意卦名以选中
+          </div>
+        </div>
+
+        <div class="view-tool-group">
+          <label class="view-tool-label">聚焦关系（可多选）</label>
+          <div class="filter-row filter-row--wrap">
+            <button
+              v-for="meta in RELATION_METAS_LIST"
+              :key="meta.type"
+              class="filter-btn filter-btn--sm"
+              :class="{ active: focusRelationTypes.has(meta.type) }"
+              :style="{
+                '--btn-color': RELATION_COLORS[meta.type],
+                borderColor: focusRelationTypes.has(meta.type) ? RELATION_COLORS[meta.type] : '#444',
+                color: focusRelationTypes.has(meta.type) ? RELATION_COLORS[meta.type] : '#aaa',
+              }"
+              @click="toggleFocusRelation(meta.type)"
+            >
+              {{ meta.label }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="focusRelationTypes.has('biangua')" class="view-tool-group">
+          <label class="view-tool-label">变卦动爻（自初至上，可多选）</label>
+          <div class="filter-row filter-row--wrap">
+            <button
+              v-for="(label, i) in YAO_LABELS"
+              :key="i"
+              class="filter-btn filter-btn--sm"
+              :class="{ active: movingLines.has(i) }"
+              :style="{
+                '--btn-color': '#9B59B6',
+                borderColor: movingLines.has(i) ? '#9B59B6' : '#444',
+                color: movingLines.has(i) ? '#9B59B6' : '#aaa',
+              }"
+              @click="toggleMovingLine(i)"
+            >
+              {{ label }}
+            </button>
+          </div>
+          <div v-if="movingLines.size === 0" class="focus-hint focus-hint--warn">
+            未选动爻 → 变卦即原卦
+          </div>
+        </div>
+      </template>
 
       <!-- ─── 卦象排列（所有关系类型通用） ─── -->
       <div class="view-tool-group">
@@ -244,8 +419,8 @@ function selectPalace(palace: string) {
         </div>
       </div>
 
-      <!-- ─── 八宫筛选（所有关系类型通用） ─── -->
-        <div class="view-tool-group">
+      <!-- ─── 八宫筛选（仅全局模式） ─── -->
+        <div v-if="mode === 'global'" class="view-tool-group">
           <label class="view-tool-label">八宫筛选</label>
           <div class="filter-row filter-row--wrap">
             <button
@@ -273,7 +448,7 @@ function selectPalace(palace: string) {
           </div>
         </div>
 
-        <div class="view-tool-group">
+        <div v-if="mode === 'global'" class="view-tool-group">
           <label class="view-tool-label">世位筛选</label>
           <div class="filter-row filter-row--wrap">
             <button
@@ -349,11 +524,107 @@ function selectPalace(palace: string) {
               :start-degree="0"
               :layout="layout"
               :relation-type="relationType"
+              :mode="mode"
+              :focused-value="focusedValue"
+              :focus-relation-types="focusRelationTypes"
+              :moving-lines="movingLines"
             />
           </template>
         </RingStack>
       </g>
     </svg>
+
+    <!-- ─── 详情面板浮层（HTML，固定左上角，不随盘面缩放/平移） ─── -->
+
+    <!-- 全局模式：悬停配对详情 -->
+    <div
+      v-if="hoveredPair"
+      class="detail-panel detail-panel--global"
+    >
+      <div class="detail-title" :style="{ color: '#FFD700' }">
+        {{ hoveredRelationMeta.label }}配对
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">{{ hoveredRelationMeta.label === '飞伏' ? '飞卦' : '源卦' }}：</span>
+        <span class="detail-val" :style="{ color: getArrowColor(hoveredPair) }">
+          {{ hoveredPair.sourceUnicode }} {{ hoveredPair.sourceName }}
+        </span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-key">{{ hoveredRelationMeta.label === '飞伏' ? '伏卦' : '目标卦' }}：</span>
+        <span class="detail-val" style="color: #66CCFF">
+          {{ hoveredPair.targetUnicode }} {{ hoveredPair.targetName }}
+        </span>
+      </div>
+      <template v-if="hoveredRelationMeta.type === 'feifu'">
+        <div v-if="hoveredPair.palace" class="detail-row detail-row--sm">
+          <span class="detail-key">所属宫：</span>
+          <span :style="{ color: hoveredPair.color || '#aaa' }">{{ hoveredPair.palace }}</span>
+        </div>
+        <div v-if="hoveredPair.shiyingType" class="detail-row detail-row--sm">
+          <span class="detail-key">世位：</span>
+          <span style="color: #F5E8C8">{{ hoveredPair.shiyingType }}</span>
+        </div>
+      </template>
+      <template v-else>
+        <div class="detail-row detail-row--sm">
+          <span class="detail-key">源卦：</span>
+          <span :style="{ color: hoveredPair.color || '#aaa' }">{{ hoveredPair.palace || '—' }}宫</span>
+          <span class="detail-sep">世</span>
+          <span style="color: #F5E8C8">{{ hoveredPair.shiyingType || '—' }}</span>
+        </div>
+        <div class="detail-row detail-row--sm">
+          <span class="detail-key">目标卦：</span>
+          <span style="color: #66CCFF">{{ hoveredPair.targetPalace || '—' }}宫</span>
+          <span class="detail-sep">世</span>
+          <span style="color: #A29BFE">{{ hoveredPair.targetShiyingType || '—' }}</span>
+        </div>
+      </template>
+      <div class="detail-desc">{{ hoveredRelationMeta.description }}</div>
+    </div>
+
+    <!-- 聚焦模式：焦点卦汇总 -->
+    <div
+      v-else-if="focusSummary"
+      class="detail-panel detail-panel--focus"
+      :class="{ 'detail-panel--preview': !focusSummary.isPinned }"
+    >
+      <div class="detail-title" :style="{ color: '#9B59B6' }">
+        <span class="detail-tag" :class="{ 'detail-tag--pinned': focusSummary.isPinned }">
+          {{ focusSummary.isPinned ? '已固定' : '预览' }}
+        </span>
+        <span :style="{ color: focusSummary.sourceColor || '#E5D0FF', marginLeft: '4px' }">
+          {{ focusSummary.sourceUnicode }} {{ focusSummary.sourceName }}
+        </span>
+      </div>
+      <div class="detail-row detail-row--sm">
+        <span v-if="focusSummary.sourcePalace" style="color: #888">{{ focusSummary.sourcePalace }}宫</span>
+        <span v-if="focusSummary.sourceShiying" style="color: #F5E8C8; margin-left: 8px">
+          {{ focusSummary.sourceShiying }}
+        </span>
+        <span class="detail-sep">动爻：</span>
+        <span style="color: #9B59B6">{{ focusSummary.movingText }}</span>
+      </div>
+      <div
+        v-for="item in focusSummary.items"
+        :key="`fs-${item.type}`"
+        class="detail-row detail-relation"
+      >
+        <span class="detail-swatch" :style="{ backgroundColor: RELATION_COLORS[item.type] }"></span>
+        <span class="detail-relation-label" :style="{ color: RELATION_COLORS[item.type] }">
+          {{ RELATION_METAS[item.type].label }}
+        </span>
+        <span class="detail-relation-target">
+          → {{ item.targetUnicode }} {{ item.targetName }}
+          <span v-if="item.targetPalace" style="color: #888; font-size: 10px; margin-left: 6px">
+            ({{ item.targetPalace }}宫)
+          </span>
+        </span>
+      </div>
+      <div class="detail-hint">
+        {{ focusSummary.isPinned ? '再次点击该卦可取消固定' : '点击此卦可固定为焦点' }}
+      </div>
+    </div>
   </div>
 </template>
 
@@ -458,5 +729,134 @@ svg {
 .filter-btn.active {
   background-color: rgba(255, 215, 0, 0.08);
   font-weight: bold;
+}
+
+/* ─── 聚焦面板 ─── */
+.focus-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background-color: rgba(155, 89, 182, 0.08);
+  border: 1px solid #9B59B6;
+  border-radius: 4px;
+}
+.focus-symbol {
+  font-size: 22px;
+  color: #9B59B6;
+  line-height: 1;
+}
+.focus-name {
+  color: #E5D0FF;
+  font-size: 13px;
+  font-weight: bold;
+  flex: 1;
+}
+.focus-clear {
+  margin-left: auto;
+  padding: 2px 6px;
+  font-size: 10px;
+}
+.focus-hint {
+  padding: 6px 8px;
+  border: 1px dashed #444;
+  border-radius: 4px;
+  color: #666;
+  font-size: 11px;
+  text-align: center;
+}
+.focus-hint--warn {
+  border-color: #9B59B6;
+  color: #9B59B6;
+  margin-top: 4px;
+}
+
+/* ─── 详情面板（HTML 浮层，屏幕坐标固定左上） ─── */
+.detail-panel {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  width: 300px;
+  padding: 12px 14px;
+  background-color: rgba(0, 0, 0, 0.85);
+  border-radius: 8px;
+  color: #F5E8C8;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;  /* 纯展示，不吃鼠标事件 */
+  z-index: 10;
+}
+.detail-panel--global {
+  border: 1px solid #FFD700;
+}
+.detail-panel--focus {
+  border: 1px solid #9B59B6;
+}
+.detail-title {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+.detail-row {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.detail-row--sm {
+  font-size: 11px;
+  color: #aaa;
+}
+.detail-key { color: #888; }
+.detail-val { font-weight: bold; }
+.detail-sep { color: #666; margin-left: 8px; }
+.detail-desc {
+  margin-top: 6px;
+  color: #888;
+  font-size: 10px;
+  font-style: italic;
+}
+.detail-relation {
+  margin-top: 2px;
+  font-size: 12px;
+}
+.detail-swatch {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+}
+.detail-relation-label {
+  font-weight: bold;
+  min-width: 32px;
+}
+.detail-relation-target {
+  color: #F5E8C8;
+}
+.detail-panel--preview {
+  border-style: dashed;
+  opacity: 0.9;
+}
+.detail-tag {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  border: 1px solid #9B59B6;
+  color: #9B59B6;
+  background-color: rgba(155, 89, 182, 0.08);
+  vertical-align: middle;
+}
+.detail-tag--pinned {
+  background-color: #9B59B6;
+  color: #fff;
+}
+.detail-hint {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #333;
+  color: #666;
+  font-size: 10px;
+  text-align: center;
 }
 </style>

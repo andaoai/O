@@ -26,7 +26,7 @@ import type { RotationDirection } from './geometry'
 // ─── 关系类型定义 ───
 
 /** 支持的卦关系类型 */
-export type GuaRelationType = 'feifu' | 'hugua' | 'duigua' | 'zonggua' | 'jiaogua'
+export type GuaRelationType = 'feifu' | 'hugua' | 'duigua' | 'zonggua' | 'jiaogua' | 'biangua'
 
 /**
  * 可视化方向约束
@@ -111,6 +111,13 @@ export const RELATION_METAS: Record<GuaRelationType, GuaRelationMeta> = {
     direction: 'bidirectional',
     filterSourceOnly: true,
   },
+  biangua: {
+    type: 'biangua',
+    label: '变卦',
+    description: '按指定动爻位将该爻阴阳反转（支持二爻/三爻皆变），代表事物发展变化之趋势。',
+    direction: 'unidirectional',
+    filterSourceOnly: true,
+  },
 }
 
 /** 供模板遍历的数组形态 */
@@ -120,6 +127,7 @@ export const RELATION_METAS_LIST: readonly GuaRelationMeta[] = [
   RELATION_METAS.duigua,
   RELATION_METAS.zonggua,
   RELATION_METAS.jiaogua,
+  RELATION_METAS.biangua,
 ]
 
 /** 各类型在模板中的配色提示 */
@@ -129,6 +137,7 @@ export const RELATION_COLORS: Record<GuaRelationType, string> = {
   duigua: '#E74C3C',   // 火
   zonggua: '#3498DB',  // 水
   jiaogua: '#A0522D',  // 土
+  biangua: '#9B59B6',  // 紫（动爻之变）
 }
 
 // ─── 排序布局 ───
@@ -196,6 +205,24 @@ export function computeJiaogua(value: number): number {
   return upper | (lower << 3)
 }
 
+/**
+ * 变卦：按指定动爻位翻转爻线
+ *
+ *  周易六爻自初爻至上爻，位置 0..5，对应二进制第 0..5 位（低位为初爻）。
+ *  支持多爻同时变（如二爻五爻皆变），无动爻时原卦不变。
+ *
+ *  @param value        原卦 value (0..63)
+ *  @param movingLines  动爻位数组，元素范围 0..5（0=初爻，5=上爻）；越界值忽略
+ *  @returns            变卦 value
+ */
+export function computeBiangua(value: number, movingLines: readonly number[]): number {
+  let mask = 0
+  for (const line of movingLines) {
+    if (line >= 0 && line <= 5) mask |= (1 << line)
+  }
+  return (value ^ mask) & 0b111111
+}
+
 // ─── 通用关系条目 ───
 
 /**
@@ -261,12 +288,16 @@ function computeGenericRelationTable(
  * 按关系类型计算完整的 64 卦关系表
  *
  * @param type 关系类型
+ * @param movingLines 动爻位（仅 biangua 使用；未提供或空数组则变卦等于原卦）
  * @returns 长度 64 的 GuaRelationEntry 数组
  *
  * feifu 类型：转写 FEIFU_TABLE 为通用格式（含宫/色/世位）
  * 其他类型：遍历 0-63 调用对应纯函数
  */
-export function computeRelationTable(type: GuaRelationType): GuaRelationEntry[] {
+export function computeRelationTable(
+  type: GuaRelationType,
+  movingLines: readonly number[] = [],
+): GuaRelationEntry[] {
   switch (type) {
     case 'feifu':
       return FEIFU_TABLE.map(e => ({
@@ -290,6 +321,8 @@ export function computeRelationTable(type: GuaRelationType): GuaRelationEntry[] 
       return computeGenericRelationTable(computeZonggua)
     case 'jiaogua':
       return computeGenericRelationTable(computeJiaogua)
+    case 'biangua':
+      return computeGenericRelationTable(v => computeBiangua(v, movingLines))
   }
 }
 
@@ -303,6 +336,79 @@ export function getArrowColor(entry: GuaRelationEntry): string {
   if (entry.color) return entry.color
   const gua = JING_FANG_64_GUA.find(g => g.value === entry.sourceValue)
   return gua?.color ?? '#FFD700'
+}
+
+// ─── 聚焦模式 ───
+
+/** 带关系类型标记的 entry（聚焦模式下按 type 上色） */
+export interface FocusRelationEntry extends GuaRelationEntry {
+  type: GuaRelationType
+}
+
+/**
+ * 计算某个源卦对应的多种关系条目（聚焦模式核心）
+ *
+ *  以 sourceValue 为焦点，对 types 中的每种关系类型分别计算目标卦，产出多条 entry。
+ *  每条 entry 附带 type 字段，供渲染层按 RELATION_COLORS 上色。
+ *
+ *  变卦（biangua）在 movingLines 为空时目标卦 == 源卦（自环），
+ *  由渲染层决定是否显示（一般不显示"未指定动爻的变卦"）。
+ *
+ *  @param sourceValue  焦点卦 value (0..63)
+ *  @param types        要计算的关系类型集合
+ *  @param movingLines  动爻位（仅 biangua 使用）
+ */
+export function computeFocusRelations(
+  sourceValue: number,
+  types: readonly GuaRelationType[],
+  movingLines: readonly number[] = [],
+): FocusRelationEntry[] {
+  if (sourceValue < 0 || sourceValue > 63) return []
+
+  const out: FocusRelationEntry[] = []
+  const sourceMeta = WENWANG_GUA_BY_VALUE[sourceValue]!
+  const sourceJf = JING_FANG_64_GUA.find(g => g.value === sourceValue)
+  const sourceUnicode = getUnicodeHexagram(sourceMeta.wenwangOrder)
+
+  for (const type of types) {
+    let targetValue: number
+    if (type === 'feifu') {
+      const feifuEntry = FEIFU_TABLE.find(e => e.feiValue === sourceValue)
+      if (!feifuEntry) continue
+      targetValue = feifuEntry.fuValue
+    } else if (type === 'hugua') {
+      targetValue = computeHugua(sourceValue)
+    } else if (type === 'duigua') {
+      targetValue = computeDuigua(sourceValue)
+    } else if (type === 'zonggua') {
+      targetValue = computeZonggua(sourceValue)
+    } else if (type === 'jiaogua') {
+      targetValue = computeJiaogua(sourceValue)
+    } else {
+      // biangua
+      targetValue = computeBiangua(sourceValue, movingLines)
+    }
+
+    const targetMeta = WENWANG_GUA_BY_VALUE[targetValue]!
+    const targetJf = JING_FANG_64_GUA.find(g => g.value === targetValue)
+
+    out.push({
+      type,
+      sourceValue,
+      targetValue,
+      sourceName: sourceMeta.name,
+      targetName: targetMeta.name,
+      sourceUnicode,
+      targetUnicode: getUnicodeHexagram(targetMeta.wenwangOrder),
+      palace: sourceJf?.palace,
+      color: sourceJf?.color,
+      shiyingType: sourceJf?.shiyingType,
+      targetPalace: targetJf?.palace,
+      targetShiyingType: targetJf?.shiyingType,
+    })
+  }
+
+  return out
 }
 
 /**

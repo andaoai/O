@@ -2,18 +2,28 @@
 /**
  * GuaRelationCenter — 卦关系箭矢圆心组件
  *
- * 渲染 64 条从源卦→目标卦的有向箭头，支持五种关系类型：
- *   飞伏 / 互卦 / 对卦 / 综卦 / 交卦
- * 通过 relationType prop 动态切换。
+ * 两种渲染模式：
+ *   global — 依 relationType 绘制全 64 条 source→target 箭头（原行为）
+ *   focus  — 从 focusedValue 出发，对 focusRelationTypes 中每种关系
+ *            分别绘制一条彩色箭头（按 RELATION_COLORS 着色）
  *
  * 支持 hover 交互：悬停箭头/节点高亮关联配对，显示详情面板。
- * 支持自环（综卦不变卦）：sourceValue === targetValue 时渲染小圆环标记。
+ * 支持自环：sourceValue === targetValue 时渲染小圆环标记。
  *
  * ⚠️ 圆心组件：只有 radius，无 innerRadius
  */
 import { inject, computed } from 'vue'
-import { GUA_RELATION_KEY, type GuaRelationInteraction } from '@/composables/useGuaRelationInteraction'
-import { computeRelationTable, getGuaAngle, getArrowColor, RELATION_METAS, type GuaRelationType, type GuaRelationEntry } from '@/utils/guaRelations'
+import { GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
+import {
+  computeRelationTable,
+  computeFocusRelations,
+  getGuaAngle,
+  getArrowColor,
+  RELATION_COLORS,
+  type GuaRelationType,
+  type GuaRelationEntry,
+  type FocusRelationEntry,
+} from '@/utils/guaRelations'
 import { polarToCartesian } from '@/utils/geometry'
 
 interface Props {
@@ -22,8 +32,16 @@ interface Props {
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
   layout?: 'jingfang' | 'xiantian'
-  /** 卦关系类型（默认飞伏） */
+  /** 卦关系类型（全局模式生效，默认飞伏） */
   relationType?: GuaRelationType
+  /** 显示模式 */
+  mode?: 'global' | 'focus'
+  /** 聚焦卦 value（focus 模式） */
+  focusedValue?: number | null
+  /** 聚焦模式下要显示的关系类型集合 */
+  focusRelationTypes?: Set<GuaRelationType>
+  /** 变卦动爻位（0..5） */
+  movingLines?: Set<number>
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -31,6 +49,10 @@ const props = withDefaults(defineProps<Props>(), {
   startDegree: 0,
   layout: 'jingfang',
   relationType: 'feifu',
+  mode: 'global',
+  focusedValue: null,
+  focusRelationTypes: () => new Set<GuaRelationType>(),
+  movingLines: () => new Set<number>(),
 })
 
 // ─── 注入交互状态 ───
@@ -42,15 +64,32 @@ const interaction = inject(GUA_RELATION_KEY)!
 /** 箭头节点的布局圆半径 */
 const arrowRadius = computed(() => props.radius * 0.93)
 
-/** 当前关系类型元数据 */
-const relationMeta = computed(() => RELATION_METAS[props.relationType])
-
-/** 根据当前关系类型计算完整的 64 条关系 */
-const currentTable = computed(() => computeRelationTable(props.relationType))
+/**
+ * 当前关系表：
+ *   global — 全 64 条 GuaRelationEntry
+ *   focus  — 单源卦对 N 种关系的 FocusRelationEntry
+ *
+ * 聚焦模式下的源卦优先取 focusedValue（点击固定），
+ * 否则回落到 interaction.hoveredValue（hover 预览）。
+ */
+const currentTable = computed<readonly (GuaRelationEntry | FocusRelationEntry)[]>(() => {
+  if (props.mode === 'focus') {
+    const source = props.focusedValue ?? interaction.hoveredValue.value
+    if (source === null) return []
+    const types = Array.from(props.focusRelationTypes)
+    if (types.length === 0) return []
+    return computeFocusRelations(
+      source,
+      types,
+      Array.from(props.movingLines),
+    )
+  }
+  return computeRelationTable(props.relationType, Array.from(props.movingLines))
+})
 
 /** 一条箭头的渲染数据 */
 interface ArrowRenderItem {
-  entry: ReturnType<typeof computeRelationTable>[number]
+  entry: GuaRelationEntry | FocusRelationEntry
   x1: number
   y1: number
   x2: number
@@ -61,20 +100,20 @@ interface ArrowRenderItem {
   strokeWidth: number
   showMarker: boolean
   circleOpacity: number
+  markerId: string
 }
 
 /**
  * 全部箭头的笛卡尔坐标 + 样式
  *
- * 使用泛型关系表（而非固定的 FEIFU_TABLE）：
- *  - sourceValue → targetValue 即为箭头方向
- *  - 角度通过 getGuaAngle 按当前布局（京房/先天）计算
- *  - 自环（sourceValue === targetValue）用 circleMarker 渲染
+ * 聚焦模式按 RELATION_COLORS[entry.type] 上色（互卦绿/综卦蓝/错卦红/变卦紫…）
+ * 全局模式沿用宫色 (getArrowColor)
  */
 const arrows = computed<ArrowRenderItem[]>(() => {
   const isHov = interaction.isHovered.value
+  const isFocus = props.mode === 'focus'
 
-  return currentTable.value.map(entry => {
+  return currentTable.value.map((entry, idx) => {
     const sourceAngle = getGuaAngle(entry.sourceValue, props.layout, props.startDegree)
     const targetAngle = getGuaAngle(entry.targetValue, props.layout, props.startDegree)
     const from = polarToCartesian(sourceAngle, arrowRadius.value, props.rotationDirection)
@@ -83,7 +122,15 @@ const arrows = computed<ArrowRenderItem[]>(() => {
     const match = interaction.isArrowMatch(entry)
     const active = interaction.isEntryFiltered(entry.sourceValue, entry.targetValue)
     const isSelfLoop = entry.sourceValue === entry.targetValue
-    const arrowColor = getArrowColor(entry)
+
+    // 聚焦模式：按关系类型上色；全局模式：按源卦宫色
+    const arrowColor = isFocus && 'type' in entry
+      ? RELATION_COLORS[(entry as FocusRelationEntry).type]
+      : getArrowColor(entry)
+
+    const markerId = isFocus && 'type' in entry
+      ? `gua-relation-arrowhead-${(entry as FocusRelationEntry).type}`
+      : 'gua-relation-arrowhead'
 
     let strokeOpacity: number
     let strokeWidth: number
@@ -105,7 +152,13 @@ const arrows = computed<ArrowRenderItem[]>(() => {
       strokeOpacity = 0
       strokeWidth = 0
       showMarker = false
-      circleOpacity = isHov && match ? 0.8 : 0.4
+      circleOpacity = isFocus ? 0.65 : (isHov && match ? 0.8 : 0.4)
+    } else if (isFocus) {
+      // 聚焦模式默认更醒目
+      strokeOpacity = 0.85
+      strokeWidth = 2.2
+      showMarker = true
+      circleOpacity = 0
     } else {
       strokeOpacity = 0.45
       strokeWidth = 1.5
@@ -113,21 +166,24 @@ const arrows = computed<ArrowRenderItem[]>(() => {
       circleOpacity = 0
     }
 
-    return { entry, x1: from.x, y1: from.y, x2: to.x, y2: to.y, isSelfLoop, arrowColor, strokeOpacity, strokeWidth, showMarker, circleOpacity }
+    return { entry, x1: from.x, y1: from.y, x2: to.x, y2: to.y, isSelfLoop, arrowColor, strokeOpacity, strokeWidth, showMarker, circleOpacity, markerId, idx } as ArrowRenderItem & { idx: number }
   })
 })
 
-/** 自环子集（综卦不变卦） */
+/** 自环子集（综卦不变卦 / 变卦无动爻等） */
 const selfLoopArrows = computed(() => arrows.value.filter(a => a.isSelfLoop))
 
-// ─── 详情面板 ───
-
-const hoveredPair = computed(() => {
-  if (interaction.hoveredValue.value === null) return null
-  return currentTable.value.find(
-    e => e.sourceValue === interaction.hoveredValue.value || e.targetValue === interaction.hoveredValue.value,
-  ) ?? null
+/** 聚焦模式需要为每种关系类型生成一个对应颜色的箭头标记 */
+const focusMarkerTypes = computed<GuaRelationType[]>(() => {
+  if (props.mode !== 'focus') return []
+  return Array.from(new Set(
+    currentTable.value
+      .filter(e => 'type' in e)
+      .map(e => (e as FocusRelationEntry).type)
+  ))
 })
+
+// ─── 悬停回调 ───
 
 function onArrowEnter(value: number) {
   interaction.setHovered(value)
@@ -153,12 +209,26 @@ function onArrowLeave() {
       >
         <path d="M 0 0 L 10 5 L 0 10 Z" fill="#FFD700" />
       </marker>
+      <!-- 聚焦模式：按关系类型生成彩色箭头标记 -->
+      <marker
+        v-for="t in focusMarkerTypes"
+        :key="`marker-${t}`"
+        :id="`gua-relation-arrowhead-${t}`"
+        viewBox="0 0 10 10"
+        refX="9"
+        refY="5"
+        markerWidth="5"
+        markerHeight="5"
+        orient="auto"
+      >
+        <path d="M 0 0 L 10 5 L 0 10 Z" :fill="RELATION_COLORS[t]" />
+      </marker>
     </defs>
 
-    <!-- 64 条有向箭头（不含自环） -->
+    <!-- 有向箭头（不含自环） -->
     <line
-      v-for="a in arrows"
-      :key="`arrow-${a.entry.sourceValue}`"
+      v-for="(a, idx) in arrows"
+      :key="`arrow-${idx}-${a.entry.sourceValue}-${a.entry.targetValue}`"
       v-show="!a.isSelfLoop"
       :x1="a.x1"
       :y1="a.y1"
@@ -167,16 +237,16 @@ function onArrowLeave() {
       :stroke="a.arrowColor"
       :stroke-width="a.strokeWidth"
       :opacity="a.strokeOpacity"
-      :marker-end="a.showMarker ? 'url(#gua-relation-arrowhead)' : undefined"
+      :marker-end="a.showMarker ? `url(#${a.markerId})` : undefined"
       class="gua-relation-arrow"
       @mouseenter="onArrowEnter(a.entry.sourceValue)"
       @mouseleave="onArrowLeave"
     />
 
-    <!-- 自环标记：小圆环（综卦不变卦：sourceValue === targetValue） -->
+    <!-- 自环标记：小圆环 -->
     <circle
-      v-for="a in selfLoopArrows"
-      :key="`loop-${a.entry.sourceValue}`"
+      v-for="(a, idx) in selfLoopArrows"
+      :key="`loop-${idx}-${a.entry.sourceValue}`"
       :cx="a.x1"
       :cy="a.y1"
       :r="8"
@@ -187,8 +257,8 @@ function onArrowLeave() {
       @mouseleave="onArrowLeave"
     />
     <text
-      v-for="a in selfLoopArrows"
-      :key="`loop-label-${a.entry.sourceValue}`"
+      v-for="(a, idx) in selfLoopArrows"
+      :key="`loop-label-${idx}-${a.entry.sourceValue}`"
       :x="a.x1"
       :y="a.y1"
       fill="#FFD700"
@@ -200,59 +270,6 @@ function onArrowLeave() {
     >
       ↻
     </text>
-
-    <!-- 详情面板 -->
-    <g v-if="hoveredPair" class="gua-relation-detail">
-      <rect
-        x="-480" y="-560"
-        width="280" height="170"
-        rx="8"
-        fill="rgba(0,0,0,0.85)"
-        stroke="#FFD700"
-        stroke-width="0.6"
-      />
-      <text x="-460" y="-540" fill="#FFD700" font-size="14" font-weight="bold">
-        {{ relationMeta.label }}配对
-      </text>
-      <text x="-460" y="-516" fill="#F5E8C8" font-size="12">
-        {{ relationMeta.label === '飞伏' ? '飞卦' : '源卦' }}：
-        <tspan :fill="getArrowColor(hoveredPair)" font-weight="bold">
-          {{ hoveredPair.sourceUnicode }} {{ hoveredPair.sourceName }}
-        </tspan>
-      </text>
-      <text x="-460" y="-496" fill="#66CCFF" font-size="12">
-        {{ relationMeta.label === '飞伏' ? '伏卦' : '目标卦' }}：
-        <tspan fill="#66CCFF" font-weight="bold">
-          {{ hoveredPair.targetUnicode }} {{ hoveredPair.targetName }}
-        </tspan>
-      </text>
-      <text v-if="hoveredPair.palace && relationMeta.type === 'feifu'" x="-460" y="-476" fill="#aaa" font-size="11">
-        所属宫：
-        <tspan :fill="hoveredPair.color || '#aaa'">{{ hoveredPair.palace }}</tspan>
-      </text>
-      <text v-if="hoveredPair.shiyingType && relationMeta.type === 'feifu'" x="-460" y="-456" fill="#aaa" font-size="11">
-        世位：
-        <tspan fill="#F5E8C8">{{ hoveredPair.shiyingType }}</tspan>
-      </text>
-      <!-- 非 feifu 关系：分别显示源卦和目标卦的宫/世位 -->
-      <template v-if="relationMeta.type !== 'feifu'">
-        <text x="-460" y="-476" fill="#aaa" font-size="11">
-          源卦：
-          <tspan :fill="hoveredPair.color || '#aaa'">{{ hoveredPair.palace || '—' }}宫</tspan>
-          <tspan fill="#666" dx="12">世</tspan>
-          <tspan fill="#F5E8C8">{{ hoveredPair.shiyingType || '—' }}</tspan>
-        </text>
-        <text x="-460" y="-456" fill="#aaa" font-size="11">
-          目标卦：
-          <tspan fill="#66CCFF">{{ hoveredPair.targetPalace || '—' }}宫</tspan>
-          <tspan fill="#666" dx="12">世</tspan>
-          <tspan fill="#A29BFE">{{ hoveredPair.targetShiyingType || '—' }}</tspan>
-        </text>
-      </template>
-      <text x="-460" y="-432" fill="#888" font-size="10" font-style="italic">
-        {{ relationMeta.description }}
-      </text>
-    </g>
   </g>
 </template>
 
