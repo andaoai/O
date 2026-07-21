@@ -771,11 +771,11 @@ svg {
   margin-top: 4px;
 }
 
-/* ─── 详情面板（HTML 浮层，屏幕坐标固定左上） ─── */
+/* ─── 详情面板（HTML 浮层，屏幕坐标固定右上） ─── */
 .detail-panel {
   position: absolute;
   top: 16px;
-  left: 16px;
+  right: 16px;
   width: 300px;
   padding: 12px 14px;
   background-color: rgba(0, 0, 0, 0.85);
