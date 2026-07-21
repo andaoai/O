@@ -24,7 +24,7 @@ import {
   type GuaRelationEntry,
   type FocusRelationEntry,
 } from '@/utils/guaRelations'
-import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
+import { JING_FANG_64_GUA, type ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 依赖注入 Key ───
 
@@ -174,16 +174,40 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
 
   const activeFeiValues: ComputedRef<Set<number> | null> = computed(() => {
     const entries = filteredEntries.value
+
     // 聚焦模式：
-    //   有 effectiveFocusedValue（含 hover 预览） → 收敛到焦点 + N 个目标卦
-    //   否则 → 全部卦保持可见（可选卦）
+    //   - 焦点卦 + 全部关系目标始终显示（保证关系图不被筛选切断）
+    //   - 其余 64 卦按世位/八宫筛选决定可见性
     if (mode.value === 'focus') {
       const source = effectiveFocusedValue.value
-      if (source === null) return null
+
+      // 收集筛选通过的卦集（若无筛选则为 null）
+      const shiyingList = options?.shiyingFilter.value ?? []
+      const palaceList = options?.palaceFilter.value ?? []
+      const hasFilter = shiyingList.length > 0 || palaceList.length > 0
+
+      let filtered: Set<number> | null = null
+      if (hasFilter) {
+        filtered = new Set<number>()
+        for (let v = 0; v < 64; v++) {
+          const jf = JING_FANG_64_GUA.find(g => g.value === v)
+          if (!jf) continue
+          if (shiyingList.length > 0 && !shiyingList.includes(jf.shiyingType as ShiyingType)) continue
+          if (palaceList.length > 0 && !palaceList.includes(jf.palace)) continue
+          filtered.add(v)
+        }
+      }
+
+      // 未选焦点：直接返回筛选集（无筛选则全部可见 → null）
+      if (source === null) return filtered
+
+      // 已选焦点：焦点 + 目标卦 ∪ 筛选集
       const set = new Set<number>([source])
       for (const e of entries) set.add(e.targetValue)
+      if (filtered) for (const v of filtered) set.add(v)
       return set
     }
+
     if (!options) return null
     const shiying = options.shiyingFilter.value
     const palace = options.palaceFilter.value

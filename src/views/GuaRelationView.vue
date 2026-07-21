@@ -419,8 +419,8 @@ function selectPalace(palace: string) {
         </div>
       </div>
 
-      <!-- ─── 八宫筛选（仅全局模式） ─── -->
-        <div v-if="mode === 'global'" class="view-tool-group">
+      <!-- ─── 八宫筛选（全局/聚焦均可用） ─── -->
+        <div class="view-tool-group">
           <label class="view-tool-label">八宫筛选</label>
           <div class="filter-row filter-row--wrap">
             <button
@@ -448,7 +448,7 @@ function selectPalace(palace: string) {
           </div>
         </div>
 
-        <div v-if="mode === 'global'" class="view-tool-group">
+        <div class="view-tool-group">
           <label class="view-tool-label">世位筛选</label>
           <div class="filter-row filter-row--wrap">
             <button
