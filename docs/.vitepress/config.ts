@@ -79,12 +79,12 @@ export default defineConfig({
         },
         {
           text: '乙巳占',
-          collapsed: false,
+          collapsed: true,
           items: [
             { text: '书籍导读', link: '/books/yisizhan/' },
             {
               text: '卷一 · 天象',
-              collapsed: false,
+              collapsed: true,
               items: [
                 { text: '一 · 天说', link: '/books/yisizhan/juan-1/tianshuo' },
               ],
@@ -93,12 +93,12 @@ export default defineConfig({
         },
         {
           text: '京氏易傳',
-          collapsed: false,
+          collapsed: true,
           "items": [
             { "text": "书籍导读", "link": "/books/京氏易傳/" },
             {
               "text": "卷上 · ☰ · 乾宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷀ 乾", "link": "/books/京氏易傳/乾卦" },
                 { "text": "䷫ 姤", "link": "/books/京氏易傳/姤卦" },
@@ -112,7 +112,7 @@ export default defineConfig({
             },
             {
               "text": "卷上 · ☳ · 震宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷲ 震", "link": "/books/京氏易傳/震卦" },
                 { "text": "䷏ 豫", "link": "/books/京氏易傳/豫卦" },
@@ -126,7 +126,7 @@ export default defineConfig({
             },
             {
               "text": "卷上 · ☵ · 坎宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷜ 坎", "link": "/books/京氏易傳/坎卦" },
                 { "text": "䷻ 节", "link": "/books/京氏易傳/节卦" },
@@ -140,7 +140,7 @@ export default defineConfig({
             },
             {
               "text": "卷上 · ☶ · 艮宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷳ 艮", "link": "/books/京氏易傳/艮卦" },
                 { "text": "䷕ 贲", "link": "/books/京氏易傳/贲卦" },
@@ -154,7 +154,7 @@ export default defineConfig({
             },
             {
               "text": "卷中 · ☷ · 坤宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷁ 坤", "link": "/books/京氏易傳/坤卦" },
                 { "text": "䷗ 复", "link": "/books/京氏易傳/复卦" },
@@ -168,7 +168,7 @@ export default defineConfig({
             },
             {
               "text": "卷中 · ☴ · 巽宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷸ 巽", "link": "/books/京氏易傳/巽卦" },
                 { "text": "䷈ 小畜", "link": "/books/京氏易傳/小畜卦" },
@@ -182,7 +182,7 @@ export default defineConfig({
             },
             {
               "text": "卷中 · ☲ · 离宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷝ 离", "link": "/books/京氏易傳/离卦" },
                 { "text": "䷷ 旅", "link": "/books/京氏易傳/旅卦" },
@@ -196,7 +196,7 @@ export default defineConfig({
             },
             {
               "text": "卷中 · ☱ · 兑宫",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "䷹ 兑", "link": "/books/京氏易傳/兑卦" },
                 { "text": "䷮ 困", "link": "/books/京氏易傳/困卦" },
@@ -210,7 +210,7 @@ export default defineConfig({
             },
             {
               "text": "卷下 · 易例总论",
-              "collapsed": false,
+              "collapsed": true,
               "items": [
                 { "text": "象数纲领与八宫卦序", "link": "/books/京氏易傳/京氏易傳卷下" }
               ]
