@@ -102,4 +102,16 @@ npm run deploy   # 构建并 push dist/ 到 gh-pages 分支
 
 ## 📄 许可证
 
-MIT
+本项目依据 [**CC BY-NC 4.0**](LICENSE)（Creative Commons Attribution-NonCommercial 4.0 International）向公众开放源代码。
+
+Copyright © 2025-2026 陈柳安 (andaoai)
+
+| 你可以 | 你需要 | 你不可以 |
+|---|---|---|
+| ✅ 阅读、学习、二次创作 | ✍️ 署名并附带许可证链接 | ❌ 用于任何商业用途 |
+| ✅ 修改、再分发 | ✍️ 标注是否修改 | ❌ 施加额外限制条款 |
+| ✅ 学术引用、公益使用 | | |
+
+**关于商用**：作为版权持有人，作者保留将本项目用于商业用途及以其他协议再授权的一切权利。第三方如需商业使用（含集成至付费产品、SaaS 部署、商业培训等），请通过 <andaoai@qq.com> 联系并获得书面授权。
+
+> 说明：CC BY-NC 4.0 属于「源代码可用」（Source Available）协议，不符合 OSI 严格意义上的「开源」定义（OSI 要求允许商用），但是社区广泛认可的公开源代码协议之一。
