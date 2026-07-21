@@ -78,7 +78,7 @@ npm run preview     # 预览生产产物
    │  ├─ rings/                   # 领域圆环组件（35+ 个）+ 3 个 Data* 数据包装器
    │  ├─ centers/                 # 领域圆心组件（7 个）
    │  ├─ sidebar/                 # 罗盘左侧嵌入式 Sidebar（时间/视口/View 专属工具位）
-   │  ├─ gua/                     # 单卦静态图（SingleGuaChart，供古籍笔记内嵌）
+   │  ├─ viz/                     # 文档可视化组件（SingleGuaChart、数学概念图等）
    │  └─ celestial/               # 天体可视化
    ├─ data/rings/                 # 静态圆环数据 + 类型契约
    ├─ composables/                # useRingBase / useUrlTime / useTimeController / useViewport / useLiveClock / useAltDragPan / useCompassContext / useSidebarLayout / usePhoneOrientation / useMagneticDeclination / useGuaRelationInteraction / …
