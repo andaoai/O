@@ -33,7 +33,7 @@ export const GUA_RELATION_KEY: InjectionKey<GuaRelationInteraction> = Symbol('gu
 
 // ─── 模式类型 ───
 
-export type GuaRelationMode = 'global' | 'focus'
+export type GuaRelationMode = 'global' | 'focus' | 'derive'
 
 // ─── 输入参数 ───
 
@@ -175,6 +175,24 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
   const activeFeiValues: ComputedRef<Set<number> | null> = computed(() => {
     const entries = filteredEntries.value
 
+    // 推衍模式：筛选按"源卦列（sourceValue）"直接判定，不涉及关系配对
+    //   - 无筛选 → null（全部可见）
+    //   - 有筛选 → 通过八宫/世位筛选的 sourceValue 列集合
+    if (mode.value === 'derive') {
+      const shiyingList = options?.shiyingFilter.value ?? []
+      const palaceList = options?.palaceFilter.value ?? []
+      if (shiyingList.length === 0 && palaceList.length === 0) return null
+      const filtered = new Set<number>()
+      for (let v = 0; v < 64; v++) {
+        const jf = JING_FANG_64_GUA.find(g => g.value === v)
+        if (!jf) continue
+        if (shiyingList.length > 0 && !shiyingList.includes(jf.shiyingType as ShiyingType)) continue
+        if (palaceList.length > 0 && !palaceList.includes(jf.palace)) continue
+        filtered.add(v)
+      }
+      return filtered
+    }
+
     // 聚焦模式：
     //   - 焦点卦 + 全部关系目标始终显示（保证关系图不被筛选切断）
     //   - 其余 64 卦按世位/八宫筛选决定可见性
@@ -243,6 +261,12 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
 
   /** 某值是否与当前悬停节点通过箭头关联 */
   function isNodeMatch(value: number): boolean {
+    // 推衍模式：由 TextRing 传入 sourceValue（列索引），hoveredValue 也是列 → 同列即 match
+    // （不再走关系配对查找——推衍视觉重点是径向柱，而非关系映射）
+    if (mode.value === 'derive') {
+      if (hoveredValue.value === null) return true
+      return value === hoveredValue.value
+    }
     // 聚焦模式下：由 activeFeiValues 直接控制可见集，不再按 hover 做二次过滤
     // （否则会与"hover 预览"逻辑冲突，让固定焦点被误 dim）
     if (mode.value === 'focus') return true
@@ -261,9 +285,9 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
     return set === null || set.has(value)
   }
 
-  /** 是否为纯卦（仅 feifu 关系有意义，非 feifu 返回 false） */
+  /** 是否为纯卦（仅全局-飞伏关系有意义；聚焦/推衍均返回 false） */
   function isPureGua(value: number): boolean {
-    if (mode.value === 'focus') return false
+    if (mode.value === 'focus' || mode.value === 'derive') return false
     const type = options?.relationType?.value
     if (type && type !== 'feifu') return false
     return PURE_GUA_VALUES.includes(value)

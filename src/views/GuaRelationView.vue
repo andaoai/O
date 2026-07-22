@@ -30,6 +30,7 @@ import {
   type GuaRelationType,
   type GuaLayout,
 } from '@/utils/guaRelations'
+import { computeDeriveChain } from '@/utils/guaDeriveChain'
 
 /**
  * 卦关系可视化
@@ -56,7 +57,7 @@ provideCompassContext({ time: controlledTime, viewport })
 
 const relationType = ref<GuaRelationType>('feifu')
 
-// ─── 模式切换：全局 / 聚焦 ───
+// ─── 模式切换：全局 / 聚焦 / 推衍 ───
 
 const mode = ref<GuaRelationMode>('global')
 /** 聚焦模式下选中的卦 value（点盘上任意卦） */
@@ -67,6 +68,8 @@ const focusRelationTypes = ref<Set<GuaRelationType>>(
 )
 /** 动爻位（0=初爻…5=上爻），仅在勾选 biangua 时生效 */
 const movingLines = ref<Set<number>>(new Set<number>())
+/** 推衍层数（1..6）：推衍模式下附加多少层内圈环组 */
+const deriveDepth = ref<number>(1)
 
 function toggleFocusRelation(t: GuaRelationType) {
   const next = new Set(focusRelationTypes.value)
@@ -282,6 +285,8 @@ const BASE_OUTER_RADIUS = 600
 const centerPercent = ref(100)
 /** 环间间隙 */
 const GAP = 1
+/** 推衍层间距（组与组之间明显留白） */
+const GROUP_GAP = 8
 
 /**
  * 每层文本环的固定径向厚度（px）
@@ -327,14 +332,24 @@ const RING_LAYERS: readonly RingLayerConfig[] = [
 /** 外缘半径 = 基础半径 × 缩放比例，环与圆心同步缩放 */
 const outerRadius = computed(() => BASE_OUTER_RADIUS * (centerPercent.value / 100))
 
-const rings = computed(() => {
+/**
+ * 生成一组文字环配置（外→内 5 或 7 层，取决于图层显隐）
+ *
+ * @param derivedValues  可选的派生卦映射：未传 → 第 0 层源卦；传入 → 内层派生卦
+ * @param firstGap       该组第一环相对上一组的间隙（组间留白）
+ */
+function makeRingGroup(
+  derivedValues: readonly number[] | undefined,
+  firstGap: number,
+): Array<{ component: ReturnType<typeof markRaw>; thickness: number; gapBefore: number; props: Record<string, unknown> }> {
   const visible = RING_LAYERS.filter(
     r => r.always || ringVisibility.value[r.key as keyof RingVisibility]
   )
-  return visible.map(r => ({
+  return visible.map((r, idx) => ({
     component: markRaw(GuaRelationTextRing),
     thickness: LAYER_THICKNESS[r.layer],
-    gapBefore: GAP,
+    // 组内第一环用组间距 firstGap；组内其余环用默认小间距 GAP
+    gapBefore: idx === 0 ? firstGap : GAP,
     props: {
       layer: r.layer,
       layout: layout.value,
@@ -342,8 +357,30 @@ const rings = computed(() => {
       startDegree: 0,
       // 五行环隐藏时，name/unicode 回退到宫色补偿
       usePaletteColorFallback: (r.layer === 'name' || r.layer === 'unicode') && !ringVisibility.value.element,
+      // 推衍层的派生卦映射（第 0 层源卦不传）
+      derivedValues,
     }
   }))
+}
+
+const rings = computed(() => {
+  if (mode.value === 'derive') {
+    // 推衍模式：外圈起，第 0 层源卦 + 第 1..deriveDepth 层链式派生卦
+    const chain = computeDeriveChain(
+      relationType.value,
+      deriveDepth.value,
+      Array.from(movingLines.value),
+    )
+    const groups: ReturnType<typeof makeRingGroup> = []
+    // 第 0 层：源卦，第一环无额外组间距
+    groups.push(...makeRingGroup(undefined, GAP))
+    // 第 1..N 层：派生链条，组之间用 GROUP_GAP 明显留白
+    for (let k = 1; k < chain.length; k++) {
+      groups.push(...makeRingGroup(chain[k]!, GROUP_GAP))
+    }
+    return groups
+  }
+  return makeRingGroup(undefined, GAP)
 })
 
 // ─── 世位筛选（仅 feifu 模式有效） ───
@@ -411,11 +448,21 @@ function selectPalace(palace: string) {
           >
             聚焦
           </button>
+          <button
+            class="filter-btn"
+            :class="{ active: mode === 'derive' }"
+            :style="{ '--btn-color': '#2ECC71' }"
+            @mouseenter="showTooltip($event, '推衍模式｜内圈按同角度切片显示派生卦，可叠加 1~6 层链式推演。圆心留空，不再画箭头。')"
+            @mouseleave="hideTooltip"
+            @click="mode = 'derive'"
+          >
+            推衍
+          </button>
         </div>
       </div>
 
-      <!-- ─── 全局模式：卦关系单选 ─── -->
-      <div v-if="mode === 'global'" class="view-tool-group">
+      <!-- ─── 全局/推衍模式：卦关系单选 ─── -->
+      <div v-if="mode === 'global' || mode === 'derive'" class="view-tool-group">
         <label class="view-tool-label">卦关系</label>
         <div class="filter-row filter-row--wrap">
           <button
@@ -436,6 +483,44 @@ function selectPalace(palace: string) {
           </button>
         </div>
       </div>
+
+      <!-- ─── 推衍模式：层数滑块 + 变卦动爻（仅关系为变卦时） ─── -->
+      <template v-if="mode === 'derive'">
+        <div class="view-tool-group">
+          <label class="view-tool-label">推衍层数 {{ deriveDepth }} 层</label>
+          <input
+            type="range"
+            min="1"
+            max="6"
+            step="1"
+            v-model.number="deriveDepth"
+            class="scale-slider"
+          />
+        </div>
+
+        <div v-if="relationType === 'biangua'" class="view-tool-group">
+          <label class="view-tool-label">变卦动爻（自初至上，可多选）</label>
+          <div class="filter-row filter-row--wrap">
+            <button
+              v-for="(label, i) in YAO_LABELS"
+              :key="i"
+              class="filter-btn filter-btn--sm"
+              :class="{ active: movingLines.has(i) }"
+              :style="{
+                '--btn-color': '#9B59B6',
+                borderColor: movingLines.has(i) ? '#9B59B6' : '#444',
+                color: movingLines.has(i) ? '#9B59B6' : '#aaa',
+              }"
+              @click="toggleMovingLine(i)"
+            >
+              {{ label }}
+            </button>
+          </div>
+          <div v-if="movingLines.size === 0" class="focus-hint focus-hint--warn">
+            未选动爻 → 每层变卦即原卦（自映射）
+          </div>
+        </div>
+      </template>
 
       <!-- ─── 聚焦模式：焦点卦 + 关系多选 + 动爻 ─── -->
       <template v-if="mode === 'focus'">

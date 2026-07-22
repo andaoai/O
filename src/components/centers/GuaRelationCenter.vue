@@ -36,7 +36,7 @@ interface Props {
   /** 卦关系类型（全局模式生效，默认飞伏） */
   relationType?: GuaRelationType
   /** 显示模式 */
-  mode?: 'global' | 'focus'
+  mode?: 'global' | 'focus' | 'derive'
   /** 聚焦卦 value（focus 模式） */
   focusedValue?: number | null
   /** 聚焦模式下要显示的关系类型集合 */
@@ -74,6 +74,8 @@ const arrowRadius = computed(() => props.radius * 0.93)
  * 否则回落到 interaction.hoveredValue（hover 预览）。
  */
 const currentTable = computed<readonly (GuaRelationEntry | FocusRelationEntry)[]>(() => {
+  // 推衍模式：圆心不绘制箭头（关系已由内圈同心环组表达）
+  if (props.mode === 'derive') return []
   if (props.mode === 'focus') {
     const source = props.focusedValue ?? interaction.hoveredValue.value
     if (source === null) return []

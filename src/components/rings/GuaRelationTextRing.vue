@@ -40,6 +40,14 @@ interface Props {
    * name / unicode 层使用此 prop，其他层忽略。
    */
   usePaletteColorFallback?: boolean
+  /**
+   * 派生卦值表（长度 64，索引 i = 外圈源卦 value，值 = 该位置实际显示的卦 value）
+   *
+   * 未提供 → 恒等映射，行为与传统单层环一致（label / angle 都用 value 本身）。
+   * 提供 → **角度**仍按索引 i（源卦位置排布），**label / color / hover / focus 判定**
+   *   一律换用 derivedValues[i]，实现「同角度切片、不同层展示不同派生卦」的推衍效果。
+   */
+  derivedValues?: readonly number[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -78,15 +86,25 @@ function getGuaElement(value: number): string {
 const items = computed(() => {
   const r = textRadius.value
   const isHov = interaction.isHovered.value
+  const derived = props.derivedValues
+  const isDerive = interaction.mode.value === 'derive'
 
-  return Array.from({ length: 64 }, (_, value) => {
-    const angle = getGuaAngle(value, props.layout, props.startDegree)
+  return Array.from({ length: 64 }, (_, sourceValue) => {
+    // 角度键：始终按外圈源卦 value 排布（推衍模式下所有层同角度对齐）
+    const angle = getGuaAngle(sourceValue, props.layout, props.startDegree)
     const pos = polarToCartesian(angle, r, props.rotationDirection)
     const rot = radialTextRotation(angle, props.rotationDirection)
+
+    // 渲染键：推衍层用派生卦 value，未提供 derivedValues 时退化为源卦本身
+    const value = derived?.[sourceValue] ?? sourceValue
+
+    // 交互键：推衍模式用列索引 sourceValue（同列高亮），其他模式用渲染卦 value
+    const interactionKey = isDerive ? sourceValue : value
+
     const meta = WENWANG_GUA_BY_VALUE[value]!
-    const active = interaction.isNodeActive(value)
-    const match = interaction.isNodeMatch(value)
-    const focused = interaction.isFocused(value)
+    const active = interaction.isNodeActive(interactionKey)
+    const match = interaction.isNodeMatch(interactionKey)
+    const focused = interaction.isFocused(interactionKey)
 
     // 计算不透明度（聚焦卦永远高亮）
     let opacity: number
@@ -181,7 +199,10 @@ const items = computed(() => {
     }
 
     return {
-      value,
+      // 用于 v-for :key（一环内 sourceValue 唯一，稳定）
+      key: sourceValue,
+      // 传给 hover / click 事件的交互键：推衍层=列索引，其他=渲染卦本身
+      interactionKey,
       x: pos.x,
       y: pos.y,
       rot,
@@ -224,7 +245,7 @@ function onTextClick(value: number) {
       <g class="gua-relation-text-ring">
         <text
           v-for="item in items"
-          :key="`${props.layer}-${item.value}`"
+          :key="`${props.layer}-${item.key}`"
           :x="item.x"
           :y="item.y"
           :fill="item.color"
@@ -236,9 +257,9 @@ function onTextClick(value: number) {
           :transform="`rotate(${item.rot} ${item.x} ${item.y})`"
           class="gua-relation-node-text"
           :class="{ 'focused-gua': item.focused }"
-          @mouseenter="onTextEnter(item.value)"
+          @mouseenter="onTextEnter(item.interactionKey)"
           @mouseleave="onTextLeave"
-          @click="onTextClick(item.value)"
+          @click="onTextClick(item.interactionKey)"
         >
           {{ item.label }}
         </text>
