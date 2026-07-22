@@ -16,7 +16,7 @@ import { GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
 import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
-import { getGuaAngle, type GuaRelationType } from '@/utils/guaRelations'
+import { getGuaAngle, type GuaRelationType, type GuaLayout } from '@/utils/guaRelations'
 import { radialTextRotation, polarToCartesian } from '@/utils/geometry'
 import PolarCanvas from '../base/PolarCanvas.vue'
 
@@ -31,7 +31,7 @@ interface Props {
   innerRadius: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
-  layout?: 'jingfang' | 'xiantian'
+  layout?: GuaLayout
   layer: GuaRelationTextLayer
   /** 卦关系类型（影响纯卦特殊着色） */
   relationType?: GuaRelationType

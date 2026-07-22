@@ -21,6 +21,7 @@ import {
   getArrowColor,
   RELATION_COLORS,
   type GuaRelationType,
+  type GuaLayout,
   type GuaRelationEntry,
   type FocusRelationEntry,
 } from '@/utils/guaRelations'
@@ -31,7 +32,7 @@ interface Props {
   radius: number
   rotationDirection?: 'clockwise' | 'counterclockwise'
   startDegree?: number
-  layout?: 'jingfang' | 'xiantian'
+  layout?: GuaLayout
   /** 卦关系类型（全局模式生效，默认飞伏） */
   relationType?: GuaRelationType
   /** 显示模式 */

@@ -55,13 +55,18 @@
  */
 import { polarToCartesian, type RotationDirection } from '@/utils/geometry'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
-import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6, BAGUA_NAMES } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6, BAGUA_NAMES, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 布局类型 ───
 
-/** 卦象排列方式：'jingfang' = 京房八宫序；'xiantian' = 先天八卦（伏羲圆图序） */
-export type GuaRelationLayout = 'jingfang' | 'xiantian'
+/**
+ * 卦象排列方式
+ *
+ * 与 `src/utils/guaRelations.ts` 的 `GuaLayout` 保持同构（避免循环导入而独立声明）：
+ *   jingfang / xiantian / binary / wenwang / zaguazhuan
+ */
+export type GuaRelationLayout = 'jingfang' | 'xiantian' | 'binary' | 'wenwang' | 'zaguazhuan'
 
 /**
  * 京房八宫序下重排宫位，使四对宫处于对径位置（180°）：
@@ -82,19 +87,33 @@ function reorderPalaces(palace: string, orderInPalace: number): number {
 
 /** 获取某卦在指定布局下的圆心角（SVG 空间，度） */
 function getAngle(value: number, layout: GuaRelationLayout, startDegree: number): number {
-  if (layout === 'jingfang') {
-    const gua = JING_FANG_64_GUA.find(g => g.value === value)
-    if (!gua) return 0
-    // 京房八宫序：用重排后的序定位，使对宫对径
-    const order = reorderPalaces(gua.palace, gua.jingFangOrder % 8)
-    return (270 + order * JING_FANG_EIGHT_PALACE_STEP + startDegree) % 360
-  } else {
-    // 先天八卦：按二进制位反转（伏羲圆图）定位
-    const pos = bitReverse6(value)
-    const angle = pos >= 32
-      ? 270 + (63 - pos) * GUA_STEP
-      : 270 - (32 - pos) * GUA_STEP
-    return (angle + startDegree) % 360
+  switch (layout) {
+    case 'jingfang': {
+      const gua = JING_FANG_64_GUA.find(g => g.value === value)
+      if (!gua) return 0
+      // 京房八宫序：用重排后的序定位，使对宫对径
+      const order = reorderPalaces(gua.palace, gua.jingFangOrder % 8)
+      return (270 + order * JING_FANG_EIGHT_PALACE_STEP + startDegree) % 360
+    }
+    case 'xiantian': {
+      // 先天八卦：按二进制位反转（伏羲圆图）定位
+      const pos = bitReverse6(value)
+      const angle = pos >= 32
+        ? 270 + (63 - pos) * GUA_STEP
+        : 270 - (32 - pos) * GUA_STEP
+      return (angle + startDegree) % 360
+    }
+    case 'binary':
+      return (270 + value * GUA_STEP + startDegree) % 360
+    case 'wenwang': {
+      const meta = WENWANG_GUA_BY_VALUE[value]
+      const pos = meta ? meta.wenwangOrder - 1 : 0
+      return (270 + pos * GUA_STEP + startDegree) % 360
+    }
+    case 'zaguazhuan': {
+      const pos = ZAGUAZHUAN_POS_BY_VALUE[value] ?? 0
+      return (270 + pos * GUA_STEP + startDegree) % 360
+    }
   }
 }
 

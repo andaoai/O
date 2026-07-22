@@ -196,3 +196,49 @@ export const XIANTIAN_64_GUA: readonly XiantianGuaItem[] = WENWANG_GUA_BY_VALUE.
 })
   .slice()
   .sort((a, b) => a.pos - b.pos)
+
+/**
+ * 卦名 → value 反查表
+ * 由 WENWANG_GUA_BY_VALUE 派生，用于将文本序（文王/杂卦传等）快速转换回 value。
+ */
+export const NAME_TO_VALUE: Readonly<Record<string, number>> = Object.freeze(
+  WENWANG_GUA_BY_VALUE.reduce<Record<string, number>>((acc, meta) => {
+    acc[meta.name] = meta.value
+    return acc
+  }, {})
+)
+
+/**
+ * 杂卦传序（《周易·杂卦传》）
+ *
+ * 传本文本自「乾刚坤柔，比乐师忧」起，逐句抽出的 64 卦名序：
+ *   乾坤比师临观屯蒙震艮损益大畜无妄萃升谦豫噬嗑贲兑巽随蛊剥复
+ *   晋明夷井困咸恒涣节解蹇睽家人否泰大壮遁大有同人革鼎小过中孚丰旅
+ *   离坎小畜履需讼大过姤渐颐既济归妹未济夬
+ *
+ * 依《十三经注疏》整理本、朱子《周易本义·杂卦》文本，共 64 卦。
+ */
+export const ZAGUAZHUAN_ORDER: readonly string[] = [
+  '乾', '坤', '比', '师', '临', '观', '屯', '蒙',
+  '震', '艮', '损', '益', '大畜', '无妄', '萃', '升',
+  '谦', '豫', '噬嗑', '贲', '兑', '巽', '随', '蛊',
+  '剥', '复', '晋', '明夷', '井', '困', '咸', '恒',
+  '涣', '节', '解', '蹇', '睽', '家人', '否', '泰',
+  '大壮', '遁', '大有', '同人', '革', '鼎', '小过', '中孚',
+  '丰', '旅', '离', '坎', '小畜', '履', '需', '讼',
+  '大过', '姤', '渐', '颐', '既济', '归妹', '未济', '夬',
+]
+
+/**
+ * 杂卦传序 pos 索引：value → pos (0-63)
+ *
+ * 由 ZAGUAZHUAN_ORDER 反查生成，pos 即卦在传文中出现的次序（0-based）。
+ */
+export const ZAGUAZHUAN_POS_BY_VALUE: readonly number[] = (() => {
+  const arr = new Array<number>(64).fill(0)
+  ZAGUAZHUAN_ORDER.forEach((name, pos) => {
+    const value = NAME_TO_VALUE[name]
+    if (value !== undefined) arr[value] = pos
+  })
+  return arr
+})()

@@ -28,6 +28,7 @@ import {
   type FocusRelationEntry,
   type GuaRelationEntry,
   type GuaRelationType,
+  type GuaLayout,
 } from '@/utils/guaRelations'
 
 /**
@@ -96,7 +97,54 @@ const focusedGuaLabel = computed(() => {
 
 const shiyingFilter = ref<ShiyingType[]>([])
 const palaceFilter = ref<string[]>([])
-const layout = ref<'jingfang' | 'xiantian'>('jingfang')
+const layout = ref<GuaLayout>('jingfang')
+
+/**
+ * 卦象排列元数据 —— 6 种历代圆盘排列
+ *
+ *   jingfang    — 汉·京房《京氏易传》
+ *   xiantian    — 宋·邵雍《皇极经世·观物外篇》
+ *   binary      — 自然二进制序（数学序，非古籍）
+ *   wenwang     — 通行本《周易·序卦传》
+ *   zaguazhuan  — 《周易·杂卦传》
+ */
+const LAYOUT_OPTIONS: readonly {
+  key: GuaLayout
+  label: string
+  color: string
+  tip: string
+}[] = [
+  {
+    key: 'jingfang',
+    label: '京房八宫',
+    color: '#F1C40F',
+    tip: '京房八宫序【汉·京房《京氏易传》】｜八纯卦（乾坎艮震坤离兑巽）各领一宫，每宫下辖 一世→二世→三世→四世→五世→游魂→归魂，共 8 卦。圆盘按宫聚成扇区，同宫同色。',
+  },
+  {
+    key: 'xiantian',
+    label: '先天圆图',
+    color: '#66CCFF',
+    tip: '先天六十四卦圆图【宋·邵雍《皇极经世·观物外篇》，本自伏羲】｜按六爻二进制「位反转」定圆周次序：乾上坤下，右阳仪、左阴仪，对径两卦即互为对卦（错卦）。莱布尼茨 1701 年据白晋寄自北京的先天图写下二进制算术的信，此排序即东方最早的 6 位二进制序。',
+  },
+  {
+    key: 'binary',
+    label: '自然二进制',
+    color: '#88DDFF',
+    tip: '自然二进制序【数学序，非古籍原文】｜六爻二进制 value 直接作为圆周位置（LSB=初爻、MSB=上爻），0=坤起顶、1=复、2=师…63=乾。可与先天圆图对照体察「位反转」的效果。',
+  },
+  {
+    key: 'wenwang',
+    label: '文王卦序',
+    color: '#E67E22',
+    tip: '文王卦序【通行本《周易·序卦传》】｜今本《易经》通行卦序：乾坤屯蒙需讼师比小畜履泰否…既济未济。上经 30 卦、下经 34 卦，成对相反相因（错综），两两相邻。',
+  },
+  {
+    key: 'zaguazhuan',
+    label: '杂卦传',
+    color: '#9B59B6',
+    tip: '杂卦传序【《周易·杂卦传》】｜十翼之末，用协韵散文体重排 64 卦：乾刚坤柔，比乐师忧，临观之义或与或求…将六十四卦两两组配以见反覆之义，卦序独立于序卦传。',
+  },
+]
 
 const interaction = useGuaRelationInteraction({
   shiyingFilter,
@@ -175,13 +223,56 @@ function toggleRing(key: keyof RingVisibility) {
   ringVisibility.value = { ...ringVisibility.value, [key]: !ringVisibility.value[key] }
 }
 
-const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: string }[] = [
-  { key: 'element', label: '五行', color: '#F1C40F' },
-  { key: 'innerElement', label: '内卦五', color: '#2ECC71' },
-  { key: 'outerElement', label: '外卦五', color: '#3498DB' },
-  { key: 'binary', label: '二进制', color: '#88DDFF' },
-  { key: 'decimal', label: '十进制', color: '#FFD08A' }
+const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: string; tip: string }[] = [
+  { key: 'element',      label: '五行',    color: '#F1C40F', tip: '本宫五行｜按京房八宫，八宫各属一行（乾兑=金、离=火、震巽=木、坎=水、艮坤=土），显示每卦所属本宫的五行' },
+  { key: 'innerElement', label: '内卦五',  color: '#2ECC71', tip: '内卦（下卦）五行｜取六爻的初、二、三爻组成八经卦，显示下卦所属五行' },
+  { key: 'outerElement', label: '外卦五',  color: '#3498DB', tip: '外卦（上卦）五行｜取六爻的四、五、上爻组成八经卦，显示上卦所属五行' },
+  { key: 'binary',       label: '二进制',  color: '#88DDFF', tip: '六爻二进制｜自初爻至上爻共 6 位（LSB=初爻，MSB=上爻），阳爻=1、阴爻=0，即莱布尼茨读到的先天数' },
+  { key: 'decimal',      label: '十进制',  color: '#FFD08A', tip: '六爻十进制序号 0–63｜二进制编码的十进制值，坤=0、复=1、姤=62、乾=63' }
 ]
+
+// ─── 通用 tooltip 状态（Teleport 到 body，脱离 sidebar 的 overflow 裁剪） ───
+
+const tooltip = ref<{ visible: boolean; text: string; x: number; y: number; color: string }>({
+  visible: false,
+  text: '',
+  x: 0,
+  y: 0,
+  color: '#F1C40F',
+})
+
+/** 悬停延迟计时器 */
+let tooltipTimer: number | null = null
+
+/**
+ * 按钮进入 → 计算 tooltip 位置（右浮，避开 sidebar 左侧裁剪）
+ * event.currentTarget 的 --btn-color CSS 变量作为边框色
+ */
+function showTooltip(event: MouseEvent, text: string) {
+  const el = event.currentTarget as HTMLElement | null
+  if (!el || !text) return
+  const rect = el.getBoundingClientRect()
+  const color = getComputedStyle(el).getPropertyValue('--btn-color').trim() || '#F1C40F'
+  if (tooltipTimer !== null) window.clearTimeout(tooltipTimer)
+  tooltipTimer = window.setTimeout(() => {
+    tooltip.value = {
+      visible: true,
+      text,
+      // 放在按钮右侧 12px 处，垂直居中对齐
+      x: rect.right + 12,
+      y: rect.top + rect.height / 2,
+      color,
+    }
+  }, 250)
+}
+
+function hideTooltip() {
+  if (tooltipTimer !== null) {
+    window.clearTimeout(tooltipTimer)
+    tooltipTimer = null
+  }
+  tooltip.value = { ...tooltip.value, visible: false }
+}
 
 // ─── RingStack 配置 ───
 
@@ -337,6 +428,8 @@ function selectPalace(palace: string) {
               borderColor: relationType === meta.type ? RELATION_COLORS[meta.type] : '#444',
               color: relationType === meta.type ? RELATION_COLORS[meta.type] : '#aaa',
             }"
+            @mouseenter="showTooltip($event, `${meta.label}｜${meta.description}`)"
+            @mouseleave="hideTooltip"
             @click="relationType = meta.type"
           >
             {{ meta.label }}
@@ -377,6 +470,8 @@ function selectPalace(palace: string) {
                 borderColor: focusRelationTypes.has(meta.type) ? RELATION_COLORS[meta.type] : '#444',
                 color: focusRelationTypes.has(meta.type) ? RELATION_COLORS[meta.type] : '#aaa',
               }"
+              @mouseenter="showTooltip($event, `${meta.label}｜${meta.description}`)"
+              @mouseleave="hideTooltip"
               @click="toggleFocusRelation(meta.type)"
             >
               {{ meta.label }}
@@ -411,22 +506,22 @@ function selectPalace(palace: string) {
       <!-- ─── 卦象排列（所有关系类型通用） ─── -->
       <div class="view-tool-group">
         <label class="view-tool-label">卦象排列</label>
-        <div class="filter-row">
+        <div class="filter-row filter-row--wrap">
           <button
-            class="filter-btn"
-            :class="{ active: layout === 'jingfang' }"
-            :style="{ '--btn-color': '#F1C40F' }"
-            @click="layout = 'jingfang'"
+            v-for="opt in LAYOUT_OPTIONS"
+            :key="opt.key"
+            class="filter-btn filter-btn--sm"
+            :class="{ active: layout === opt.key }"
+            :style="{
+              '--btn-color': opt.color,
+              borderColor: layout === opt.key ? opt.color : '#444',
+              color: layout === opt.key ? opt.color : '#aaa',
+            }"
+            @mouseenter="showTooltip($event, opt.tip)"
+            @mouseleave="hideTooltip"
+            @click="layout = opt.key"
           >
-            京房八宫
-          </button>
-          <button
-            class="filter-btn"
-            :class="{ active: layout === 'xiantian' }"
-            :style="{ '--btn-color': '#66CCFF' }"
-            @click="layout = 'xiantian'"
-          >
-            先天八卦
+            {{ opt.label }}
           </button>
         </div>
       </div>
@@ -493,6 +588,8 @@ function selectPalace(palace: string) {
               borderColor: ringVisibility[opt.key] ? opt.color : '#444',
               color: ringVisibility[opt.key] ? opt.color : '#555'
             }"
+            @mouseenter="showTooltip($event, opt.tip)"
+            @mouseleave="hideTooltip"
             @click="toggleRing(opt.key)"
           >
             {{ opt.label }}
@@ -637,6 +734,20 @@ function selectPalace(palace: string) {
         {{ focusSummary.isPinned ? '再次点击该卦可取消固定' : '点击此卦可固定为焦点' }}
       </div>
     </div>
+    <!-- ─── 通用 tooltip（Teleport 到 body，脱离 sidebar 的 overflow 裁剪） ─── -->
+    <Teleport to="body">
+      <div
+        v-if="tooltip.visible"
+        class="global-tooltip"
+        :style="{
+          left: `${tooltip.x}px`,
+          top: `${tooltip.y}px`,
+          borderColor: tooltip.color,
+        }"
+      >
+        {{ tooltip.text }}
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -742,6 +853,8 @@ svg {
   background-color: rgba(255, 215, 0, 0.08);
   font-weight: bold;
 }
+
+/* ─── info-tip：已废弃，改为 JS 驱动的 Teleport tooltip（见文件末尾非 scoped 块） ─── */
 
 /* ─── 聚焦面板 ─── */
 .focus-display {
@@ -870,5 +983,31 @@ svg {
   color: #666;
   font-size: 10px;
   text-align: center;
+}
+</style>
+
+<!--
+  非 scoped 样式块：承载 Teleport 到 <body> 的 .global-tooltip。
+  scoped 样式的 data-v hash 无法作用于 body 内的元素，故此块必须非 scoped。
+-->
+<style>
+.global-tooltip {
+  position: fixed;
+  transform: translateY(-50%);
+  max-width: 280px;
+  padding: 8px 10px;
+  background-color: rgba(20, 15, 30, 0.96);
+  border: 1px solid #F1C40F;
+  border-radius: 4px;
+  color: #E8E0D0;
+  font-size: 11px;
+  line-height: 1.55;
+  letter-spacing: 0.3px;
+  text-align: left;
+  white-space: normal;
+  pointer-events: none;
+  z-index: 9999;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+  font-family: inherit;
 }
 </style>
