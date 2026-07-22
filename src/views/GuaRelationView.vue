@@ -375,10 +375,11 @@ const rings = computed(() => {
     const groups: ReturnType<typeof makeRingGroup> = []
     for (let k = 0; k < chain.length; k++) {
       const values = chain[k]!
-      // 每层文字环组的正外侧插一条发光统计环：显示该层唯一卦数 K/64
+      // 每层文字环组的正外侧插一层独立的发光统计环，
+      // 环厚 14px，独占空间，数字标签落在环带正中央，永不与相邻卦名/卦符重叠
       groups.push({
         component: markRaw(GuaRelationDeriveStatRing),
-        thickness: 4,
+        thickness: 14,
         // 第 0 层不留组间距；第 k>0 层用 GROUP_GAP 拉开与上一组的距离
         gapBefore: k === 0 ? GAP : GROUP_GAP,
         props: {

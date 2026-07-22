@@ -1,16 +1,17 @@
 <script setup lang="ts">
 /**
- * GuaRelationDeriveStatRing — 推衍层统计发光环
+ * GuaRelationDeriveStatRing — 推衍层统计发光环（独立占厚一整环）
  *
- * 卡在每一层推衍环组的外侧，显示该层 64 个位置里出现的**唯一卦数** K：
- *   K = 64 → 无收敛，全信息保留，发金绿光
+ * 卡在每一层推衍环组的外侧，独占一层厚度显示该层 64 个位置里出现的**唯一卦数** K：
+ *   K = 64 → 无收敛，全信息保留，发绿光
  *   K < 64 → 存在收敛（多对一映射），发红光
  *
  *   飞伏 R = 8（收敛到八纯卦） → 深红
  *   互卦 R = 16 或更少 → 橙红
- *   对/综/交 R = 64 无收敛 → 金绿
+ *   对/综/交 R = 64 无收敛 → 绿
  *
- * 数值 K 显示在环的顶端（270° 位置），环体是一条渐变发光的窄圈。
+ * 环体本身作为文字的背景条（低透明度色带），文字 K/64 沿环身在正上方 270°
+ * 独立呈现，永不与相邻卦名/卦符重叠。
  *
  * ⚠️ 圆环组件：接受 radius/innerRadius，无 time 依赖（纯派生自 derivedValues）
  */
@@ -51,31 +52,29 @@ const hasConvergence = computed(() => uniqueCount.value < 64)
 /**
  * 发光色：绿(64) → 黄(48) → 橙(24) → 红(8)
  *
- * 使用 HSL 插值，色相从 120°(绿) 线性过渡到 0°(红)：
+ * HSL 色相从 120°(绿) 线性过渡到 0°(红)：
  *   hue = 120 × (K - 1) / 63
- *
- * 亮度整体压暗（避免抢占卦名文字视线）：
- *   有收敛 → 更暗（35% 亮度）
- *   无收敛 → 中暗（40% 亮度）
  */
 const glowColor = computed(() => {
   const k = uniqueCount.value
   const t = Math.max(0, Math.min(1, (k - 1) / 63))
   const hue = Math.round(120 * t) // 0..120
-  const lightness = hasConvergence.value ? 35 : 40
+  const lightness = hasConvergence.value ? 40 : 45
   return `hsl(${hue}, 70%, ${lightness}%)`
 })
 
 // ─── 几何 ───
 
-/** 环的中间半径（用于放文字与描边圆） */
+/** 环的中间半径（文字与环带都居中于此） */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
-const strokeWidth = computed(() => Math.max(1.5, props.radius - props.innerRadius))
+/** 环带 stroke 宽度（占据整个厚度，作为文字底色带） */
+const bandWidth = computed(() => Math.max(2, props.radius - props.innerRadius))
 
-/** 文本落在正上方（270°），随 rotationDirection 处理坐标 */
+/** 文本落在正上方（270°） */
 const label = computed(() => `${uniqueCount.value}/64`)
 const labelPos = computed(() => polarToCartesian(270, midRadius.value, props.rotationDirection))
-const labelFontSize = computed(() => Math.max(9, Math.round(midRadius.value * 0.024)))
+/** 文字大小：不超过环厚的 65%，保底 9px */
+const labelFontSize = computed(() => Math.max(9, Math.min(14, Math.round(bandWidth.value * 0.65))))
 
 /** 唯一滤镜 id（避免多层实例冲突） */
 const filterId = computed(() => `derive-stat-glow-${props.layerIndex}-${Math.round(props.radius)}`)
@@ -90,10 +89,10 @@ const filterId = computed(() => `derive-stat-glow-${props.layerIndex}-${Math.rou
   >
     <template #default>
       <g class="derive-stat-ring">
-        <!-- 发光滤镜（轻量光晕，不过度晕染） -->
+        <!-- 发光滤镜（仅作用于顶部数字标签） -->
         <defs>
-          <filter :id="filterId" x="-20%" y="-20%" width="140%" height="140%">
-            <feGaussianBlur stdDeviation="1.2" result="blur" />
+          <filter :id="filterId" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="1.4" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -101,46 +100,33 @@ const filterId = computed(() => `derive-stat-glow-${props.layerIndex}-${Math.rou
           </filter>
         </defs>
 
-        <!-- 环体：低亮度圆 -->
+        <!-- 环带：整环低透明度色带（独占厚度，不与相邻环重叠） -->
         <circle
           cx="0"
           cy="0"
           :r="midRadius"
           fill="none"
           :stroke="glowColor"
-          :stroke-width="strokeWidth"
-          :opacity="hasConvergence ? 0.55 : 0.32"
-          :filter="`url(#${filterId})`"
-          class="stat-arc"
-          :class="{ 'stat-arc--warn': hasConvergence }"
+          :stroke-width="bandWidth"
+          :opacity="hasConvergence ? 0.22 : 0.14"
+          class="stat-band"
+          :class="{ 'stat-band--warn': hasConvergence }"
         />
 
-        <!-- 数值标签（在环顶正上方，配衬底色块） -->
-        <g :transform="`translate(${labelPos.x}, ${labelPos.y})`">
-          <rect
-            :x="-labelFontSize * 1.6"
-            :y="-labelFontSize * 0.7"
-            :width="labelFontSize * 3.2"
-            :height="labelFontSize * 1.4"
-            rx="3"
-            fill="rgba(0, 0, 0, 0.8)"
-            :stroke="glowColor"
-            stroke-width="0.6"
-            :opacity="0.7"
-          />
-          <text
-            x="0"
-            y="0"
-            text-anchor="middle"
-            dominant-baseline="central"
-            :fill="glowColor"
-            :font-size="labelFontSize"
-            font-weight="bold"
-            :opacity="0.85"
-          >
-            {{ label }}
-          </text>
-        </g>
+        <!-- 数值标签：贴环带正中，无背景块（背景已由环带承担） -->
+        <text
+          :x="labelPos.x"
+          :y="labelPos.y"
+          text-anchor="middle"
+          dominant-baseline="central"
+          :fill="glowColor"
+          :font-size="labelFontSize"
+          font-weight="bold"
+          :opacity="hasConvergence ? 0.95 : 0.8"
+          :filter="`url(#${filterId})`"
+        >
+          {{ label }}
+        </text>
       </g>
     </template>
   </PolarCanvas>
@@ -150,18 +136,18 @@ const filterId = computed(() => `derive-stat-glow-${props.layerIndex}-${Math.rou
 .derive-stat-ring {
   pointer-events: none;
 }
-.stat-arc {
-  animation: derive-stat-glow-pulse 3.5s ease-in-out infinite;
+.stat-band {
+  animation: derive-stat-band-pulse 3.5s ease-in-out infinite;
 }
-.stat-arc--warn {
-  animation: derive-stat-glow-warn 1.6s ease-in-out infinite;
+.stat-band--warn {
+  animation: derive-stat-band-warn 1.8s ease-in-out infinite;
 }
-@keyframes derive-stat-glow-pulse {
-  0%, 100% { opacity: 0.22; }
-  50%      { opacity: 0.4;  }
+@keyframes derive-stat-band-pulse {
+  0%, 100% { opacity: 0.10; }
+  50%      { opacity: 0.18; }
 }
-@keyframes derive-stat-glow-warn {
-  0%, 100% { opacity: 0.38; }
-  50%      { opacity: 0.62; }
+@keyframes derive-stat-band-warn {
+  0%, 100% { opacity: 0.18; }
+  50%      { opacity: 0.32; }
 }
 </style>
