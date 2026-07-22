@@ -11,6 +11,7 @@ import { ref, computed, markRaw, provide } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
 import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
 import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
+import GuaRelationDeriveStatRing from '@/components/rings/GuaRelationDeriveStatRing.vue'
 import type { GuaRelationTextLayer } from '@/components/rings/GuaRelationTextRing.vue'
 import { useGuaRelationInteraction, GUA_RELATION_KEY, type GuaRelationMode } from '@/composables/useGuaRelationInteraction'
 import { useUrlTime } from '@/composables/useUrlTime'
@@ -372,11 +373,22 @@ const rings = computed(() => {
       Array.from(movingLines.value),
     )
     const groups: ReturnType<typeof makeRingGroup> = []
-    // 第 0 层：源卦，第一环无额外组间距
-    groups.push(...makeRingGroup(undefined, GAP))
-    // 第 1..N 层：派生链条，组之间用 GROUP_GAP 明显留白
-    for (let k = 1; k < chain.length; k++) {
-      groups.push(...makeRingGroup(chain[k]!, GROUP_GAP))
+    for (let k = 0; k < chain.length; k++) {
+      const values = chain[k]!
+      // 每层文字环组的正外侧插一条发光统计环：显示该层唯一卦数 K/64
+      groups.push({
+        component: markRaw(GuaRelationDeriveStatRing),
+        thickness: 4,
+        // 第 0 层不留组间距；第 k>0 层用 GROUP_GAP 拉开与上一组的距离
+        gapBefore: k === 0 ? GAP : GROUP_GAP,
+        props: {
+          derivedValues: values,
+          layerIndex: k,
+          startDegree: 0,
+        },
+      })
+      // 该层文字环组紧接统计环之后，无额外间距（组内 GAP）
+      groups.push(...makeRingGroup(values, GAP))
     }
     return groups
   }
