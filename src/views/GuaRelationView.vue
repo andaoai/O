@@ -216,9 +216,9 @@ export interface RingVisibility {
 }
 
 const ringVisibility = ref<RingVisibility>({
-  element: true,
-  innerElement: true,
-  outerElement: true,
+  element: false,
+  innerElement: false,
+  outerElement: false,
   binary: false,
   decimal: false,
 })
