@@ -159,12 +159,16 @@ export interface RingVisibility {
   element: boolean
   innerElement: boolean
   outerElement: boolean
+  binary: boolean
+  decimal: boolean
 }
 
 const ringVisibility = ref<RingVisibility>({
   element: true,
   innerElement: true,
   outerElement: true,
+  binary: false,
+  decimal: false,
 })
 
 function toggleRing(key: keyof RingVisibility) {
@@ -174,7 +178,9 @@ function toggleRing(key: keyof RingVisibility) {
 const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: string }[] = [
   { key: 'element', label: '五行', color: '#F1C40F' },
   { key: 'innerElement', label: '内卦五', color: '#2ECC71' },
-  { key: 'outerElement', label: '外卦五', color: '#3498DB' }
+  { key: 'outerElement', label: '外卦五', color: '#3498DB' },
+  { key: 'binary', label: '二进制', color: '#88DDFF' },
+  { key: 'decimal', label: '十进制', color: '#FFD08A' }
 ]
 
 // ─── RingStack 配置 ───
@@ -196,6 +202,8 @@ const GAP = 1
  *   卦符(unicode): 30px — 魁字卦符 + 内边距
  *   内卦五行(innerElement): 14px — 1 字五行 + 内边距
  *   外卦五行(outerElement): 14px — 1 字五行 + 内边距
+ *   二进制(binary): 16px — 6 位 0/1 + 内边距
+ *   十进制(decimal): 14px — 1~2 位数字 + 内边距
  *   阴阳(yinYang): 18px — 3 字体性 + 内边距
  */
 const LAYER_THICKNESS: Record<GuaRelationTextLayer, number> = {
@@ -204,6 +212,8 @@ const LAYER_THICKNESS: Record<GuaRelationTextLayer, number> = {
   unicode: 30,
   innerElement: 14,
   outerElement: 14,
+  binary: 16,
+  decimal: 14,
 }
 
 type RingLayerConfig = {
@@ -214,6 +224,8 @@ type RingLayerConfig = {
 
 /** 各文本环层级定义（由外到内，RingStack 反向累加） */
 const RING_LAYERS: readonly RingLayerConfig[] = [
+  { key: 'decimal',       layer: 'decimal',       always: false },
+  { key: 'binary',        layer: 'binary',        always: false },
   { key: 'outerElement',  layer: 'outerElement',  always: false },
   { key: 'innerElement',  layer: 'innerElement',  always: false },
   { key: 'always',        layer: 'unicode',       always: true  },

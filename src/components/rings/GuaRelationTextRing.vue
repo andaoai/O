@@ -22,7 +22,7 @@ import PolarCanvas from '../base/PolarCanvas.vue'
 
 // ─── 图层配置 ───
 
-export type GuaRelationTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement'
+export type GuaRelationTextLayer = 'name' | 'element' | 'unicode' | 'innerElement' | 'outerElement' | 'binary' | 'decimal'
 
 // ─── Props ───
 
@@ -152,6 +152,26 @@ const items = computed(() => {
           ? '#E5D0FF'
           : match ? ((ELEMENT_COLORS as Record<string, string>)[label] || '#888') : (active ? '#555' : '#1a1a1a')
         fontSize = Math.max(7, Math.round(r * 0.020))
+        break
+
+      case 'binary': {
+        // 6 位二进制：MSB=上爻 (bit 5)，LSB=初爻 (bit 0)
+        // 与先天六十四卦按 value 展开的二进制顺序一致
+        label = value.toString(2).padStart(6, '0')
+        color = focused
+          ? '#E5D0FF'
+          : match ? '#88DDFF' : (active ? '#555' : '#1a1a1a')
+        fontSize = Math.max(7, Math.round(r * 0.018))
+        break
+      }
+
+      case 'decimal':
+        // 0 ~ 63 十进制序号（与先天卦位对应）
+        label = String(value)
+        color = focused
+          ? '#E5D0FF'
+          : match ? '#FFD08A' : (active ? '#555' : '#1a1a1a')
+        fontSize = Math.max(9, Math.round(r * 0.026))
         break
 
       default:
