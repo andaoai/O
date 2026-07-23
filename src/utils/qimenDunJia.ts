@@ -511,8 +511,10 @@ export function getYuanJuAt(
   const yearTerms = terms.filter(t => !t.isNextWinter)
   if (yearTerms.length === 0) return null
 
-  // 按 dayInRing 相对冬至（本岁网格起点）的偏移排序
-  const sorted = [...yearTerms].sort((a, b) => a.date.getTime() - b.date.getTime())
+  // computeQiMenSolarTerms 输出时已按 date 有序（内部先 realDates.sort），
+  // 这里直接信赖调用方顺序，删除原先每次都做的 `[...yearTerms].sort(...)`。
+  // 原 SanYuan+JuShu 逐格调用 → 720 次冗余排序 → 现在为 0。
+  const sorted = yearTerms
   const winterDayInRing = sorted[0]!.dayInRing
 
   // 计算 dayInRing 距冬至锚点的偏移（绕环）
@@ -741,9 +743,9 @@ export function computeChaoshenState(today: Date): ChaoshenState {
   const info = getYuanJuAt(todayInRing, terms)
   if (!info) return { label: '正授', days: 0 }
 
-  // 找出所在节气的真实公历日期
+  // 找出所在节气的真实公历日期（yearTerms 已按 date 有序，无需再 sort）
   const yearTerms = terms.filter(t => !t.isNextWinter)
-  const sorted = [...yearTerms].sort((a, b) => a.date.getTime() - b.date.getTime())
+  const sorted = yearTerms
   const winterDayInRing = sorted[0]!.dayInRing
   const offsetFromWinter = ((todayInRing - winterDayInRing) % CYCLE_DAYS + CYCLE_DAYS) % CYCLE_DAYS
   const termIdx = Math.floor(offsetFromWinter / TERM_DAYS)

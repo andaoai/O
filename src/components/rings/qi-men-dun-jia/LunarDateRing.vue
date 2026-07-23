@@ -23,19 +23,11 @@
  *     故与 GuaRing 类似自绘 SVG（PolarCanvas + arcPath + polarToCartesian）。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, unref, type MaybeRef } from 'vue'
-import { SolarDay } from 'tyme4ts'
+import { computed, type MaybeRef } from 'vue'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import {
-  computeQiMenLunarRing,
-  findUpperYuanJiaziDay,
-  findLastWinterSolstice,
-  findNextWinterSolstice,
-  getWinterOverlayIndices,
-  type LunarRingEntry
-} from '@/utils/qimenDunJia'
+import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -52,15 +44,10 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-/** ⚠️ 范式第一行：统一转换为响应式 timeRef */
-const timeRef = computed(() => unref(props.time) ?? new Date())
+/** 共享上下文（跨天才变） */
+const ctx = useQiMenContext()
 
-/** 走 tyme4ts 儒略日整数运算的整日差（抗时区标准化） */
-function diffDays(later: Date, earlier: Date): number {
-  const a = SolarDay.fromYmd(later.getFullYear(), later.getMonth() + 1, later.getDate())
-  const b = SolarDay.fromYmd(earlier.getFullYear(), earlier.getMonth() + 1, earlier.getDate())
-  return a.subtract(b)
-}
+/** 走 tyme4ts 儒略日整数运算的整日差（抗时区标准化） —— 已由 ctx 覆盖，此处不再需要 */
 
 /** 极坐标 → 笛卡尔（走 useRingBase.usePolar，按 startDegree/rotationDirection 处理） */
 const toXY = usePolar(
@@ -73,35 +60,15 @@ const band = computed(() => props.radius - props.innerRadius)
 /** 环带径向中线（划分上下两半的分界） */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 
-/** ⚠️ 范式第二行：所有业务逻辑派生自 timeRef */
-const entries = computed<LunarRingEntry[]>(() => computeQiMenLunarRing(timeRef.value))
-const overlaySet = computed<Set<number>>(() => new Set(getWinterOverlayIndices(timeRef.value)))
+/** 从共享 context 派生（跨天才变） */
+const entries = computed(() => ctx.value.lunarEntries)
+const overlaySet = computed(() => ctx.value.overlaySet)
+const yearLength = computed(() => ctx.value.yearLength)
 
-/** 本岁实际年长（365 或 366 天），用于「主层末 10 天紫色渐变」判定 */
-const yearLength = computed<number>(() => {
-  const now = timeRef.value
-  const winter = findLastWinterSolstice(now)
-  const next = findNextWinterSolstice(winter)
-  if (!next) return 365
-  const a = SolarDay.fromYmd(next.getFullYear(), next.getMonth() + 1, next.getDate())
-  const b = SolarDay.fromYmd(winter.getFullYear(), winter.getMonth() + 1, winter.getDate())
-  return a.subtract(b)
-})
-
-/**
- * 今日在环上的定位。
- *  - index: 环格 0-359（= (D1 + k_today) mod 360）
- *  - isInOverlayTail: 今日是否落在本岁末尾 5 天（k_today ≥ 360）
- *    → 若为 true，冬至叠加区的高亮画在内层；否则画在外层
- */
+/** 今日在环上的定位（也从 ctx 读，秒变化时不重算） */
 const todayPos = computed<{ index: number; isInOverlayTail: boolean }>(() => {
-  const now = timeRef.value
-  const upperYuan = findUpperYuanJiaziDay(now)
-  const winter = findLastWinterSolstice(now)
-  const D1 = ((diffDays(winter, upperYuan) % 360) + 360) % 360
-  const kToday = diffDays(now, winter)             // 0..364（本岁天数）
-  const index = ((D1 + kToday) % 360 + 360) % 360
-  return { index, isInOverlayTail: kToday >= 360 }
+  const c = ctx.value
+  return { index: c.todayInRing, isInOverlayTail: c.isInOverlayTail }
 })
 
 /** 段填色 + 文字判定（每格 1°） */

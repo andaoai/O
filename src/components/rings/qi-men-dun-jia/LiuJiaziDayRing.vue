@@ -2,7 +2,9 @@
 /**
  * 六轮甲子日环（60 甲子 × 6 轮 = 360 天） — 奇门遁甲最外环
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useQiMenContext 共享上下文读取（跨天才重算）。
+ *    time prop 保留仅供架构兼容 —— 实际数据源来自 View 侧的
+ *    provideQiMenContext(controlledTime)。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 环 0° 起点 = 「上元甲子日」（冬至前后最近的甲子日）
@@ -18,11 +20,12 @@
  *  即是「超神/接气/正授」的天文根源。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, unref, type MaybeRef } from 'vue'
+import { computed, type MaybeRef } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { ganzhiName } from '@/utils/constants/ganzhi'
-import { computeSixYun, YUN_COLORS, jiaziIndexAt } from '@/utils/qimenDunJia'
+import { YUN_COLORS, jiaziIndexAt } from '@/utils/qimenDunJia'
+import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
 
 interface Props {
   /** 时间源（MaybeRef<Date>） */
@@ -44,8 +47,8 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-/** ⚠️ 范式第一行：统一转换为响应式 timeRef */
-const timeRef = computed(() => unref(props.time) ?? new Date())
+/** ⚠️ 时间状态改从共享 context 读取，秒级 tick 不会触发 tyme4ts 重算 */
+const ctx = useQiMenContext()
 
 /** 6 轮微差背景色（每轮 60 天普通日，一运深→六运浅） */
 const ROUND_BG_COLORS = [
@@ -57,12 +60,11 @@ const ROUND_BG_COLORS = [
   '#2a3a3a'  // 六运
 ]
 
-/** ⚠️ 范式第二行：所有业务逻辑派生自 timeRef */
+/** ⚠️ 范式第二行：所有业务逻辑派生自 ctx（跨天才变） */
 const ringData = computed<RingData>(() => {
-  const now = timeRef.value
-  const info = computeSixYun(now)
-  const currentIdx = info.dayInRing
-  const currentYunIdx0 = info.currentYunIndex - 1  // 0-5
+  const c = ctx.value
+  const currentIdx = c.todayInRing
+  const currentYunIdx0 = c.currentYunIndex - 1  // 0-5
 
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {

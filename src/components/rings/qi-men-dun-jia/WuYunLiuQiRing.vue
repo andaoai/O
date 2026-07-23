@@ -38,18 +38,12 @@
  *  🏷️ 六气标签逐字沿弧线径向分布，标签中心 = 六气几何中点
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, unref, type MaybeRef } from 'vue'
+import { computed, type MaybeRef } from 'vue'
 import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import {
-  computeQiMenSolarTerms,
-  findUpperYuanJiaziDay,
-  findLastWinterSolstice,
-  findNextWinterSolstice,
-  getWinterOverlayIndices
-} from '@/utils/qimenDunJia'
+import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -66,8 +60,8 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-/** ⚠️ 范式第一行：统一转换为响应式 timeRef */
-const timeRef = computed(() => unref(props.time) ?? new Date())
+/** 共享上下文（跨天才变） */
+const ctx = useQiMenContext()
 
 /** 走 tyme4ts 儒略日整数运算的整日差（抗时区标准化） */
 function diffDays(later: Date, earlier: Date): number {
@@ -86,19 +80,13 @@ const toXY = usePolar(
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 
 /** 本岁实际年长（365 或 366 天） */
-const yearLength = computed<number>(() => {
-  const now = timeRef.value
-  const winter = findLastWinterSolstice(now)
-  const next = findNextWinterSolstice(winter)
-  if (!next) return 365
-  return diffDays(next, winter)
-})
+const yearLength = computed<number>(() => ctx.value.yearLength)
 
 /** overflow = 岁末溢出天数（一般 5 或 6） */
-const overflow = computed<number>(() => yearLength.value - 360)
+const overflow = computed<number>(() => ctx.value.overflow)
 
 /** 冬至叠加区 (末 overflow+1 格) 索引集 */
-const overlaySet = computed<Set<number>>(() => new Set(getWinterOverlayIndices(timeRef.value)))
+const overlaySet = computed<Set<number>>(() => ctx.value.overlaySet)
 
 /** 六气定义（起讫节气用真实公历日期，与农历环、24 节气环严格同源） */
 interface QiDef {
@@ -175,13 +163,8 @@ function zhongQiGradient(distToWinter: number): string {
  *  - isInOverlayTail: 今日是否落在本岁末尾 overflow 天（k_today ≥ 360，含 W2）
  */
 const todayPos = computed<{ index: number; kToday: number; isInOverlayTail: boolean }>(() => {
-  const now = timeRef.value
-  const upperYuan = findUpperYuanJiaziDay(now)
-  const winter = findLastWinterSolstice(now)
-  const D1 = ((diffDays(winter, upperYuan) % 360) + 360) % 360
-  const kToday = diffDays(now, winter)             // 0..364/365（本岁天数）
-  const index = ((D1 + kToday) % 360 + 360) % 360
-  return { index, kToday, isInOverlayTail: kToday >= 360 }
+  const c = ctx.value
+  return { index: c.todayInRing, kToday: c.kToday, isInOverlayTail: c.isInOverlayTail }
 })
 
 /**
@@ -249,22 +232,16 @@ function buildQiLookup(termDayFromWinter: Map<string, number>, L: number) {
 }
 
 const cells = computed<Cell[]>(() => {
-  const now = timeRef.value
-  const upperYuan = findUpperYuanJiaziDay(now)
-  const winter = findLastWinterSolstice(now)
-  const D1 = ((diffDays(winter, upperYuan) % 360) + 360) % 360
-  const L = yearLength.value
-  const of = overflow.value
-  const overlays = overlaySet.value
+  const c = ctx.value
+  const upperYuan = c.upperYuan
+  const winter = c.W1
+  const D1 = c.D1
+  const L = c.yearLength
+  const of = c.overflow
+  const overlays = c.overlaySet
 
-  // 节气名 → daysFromWinter,用于 buildQiLookup
-  const terms = computeQiMenSolarTerms(now)
-  const yearTerms = terms.filter(t => !t.isNextWinter)
-  const termDayFromWinter = new Map<string, number>()
-  for (const t of yearTerms) {
-    const d = diffDays(t.date, winter)
-    if (!termDayFromWinter.has(t.name)) termDayFromWinter.set(t.name, d)
-  }
+  // 节气名 → daysFromWinter,用于 buildQiLookup（从 ctx 直接读）
+  const termDayFromWinter = c.termDayFromWinter
   const qiForK = buildQiLookup(termDayFromWinter, L)
 
   function bgFor(k: number): string {
@@ -289,7 +266,7 @@ const cells = computed<Cell[]>(() => {
   }
 
   // 后处理:为每个 overlay cell 精确计算 kTail 与背景色
-  const nextWinter = findNextWinterSolstice(winter)
+  const nextWinter = c.W2
   if (nextWinter) {
     const nextSD = SolarDay.fromYmd(
       nextWinter.getFullYear(), nextWinter.getMonth() + 1, nextWinter.getDate()
@@ -423,19 +400,11 @@ interface Qi6 {
 }
 
 const qiList = computed<Qi6[]>(() => {
-  const now = timeRef.value
-  const upperYuan = findUpperYuanJiaziDay(now)
-  const terms = computeQiMenSolarTerms(now)
-  const yearTerms = terms.filter(t => !t.isNextWinter)
+  const c = ctx.value
 
-  // 节气名 → 真实 dayInRing 索引
-  const termDayInRing = new Map<string, number>()
-  for (const t of yearTerms) {
-    const realIdx = ((diffDays(t.date, upperYuan) % 360) + 360) % 360
-    if (!termDayInRing.has(t.name)) termDayInRing.set(t.name, realIdx)
-  }
-
-  const today = ((diffDays(now, upperYuan) % 360) + 360) % 360
+  // 节气名 → 真实 dayInRing 索引（直接读 ctx 预算表）
+  const termDayInRing = c.termDayInRing
+  const today = c.todayInRing
   const results: Qi6[] = []
 
   for (const qi of QI_LIST) {

@@ -13,6 +13,7 @@ import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
+import { provideQiMenContext } from '@/composables/useQiMenDunJiaContext'
 
 /**
  * 阴阳遁九局盘 —— 奇门遁甲可视化
@@ -39,6 +40,15 @@ const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 
 provideCompassContext({ time: controlledTime, viewport })
+
+/**
+ * 🔑 奇门盘日粒度共享上下文
+ * ─────────────────────────────────────────────────────────
+ *  6 个环历史上各自独立跑同一份 tyme4ts 昂贵计算，秒级 tick
+ *  时被反复执行 20+ 次。改由此处统一 provide 一份上下文，
+ *  只在跨天时才重算；下游 6 个环通过 useQiMenContext() 读取。
+ */
+provideQiMenContext(controlledTime)
 
 /** 最外环外缘半径 */
 const OUTER_RADIUS = 560

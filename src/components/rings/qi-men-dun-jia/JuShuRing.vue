@@ -19,16 +19,11 @@
  *   · 夏至→大雪 阴遁 12 节气（青蓝冷色系为主）
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, unref, type MaybeRef } from 'vue'
-import { SolarDay } from 'tyme4ts'
+import { computed, type MaybeRef } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
-import {
-  computeQiMenSolarTerms,
-  findUpperYuanJiaziDay,
-  getYuanJuAt,
-  JU_COLORS
-} from '@/utils/qimenDunJia'
+import { JU_COLORS } from '@/utils/qimenDunJia'
+import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -45,26 +40,18 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-const timeRef = computed(() => unref(props.time) ?? new Date())
-
-/** 走 tyme4ts 儒略日的整日差（抗时区标准化） */
-function diffDays(later: Date, earlier: Date): number {
-  const a = SolarDay.fromYmd(later.getFullYear(), later.getMonth() + 1, later.getDate())
-  const b = SolarDay.fromYmd(earlier.getFullYear(), earlier.getMonth() + 1, earlier.getDate())
-  return a.subtract(b)
-}
+const ctx = useQiMenContext()
 
 const CHINESE_NUM = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九']
 
 const ringData = computed<RingData>(() => {
-  const now = timeRef.value
-  const upperYuan = findUpperYuanJiaziDay(now)
-  const terms = computeQiMenSolarTerms(now)
-  const todayInRing = ((diffDays(now, upperYuan) % 360) + 360) % 360
+  const c = ctx.value
+  const todayInRing = c.todayInRing
+  const yuanJuAt = c.yuanJuAt
 
   const items: RingItem[] = []
   for (let i = 0; i < 360; i++) {
-    const info = getYuanJuAt(i, terms)
+    const info = yuanJuAt[i] ?? null
     const isToday = i === todayInRing
     const isYuanFirst = info && (
       info.yuanPos === 0 ? info.daysFromTermStart === 0
