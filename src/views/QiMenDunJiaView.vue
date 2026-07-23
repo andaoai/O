@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, markRaw } from 'vue'
+import { ref, markRaw, computed } from 'vue'
 import RingStack from '../components/base/RingStack.vue'
 import QiMenLiuJiaziRing from '../components/rings/QiMenLiuJiaziRing.vue'
 import QiMenSolarTermsRing from '../components/rings/QiMenSolarTermsRing.vue'
 import QiMenLunarRing from '../components/rings/QiMenLunarRing.vue'
+import QiMenLiuQiRing from '../components/rings/QiMenLiuQiRing.vue'
 import QiMenSanYuanRing from '../components/rings/QiMenSanYuanRing.vue'
 import QiMenJuShuRing from '../components/rings/QiMenJuShuRing.vue'
 import QiMenInfoCenter from '../components/centers/QiMenInfoCenter.vue'
@@ -52,38 +53,41 @@ const showInfoCenter = ref(false)
 const showLuoshuCenter = ref(false)
 
 /** 由外到内的环配置 */
-const rings = [
-  // ① 最外：六轮甲子日环（60 × 6 = 360 天，时间物理坐标）
-  {
-    component: markRaw(QiMenLiuJiaziRing),
-    thickness: 30,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
+const rings = computed(() => {
+  const base = [
+    // ① 最外：六轮甲子日环（60 × 6 = 360 天，时间物理坐标）
+    {
+      component: markRaw(QiMenLiuJiaziRing),
+      thickness: 30,
+      props: {
+        time: controlledTime,
+        startDegree: START_DEGREE
+      }
+    },
+    // ② 二十四节气段环（岁首冬至 + 下岁冬至紫色标）
+    {
+      component: markRaw(QiMenSolarTermsRing),
+      thickness: 26,
+      gapBefore: 2,
+      props: {
+        time: controlledTime,
+        startDegree: START_DEGREE
+      }
+    },
+    // ③ 农历日期环（初一显示月名，其他显示日号；冬至叠加区径向上下分层）
+    {
+      component: markRaw(QiMenLunarRing),
+      thickness: 24,
+      gapBefore: 2,
+      props: {
+        time: controlledTime,
+        startDegree: START_DEGREE
+      }
     }
-  },
-  // ② 二十四节气段环（岁首冬至 + 下岁冬至紫色标）
-  {
-    component: markRaw(QiMenSolarTermsRing),
-    thickness: 26,
-    gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  },
-  // ③ 农历日期环（初一显示月名，其他显示日号；冬至叠加区径向上下分层）
-  {
-    component: markRaw(QiMenLunarRing),
-    thickness: 24,
-    gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  },
+  ]
+
   // ④ 三元段环（上元/中元/下元）
-  {
+  base.push({
     component: markRaw(QiMenSanYuanRing),
     thickness: 24,
     gapBefore: 2,
@@ -91,9 +95,9 @@ const rings = [
       time: controlledTime,
       startDegree: START_DEGREE
     }
-  },
+  })
   // ⑤ 九局数段环（1-9 洛书色）
-  {
+  base.push({
     component: markRaw(QiMenJuShuRing),
     thickness: 24,
     gapBefore: 2,
@@ -101,8 +105,20 @@ const rings = [
       time: controlledTime,
       startDegree: START_DEGREE
     }
-  }
-]
+  })
+  // ⑥ 五运六气环（最内，跨冬至的终之气拆两段）
+  base.push({
+    component: markRaw(QiMenLiuQiRing),
+    thickness: 24,
+    gapBefore: 2,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  })
+
+  return base
+})
 </script>
 
 <template>
