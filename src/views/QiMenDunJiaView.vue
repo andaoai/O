@@ -7,6 +7,7 @@ import QiMenLunarRing from '../components/rings/QiMenLunarRing.vue'
 import QiMenSanYuanRing from '../components/rings/QiMenSanYuanRing.vue'
 import QiMenJuShuRing from '../components/rings/QiMenJuShuRing.vue'
 import QiMenInfoCenter from '../components/centers/QiMenInfoCenter.vue'
+import QiMenLuoshuCenter from '../components/centers/QiMenLuoshuCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
@@ -43,6 +44,12 @@ const OUTER_RADIUS = 560
 
 /** 六轮甲子日环共享参考点（屏幕正上方） */
 const START_DEGREE = -90
+
+/** 圆心信息卡显隐（默认关闭，与其它罗盘图层默认关闭一致） */
+const showInfoCenter = ref(false)
+
+/** 洛书九宫圆心显隐（默认关闭） */
+const showLuoshuCenter = ref(false)
 
 /** 由外到内的环配置 */
 const rings = [
@@ -100,6 +107,25 @@ const rings = [
 
 <template>
   <div class="container">
+    <!-- 图层切换：通过 Teleport 传入 Sidebar 的"视图选项"区块 -->
+    <Teleport to="#sidebar-view-tools">
+      <div class="view-tool-group">
+        <label class="view-tool-label">图层</label>
+        <div class="orientation-toggle">
+          <button
+            :class="{ active: showInfoCenter }"
+            @click="showInfoCenter = !showInfoCenter"
+            :title="showInfoCenter ? '关闭圆心信息卡（阴阳遁·节气·三元·局数）' : '开启圆心信息卡（阴阳遁·节气·三元·局数）'"
+          >{{ showInfoCenter ? '✔ 阴阳遁信息' : '  阴阳遁信息' }}</button>
+          <button
+            :class="{ active: showLuoshuCenter }"
+            @click="showLuoshuCenter = !showLuoshuCenter"
+            :title="showLuoshuCenter ? '关闭洛书九宫图（河图洛书 · 后天八卦 · 当前局所在宫高亮）' : '开启洛书九宫图（河图洛书 · 后天八卦 · 当前局所在宫高亮）'"
+          >{{ showLuoshuCenter ? '✔ 洛书九宫' : '  洛书九宫' }}</button>
+        </div>
+      </div>
+    </Teleport>
+
     <svg
       ref="svgRef"
       class="compass-svg"
@@ -115,7 +141,14 @@ const rings = [
           :rotation-direction="rotationDirection"
         >
           <template #center="{ innerRadius }">
+            <QiMenLuoshuCenter
+              v-if="showLuoshuCenter"
+              :radius="innerRadius * 0.95"
+              :time="controlledTime"
+              :rotation-angle="rotationAngle"
+            />
             <QiMenInfoCenter
+              v-if="showInfoCenter"
               :radius="innerRadius * 0.85"
               :time="controlledTime"
               :rotation-angle="rotationAngle"
@@ -152,5 +185,52 @@ svg {
 }
 .compass-svg.alt-dragging {
   cursor: grabbing;
+}
+
+/* ─── Teleport 到 Sidebar 的图层切换 ─── */
+.view-tool-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.view-tool-label {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 1px;
+  padding-left: 2px;
+}
+
+.orientation-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.orientation-toggle button {
+  color: #aaa;
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  border-radius: 3px;
+  letter-spacing: 1px;
+  transition: color 0.15s, background-color 0.15s;
+  font-family: inherit;
+}
+
+.orientation-toggle button:hover {
+  color: #eee;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.orientation-toggle button.active {
+  color: #d4af37;
+  background: rgba(212, 175, 55, 0.15);
 }
 </style>
