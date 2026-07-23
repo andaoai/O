@@ -759,3 +759,81 @@ export function computeChaoshenState(today: Date): ChaoshenState {
   if (diff < 0) return { label: '超神', days: -diff }
   return { label: '正授', days: 0 }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+ *  五运六气 · 客气排布
+ * ──────────────────────────────────────────────────────────────────
+ *  客气排布规则（仅看「年地支」）：
+ *
+ *    年地支          司天之气(三之气)   在泉之气(终之气)
+ *    ─────           ──────────       ──────────
+ *    子/午           少阴君火          阳明燥金
+ *    丑/未           太阴湿土          太阳寒水
+ *    寅/申           少阳相火          厥阴风木
+ *    卯/酉           阳明燥金          少阴君火
+ *    辰/戌           太阳寒水          太阴湿土
+ *    巳/亥           厥阴风木          少阳相火
+ *
+ *  客气六气固定循环顺序：
+ *    厥阴风木 → 少阴君火 → 太阴湿土 → 少阳相火 → 阳明燥金 → 太阳寒水
+ *
+ *  排布方法：把「司天之气」放到第三步(三之气)，前后各推 2/3 步，
+ *  即得初/二/三/四/五/终六步的客气序列。
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+/** 客气六气（固定循环顺序） */
+export const KE_QI_CYCLE: readonly string[] = [
+  '厥阴风木', '少阴君火', '太阴湿土', '少阳相火', '阳明燥金', '太阳寒水'
+] as const
+
+/**
+ * 年地支 → 司天之气(三之气)在 KE_QI_CYCLE 中的索引。
+ *   子(0)/午(6) → 少阴君火 = index 1
+ *   丑(1)/未(7) → 太阴湿土 = index 2
+ *   寅(2)/申(8) → 少阳相火 = index 3
+ *   卯(3)/酉(9) → 阳明燥金 = index 4
+ *   辰(4)/戌(10)→ 太阳寒水 = index 5
+ *   巳(5)/亥(11)→ 厥阴风木 = index 0
+ */
+const SITIAN_INDEX_BY_BRANCH: readonly number[] = [1, 2, 3, 4, 5, 0, 1, 2, 3, 4, 5, 0]
+
+/**
+ * 计算某岁的客气六步序列（从初之气到终之气）。
+ *
+ * 惯例：五运六气的「年」以立春（或大寒）为界，早于立春按前一年干支。
+ * 此处取「本岁大寒当日」的年地支作为客气排布依据 —— 大寒对应
+ * 初之气起点，是运气学说中最自然的年界。
+ *
+ * @param yearBranchIndex 年地支索引（0=子,1=丑,…,11=亥）
+ * @returns 长度 6 的客气名称数组：[初,二,三,四,五,终]
+ */
+export function computeKeQiSequence(yearBranchIndex: number): string[] {
+  const branch = ((yearBranchIndex % 12) + 12) % 12
+  const sitianIdx = SITIAN_INDEX_BY_BRANCH[branch]!
+  // 司天(第三步) → 前推 2 步得初之气起点在 cycle 中的位置
+  const startIdx = ((sitianIdx - 2) % 6 + 6) % 6
+  const seq: string[] = []
+  for (let i = 0; i < 6; i++) {
+    seq.push(KE_QI_CYCLE[(startIdx + i) % 6]!)
+  }
+  return seq
+}
+
+/**
+ * 从「大寒」真实日期反查其所在的年地支索引 —— 作为客气排布的年界基准。
+ *
+ * 大寒为初之气起点：yearTerms 首个「大寒」的年份即客气岁的年支。
+ * yearTerms[0] 是冬至，紧接是小寒(idx=1)、大寒(idx=2)。
+ * 若本岁大寒不在 yearTerms 里（罕见），退化用 W1 冬至所在年 + 1。
+ */
+export function getKeQiYearBranchIndex(yearTerms: QiMenSolarTerm[], W1: Date): number {
+  const daHan = yearTerms.find(t => t.name === '大寒')
+  const ref = daHan?.date ?? new Date(W1.getFullYear() + 1, 0, 20)
+  const sd = SolarDay.fromYmd(ref.getFullYear(), ref.getMonth() + 1, ref.getDate())
+  const yearCycle = sd.getLunarDay().getLunarMonth().getLunarYear().getSixtyCycle()
+  const branchName = yearCycle.getEarthBranch().getName()
+  const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
+  const idx = BRANCHES.indexOf(branchName)
+  return idx >= 0 ? idx : 0
+}

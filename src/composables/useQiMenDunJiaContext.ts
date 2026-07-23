@@ -43,6 +43,8 @@ import {
   getWinterOverlayIndices,
   getYuanJuAt,
   computeSixYun,
+  computeKeQiSequence,
+  getKeQiYearBranchIndex,
   type QiMenSolarTerm,
   type LunarRingEntry,
   type YuanJuInfo
@@ -107,6 +109,10 @@ export interface QiMenContext {
   /* ── WuYunLiuQiRing ── */
   termDayFromWinter: Map<string, number>  // 节气名 → 距 W1 天数
   termDayInRing: Map<string, number>      // 节气名 → 环上真实位置
+  /** 客气六步序列（初→二→三→四→五→终），本岁大寒年地支决定 */
+  keQi: string[]
+  /** 本岁年地支索引（子=0…亥=11），供调试或圆心卡展示 */
+  keQiYearBranchIndex: number
 
   /* ── 今日派生量（日粒度） ── */
   todayInRing: number             // 今日环上 index [0, 360)
@@ -234,6 +240,10 @@ function buildContext(now: Date): QiMenContext {
   const isInOverlayTail = kToday >= CYCLE_DAYS
   const currentYunIndex = sixYun.currentYunIndex
 
+  // 客气六步：以「本岁大寒」的年地支为准
+  const keQiYearBranchIndex = getKeQiYearBranchIndex(yearTerms, W1)
+  const keQi = computeKeQiSequence(keQiYearBranchIndex)
+
   return {
     upperYuan,
     W1,
@@ -253,6 +263,8 @@ function buildContext(now: Date): QiMenContext {
     segAssignment,
     termDayFromWinter,
     termDayInRing,
+    keQi,
+    keQiYearBranchIndex,
     todayInRing,
     kToday,
     isInOverlayTail,

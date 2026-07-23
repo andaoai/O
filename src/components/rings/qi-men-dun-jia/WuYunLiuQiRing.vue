@@ -387,7 +387,7 @@ const highlightSectors = computed(() => {
 })
 
 /**
- * 六气几何：从真实节气日期派生 arc 起讫。
+ * 六气几何：从真实节气日期派生 arc 起讫。主气。
  * 只保留一段（不需要"跨冬至拆两段"—— 终之气跨环起点走 arcPath 允许 end > 360 即可）。
  */
 interface Qi6 {

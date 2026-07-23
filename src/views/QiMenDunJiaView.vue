@@ -5,6 +5,7 @@ import LiuJiaziDayRing from '../components/rings/qi-men-dun-jia/LiuJiaziDayRing.
 import SolarTermsRing from '../components/rings/qi-men-dun-jia/SolarTermsRing.vue'
 import LunarDateRing from '../components/rings/qi-men-dun-jia/LunarDateRing.vue'
 import WuYunLiuQiRing from '../components/rings/qi-men-dun-jia/WuYunLiuQiRing.vue'
+import KeQiRing from '../components/rings/qi-men-dun-jia/KeQiRing.vue'
 import SanYuanRing from '../components/rings/qi-men-dun-jia/SanYuanRing.vue'
 import JuShuRing from '../components/rings/qi-men-dun-jia/JuShuRing.vue'
 import InfoCenter from '../components/centers/qi-men-dun-jia/InfoCenter.vue'
@@ -19,13 +20,15 @@ import { provideQiMenContext } from '@/composables/useQiMenDunJiaContext'
  * 阴阳遁九局盘 —— 奇门遁甲可视化
  *
  * ═══════════════════════════════════════════════════════════════
- *  由外到内 5 环 + 圆心：
+ *  由外到内 7 环 + 圆心：
  *   ① 六轮甲子日环（60 甲子 × 6 轮 = 360 天）—— 时间物理坐标
  *   ② 二十四节气段环（岁首=冬至，本岁 24 节气 + 下岁冬至紫标）
  *   ③ 农历日期环（初一显示月名，其余日号；冬至叠加区径向分上下两层）
  *   ④ 三元段环（上元/中元/下元，72 元）
  *   ⑤ 九局数段环（1-9 洛书方位色）
- *   ⑥ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
+ *   ⑥ 五运六气 · 主气环（暖色系，节气切六段）
+ *   ⑦ 五运六气 · 客气环（冷色系，年支推六步）
+ *   ⑧ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
  *
  *  所有环共享 0° 起点 = 「上元甲子日」（1900 固定历元派生），
  *  环上每格 [i, i+1) 严格对应一个具体日期，径向对齐。
@@ -116,9 +119,19 @@ const rings = computed(() => {
       startDegree: START_DEGREE
     }
   })
-  // ⑥ 五运六气环（最内，跨冬至的终之气拆两段）
+  // ⑥ 五运六气环 · 主气（跨冬至的终之气拆两段）
   base.push({
     component: markRaw(WuYunLiuQiRing),
+    thickness: 24,
+    gapBefore: 2,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  })
+  // ⑦ 五运六气环 · 客气（本岁年支决定六步序列，配色与主气分离）
+  base.push({
+    component: markRaw(KeQiRing),
     thickness: 24,
     gapBefore: 2,
     props: {
