@@ -107,10 +107,14 @@ const QI_LIST: readonly QiDef[] = [
  */
 interface Qi6 {
   qi: QiDef
-  /** 一段或两段扇形（跨环起点时两段） */
+  /** 一段或两段扇形（跨冬至时两段） */
   paths: Array<{ startAngle: number, endAngle: number }>
-  /** 气几何中心角度，用于标签定位（0-359） */
+  /** 气几何中心角度（0-359），用于判定文字方向翻转 */
   labelAngle: number
+  /** 气标签沿弧线的起点（未 mod raw dayInRing） */
+  labelArcStart: number
+  /** 气标签沿弧线的终点（未 mod raw dayInRing，可能 > 360） */
+  labelArcEnd: number
   isCurrent: boolean
   /** 气实际跨越的天数（用于 debug；一般 60±2 天） */
   spanDays: number
@@ -176,7 +180,15 @@ const qiList = computed<Qi6[]>(() => {
       paths.push({ startAngle: start, endAngle: arcEnd })
     }
 
-    results.push({ qi, paths, labelAngle, isCurrent, spanDays: rawSpan })
+    results.push({
+      qi,
+      paths,
+      labelAngle,
+      labelArcStart: start,
+      labelArcEnd: start + rawSpan,
+      isCurrent,
+      spanDays: rawSpan
+    })
   }
   return results
 })
@@ -187,36 +199,53 @@ const qiList = computed<Qi6[]>(() => {
  */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 
-/**
- * 段路径（走 arcPath），处理 startDegree 偏移。
- * arcPath 的角度就是 dayInRing（我们后面用 startDegree 通过外层 <g rotate> 处理起点旋转），
- * 但更直接：把 startDegree 应用到 startAngle/endAngle 里，简单起见先用 svgAngle = start + startDegree。
- * 因为 polarToCartesian 内部已通过 startDegree 偏移，这里传入 dayInRing 直接即可。
- *
- * 但 arcPath 直接用 polarToCartesian，polarToCartesian 需要一个"绝对角度"（0°=正右）。
- * 而 dayInRing 是从 startDegree 起算的相对角度。
- * 参考其他环用法：DataRing → CircleRing 内部把 startDegree 加到每格角度上传给 polarToCartesian。
- *
- * 为保持一致，这里手动做 startDegree 偏移。
- */
 function svgArcPath(startAngle: number, endAngle: number): string {
   const absStart = startAngle + props.startDegree
   const absEnd = endAngle + props.startDegree
   return arcPath(props.radius, absStart, absEnd, props.innerRadius, props.rotationDirection)
 }
 
-function svgLabelXY(midAngle: number): { x: number, y: number, rot: number } {
-  const absMid = midAngle + props.startDegree
-  const xy = polarToCartesian(absMid, midRadius.value, props.rotationDirection)
-  const rot = radialTextRotation(absMid, props.rotationDirection)
-  return { x: xy.x, y: xy.y, rot }
+/**
+ * 逐字沿弧线均匀分布 —— 项目 CircleRing 一致的做法：
+ * 每个字独立定位到自己的极坐标，再用 radialTextRotation 让字底朝圆心。
+ *
+ * 字距（度/字）根据文字长度和气跨度自适应，字始终在气的正中间对称分布。
+ */
+interface CharPos {
+  ch: string
+  x: number
+  y: number
+  rot: number
+}
+
+/** 每字之间的角度间隔（度）—— 弧长 = 2 × π × r × (Δ/360) 大致等于字号 */
+const CHAR_ANGLE_STEP = computed(() => {
+  // 字号 8~9，字间距略大于字宽 → 每字约 3~4°；这里给一个跟半径解耦的近似
+  const arcPerChar = 12 // 弧长像素 ≈ 字号 + spacing
+  return (arcPerChar / (2 * Math.PI * midRadius.value)) * 360
+})
+
+function labelChars(q: Qi6): CharPos[] {
+  const text = `${q.qi.name} · ${q.qi.attr}`
+  const chars = Array.from(text)
+  const step = CHAR_ANGLE_STEP.value
+  const totalSpan = (chars.length - 1) * step
+  const midRaw = q.labelArcStart + (q.labelArcEnd - q.labelArcStart) / 2
+
+  return chars.map((ch, i) => {
+    const rawAngle = midRaw - totalSpan / 2 + i * step
+    const absAngle = rawAngle + props.startDegree
+    const p = polarToCartesian(absAngle, midRadius.value, props.rotationDirection)
+    const rot = radialTextRotation(absAngle, props.rotationDirection)
+    return { ch, x: p.x, y: p.y, rot }
+  })
 }
 </script>
 
 <template>
   <PolarCanvas>
     <g class="qimen-liuqi-ring">
-      <!-- 6 气：每气一或两个扇形（跨环起点时拆两段），但只画一个标签 -->
+      <!-- 6 气：每气一或两个扇形（跨冬至时两段），文字逐字沿弧线径向排布 -->
       <g v-for="q in qiList" :key="q.qi.key">
         <!-- 扇形（1 段 or 2 段） -->
         <path
@@ -231,21 +260,19 @@ function svgLabelXY(midAngle: number): { x: number, y: number, rot: number } {
           :class="{ 'seg-pulse': q.isCurrent }"
         />
 
-        <!-- 标签：只画一个，放在气的几何中心 -->
-        <g
-          :transform="`translate(${svgLabelXY(q.labelAngle).x}, ${svgLabelXY(q.labelAngle).y}) rotate(${svgLabelXY(q.labelAngle).rot})`"
-        >
-          <text
-            :fill="q.isCurrent ? '#ffffff' : q.qi.color"
-            :font-size="q.isCurrent ? 9 : 8"
-            :font-weight="q.isCurrent ? 'bold' : 'normal'"
-            text-anchor="middle"
-            dominant-baseline="middle"
-            letter-spacing="1"
-          >
-            {{ q.qi.name }} · {{ q.qi.attr }}
-          </text>
-        </g>
+        <!-- 标签：逐字沿弧线均匀分布，每字径向摆放（字底朝圆心） -->
+        <text
+          v-for="(c, ci) in labelChars(q)"
+          :key="ci"
+          :x="c.x"
+          :y="c.y"
+          :transform="`rotate(${c.rot} ${c.x} ${c.y})`"
+          :fill="q.isCurrent ? '#ffffff' : q.qi.color"
+          :font-size="q.isCurrent ? 9 : 8"
+          :font-weight="q.isCurrent ? 'bold' : 'normal'"
+          text-anchor="middle"
+          dominant-baseline="central"
+        >{{ c.ch }}</text>
       </g>
     </g>
   </PolarCanvas>
