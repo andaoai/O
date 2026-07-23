@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataRing from './DataRing.vue'
+import DataRing from '../DataRing.vue'
 import {
   MONTH_ESTABLISH,
   getCurrentGeneralIndex,

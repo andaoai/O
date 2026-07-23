@@ -3,7 +3,7 @@
  *
  * ═══════════════════════════════════════════════════════════════
  *  历史上 24 节气名字数组以不同起序散落多处：
- *    - 立春起序：GuanDouSolarTermsRing / SolarTermsSkyRing
+ *    - 立春起序：guan-dou/SolarTermsRing / planet-mansion/SolarTermsSkyRing
  *    - 冬至起序：utils/chineseCalendar.ts（tyme4ts 索引约定）
  *  这里统一收敛并同时导出两套顺序 + 元数据（节/中气 判定、二分二至集合）。
  *

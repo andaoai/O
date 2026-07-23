@@ -2,7 +2,7 @@
 import { ref, markRaw } from 'vue'
 import SolarTermsPointRing from '../components/rings/SolarTermsPointRing.vue'
 import DayScaleRing from '../components/rings/DayScaleRing.vue'
-import LiuRiQiFenScaleRing from '../components/rings/LiuRiQiFenScaleRing.vue'
+import LiuRiQiFenScaleRing from '../components/rings/jingfang/LiuRiQiFenScaleRing.vue'
 import JingFangGuaRing from '../components/rings/JingFangGuaRing.vue'
 import NajiaRing from '../components/rings/NajiaRing.vue'
 import RingStack from '../components/base/RingStack.vue'

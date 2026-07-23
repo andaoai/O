@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * GuaRelationDeriveStatRing — 推衍层统计发光环（独立占厚一整环）
+ * DeriveStatRing — 推衍层统计发光环（独立占厚一整环）
  *
  * 卡在每一层推衍环组的外侧，独占一层厚度显示该层 64 个位置里出现的**唯一卦数** K：
  *   K = 64 → 无收敛，全信息保留，发绿光
@@ -17,7 +17,7 @@
  */
 import { computed } from 'vue'
 import { polarToCartesian } from '@/utils/geometry'
-import PolarCanvas from '../base/PolarCanvas.vue'
+import PolarCanvas from '../../base/PolarCanvas.vue'
 
 // ─── Props ───
 

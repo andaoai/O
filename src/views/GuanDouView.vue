@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, markRaw } from 'vue'
 import RingStack from '../components/base/RingStack.vue'
-import MonthEstablishRing from '../components/rings/MonthEstablishRing.vue'
-import HourShichenRing from '../components/rings/HourShichenRing.vue'
-import SunDiurnalRing from '../components/rings/SunDiurnalRing.vue'
-import MonthGeneralRing from '../components/rings/MonthGeneralRing.vue'
-import GuanDouSolarTermsRing from '../components/rings/GuanDouSolarTermsRing.vue'
+import MonthEstablishRing from '../components/rings/guan-dou/MonthEstablishRing.vue'
+import HourShichenRing from '../components/rings/guan-dou/HourShichenRing.vue'
+import SunDiurnalRing from '../components/rings/guan-dou/SunDiurnalRing.vue'
+import MonthGeneralRing from '../components/rings/guan-dou/MonthGeneralRing.vue'
+import SolarTermsRing from '../components/rings/guan-dou/SolarTermsRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
-import BeidouCenter from '../components/centers/BeidouCenter.vue'
+import BeidouCenter from '../components/centers/guan-dou/BeidouCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'
 import { useGeolocation } from '@/composables/useGeolocation'
@@ -172,7 +172,7 @@ const OUTER_RADIUS = 570
  */
 const rings = computed(() => [
   {
-    component: markRaw(GuanDouSolarTermsRing),
+    component: markRaw(SolarTermsRing),
     thickness: 22,
     props: { time: controlledTime }
   },

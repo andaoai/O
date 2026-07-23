@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataRing from './DataRing.vue'
+import DataRing from '../DataRing.vue'
 import { BRANCHES } from '@/utils/constants/ganzhi'
 import { getJiaziIndices, branchOf } from '@/utils/liushiJiazi'
 import { branchIndexToScreenCenter, centerToArcSpan } from '@/utils/jianJiang'

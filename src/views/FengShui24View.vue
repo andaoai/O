@@ -31,7 +31,7 @@ import { useMagneticDeclination, headingToChinese } from '@/composables/useMagne
 import { useViewport } from '@/composables/useViewport'
 import { provideCompassContext } from '@/composables/useCompassContext'
 import RingStack from '@/components/base/RingStack.vue'
-import TwentyFourMountainsRing from '@/components/rings/TwentyFourMountainsRing.vue'
+import TwentyFourMountainsRing from '@/components/rings/fengshui24/TwentyFourMountainsRing.vue'
 import { normalizeAngle } from '@/utils/geometry'
 
 // ─── 时间源 ─────────────────────────────────────────────

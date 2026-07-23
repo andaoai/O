@@ -184,7 +184,7 @@ export function computeSixYun(date: Date): SixYunInfo {
 
 /**
  * 六运色板（一运深 → 六运浅），暗示「一阳来复」的时间流。
- * 与 QiMenLiuJiaziRing 的 ROUND_COLORS 一一对应。
+ * 与 LiuJiaziDayRing 的 ROUND_COLORS 一一对应。
  */
 export const YUN_COLORS: readonly string[] = [
   '#3498DB', // 一运 · 冬（水青）

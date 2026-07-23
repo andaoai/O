@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataBodyRing from './DataBodyRing.vue'
+import DataBodyRing from '../DataBodyRing.vue'
 import { sunDiurnal, moonDiurnal, dayNightArc } from '@/utils/celestial'
 import { arcPath } from '@/utils/geometry'
 import type { BodyRingData } from '@/data/rings/types'

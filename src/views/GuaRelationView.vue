@@ -11,7 +11,7 @@ import { ref, computed, markRaw, provide } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
 import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
 import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
-import GuaRelationDeriveStatRing from '@/components/rings/GuaRelationDeriveStatRing.vue'
+import DeriveStatRing from '@/components/rings/gua-relation/DeriveStatRing.vue'
 import type { GuaRelationTextLayer } from '@/components/rings/GuaRelationTextRing.vue'
 import { useGuaRelationInteraction, GUA_RELATION_KEY, type GuaRelationMode } from '@/composables/useGuaRelationInteraction'
 import { useUrlTime } from '@/composables/useUrlTime'
@@ -378,7 +378,7 @@ const rings = computed(() => {
       // 每层文字环组的正外侧插一层独立的发光统计环，
       // 环厚 14px，独占空间，数字标签落在环带正中央，永不与相邻卦名/卦符重叠
       groups.push({
-        component: markRaw(GuaRelationDeriveStatRing),
+        component: markRaw(DeriveStatRing),
         thickness: 14,
         // 第 0 层不留组间距；第 k>0 层用 GROUP_GAP 拉开与上一组的距离
         gapBefore: k === 0 ? GAP : GROUP_GAP,

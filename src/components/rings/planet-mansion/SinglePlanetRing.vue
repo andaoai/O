@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataBodyRing from './DataBodyRing.vue'
+import DataBodyRing from '../DataBodyRing.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import type { BodyRingData, LuminaryKey } from '@/data/rings/types'
 

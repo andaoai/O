@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, markRaw } from 'vue'
-import SkyChart from '../components/rings/SkyChart.vue'
+import SkyChart from '../components/rings/planet-mansion/SkyChart.vue'
 import MansionDegreeRing from '../components/rings/MansionDegreeRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import ConstellationsRing from '../components/rings/ConstellationsRing.vue'
 import SiXiangRing from '../components/rings/SiXiangRing.vue'
-import SolarTermsSkyRing from '../components/rings/SolarTermsSkyRing.vue'
+import SolarTermsSkyRing from '../components/rings/planet-mansion/SolarTermsSkyRing.vue'
 import DegreeScale from '../components/rings/DegreeScale.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'

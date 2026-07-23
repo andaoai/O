@@ -25,7 +25,7 @@
  */
 import { computed, unref, type MaybeRef } from 'vue'
 import { SolarDay } from 'tyme4ts'
-import PolarCanvas from '../base/PolarCanvas.vue'
+import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
 import {

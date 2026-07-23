@@ -19,7 +19,7 @@
  * ═══════════════════════════════════════════════════════════════
  */
 import { computed, unref, type MaybeRef } from 'vue'
-import DataRing from './DataRing.vue'
+import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { ganzhiName } from '@/utils/constants/ganzhi'
 import { computeSixYun, YUN_COLORS, jiaziIndexAt } from '@/utils/qimenDunJia'

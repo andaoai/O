@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { ref, markRaw, computed } from 'vue'
 import RingStack from '../components/base/RingStack.vue'
-import QiMenLiuJiaziRing from '../components/rings/QiMenLiuJiaziRing.vue'
-import QiMenSolarTermsRing from '../components/rings/QiMenSolarTermsRing.vue'
-import QiMenLunarRing from '../components/rings/QiMenLunarRing.vue'
-import QiMenLiuQiRing from '../components/rings/QiMenLiuQiRing.vue'
-import QiMenSanYuanRing from '../components/rings/QiMenSanYuanRing.vue'
-import QiMenJuShuRing from '../components/rings/QiMenJuShuRing.vue'
-import QiMenInfoCenter from '../components/centers/QiMenInfoCenter.vue'
-import QiMenLuoshuCenter from '../components/centers/QiMenLuoshuCenter.vue'
+import LiuJiaziDayRing from '../components/rings/qi-men-dun-jia/LiuJiaziDayRing.vue'
+import SolarTermsRing from '../components/rings/qi-men-dun-jia/SolarTermsRing.vue'
+import LunarDateRing from '../components/rings/qi-men-dun-jia/LunarDateRing.vue'
+import WuYunLiuQiRing from '../components/rings/qi-men-dun-jia/WuYunLiuQiRing.vue'
+import SanYuanRing from '../components/rings/qi-men-dun-jia/SanYuanRing.vue'
+import JuShuRing from '../components/rings/qi-men-dun-jia/JuShuRing.vue'
+import InfoCenter from '../components/centers/qi-men-dun-jia/InfoCenter.vue'
+import LuoshuCenter from '../components/centers/qi-men-dun-jia/LuoshuCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
@@ -24,7 +24,7 @@ import { provideCompassContext } from '@/composables/useCompassContext'
  *   ③ 农历日期环（初一显示月名，其余日号；冬至叠加区径向分上下两层）
  *   ④ 三元段环（上元/中元/下元，72 元）
  *   ⑤ 九局数段环（1-9 洛书方位色）
- *   ⑥ QiMenInfoCenter 中央：局数/元位/超神接气/六运/干支四柱
+ *   ⑥ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
  *
  *  所有环共享 0° 起点 = 「上元甲子日」（1900 固定历元派生），
  *  环上每格 [i, i+1) 严格对应一个具体日期，径向对齐。
@@ -57,7 +57,7 @@ const rings = computed(() => {
   const base = [
     // ① 最外：六轮甲子日环（60 × 6 = 360 天，时间物理坐标）
     {
-      component: markRaw(QiMenLiuJiaziRing),
+      component: markRaw(LiuJiaziDayRing),
       thickness: 30,
       props: {
         time: controlledTime,
@@ -66,7 +66,7 @@ const rings = computed(() => {
     },
     // ② 二十四节气段环（岁首冬至 + 下岁冬至紫色标）
     {
-      component: markRaw(QiMenSolarTermsRing),
+      component: markRaw(SolarTermsRing),
       thickness: 26,
       gapBefore: 2,
       props: {
@@ -76,7 +76,7 @@ const rings = computed(() => {
     },
     // ③ 农历日期环（初一显示月名，其他显示日号；冬至叠加区径向上下分层）
     {
-      component: markRaw(QiMenLunarRing),
+      component: markRaw(LunarDateRing),
       thickness: 24,
       gapBefore: 2,
       props: {
@@ -88,7 +88,7 @@ const rings = computed(() => {
 
   // ④ 三元段环（上元/中元/下元）
   base.push({
-    component: markRaw(QiMenSanYuanRing),
+    component: markRaw(SanYuanRing),
     thickness: 24,
     gapBefore: 2,
     props: {
@@ -98,7 +98,7 @@ const rings = computed(() => {
   })
   // ⑤ 九局数段环（1-9 洛书色）
   base.push({
-    component: markRaw(QiMenJuShuRing),
+    component: markRaw(JuShuRing),
     thickness: 24,
     gapBefore: 2,
     props: {
@@ -108,7 +108,7 @@ const rings = computed(() => {
   })
   // ⑥ 五运六气环（最内，跨冬至的终之气拆两段）
   base.push({
-    component: markRaw(QiMenLiuQiRing),
+    component: markRaw(WuYunLiuQiRing),
     thickness: 24,
     gapBefore: 2,
     props: {
@@ -157,13 +157,13 @@ const rings = computed(() => {
           :rotation-direction="rotationDirection"
         >
           <template #center="{ innerRadius }">
-            <QiMenLuoshuCenter
+            <LuoshuCenter
               v-if="showLuoshuCenter"
               :radius="innerRadius * 0.95"
               :time="controlledTime"
               :rotation-angle="rotationAngle"
             />
-            <QiMenInfoCenter
+            <InfoCenter
               v-if="showInfoCenter"
               :radius="innerRadius * 0.85"
               :time="controlledTime"

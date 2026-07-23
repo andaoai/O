@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataRing from './DataRing.vue'
+import DataRing from '../DataRing.vue'
 import { twentyFourMountains, MOUNTAIN_CENTERS, MOUNTAIN_NAMES } from '@/data/rings/twentyFourMountains'
 import type { RingData } from '@/data/rings/types'
 

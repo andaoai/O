@@ -900,7 +900,7 @@ const { controlledTime } = useUrlTime()
 | `MonthGeneralRing.vue` | Segment | 月将（大吉/功曹…）：太阳所在宫锚定 |
 | `HourShichenRing.vue` | Segment | 12 时辰赤道环，当前时辰高亮 |
 | `SunDiurnalRing.vue` | Segment | 日周：白昼-曙暮-夜三层弧背景，地轴倾斜驱动 |
-| `GuanDouSolarTermsRing.vue` | Point | 观斗盘节气刻度（黄经→赤道映射） |
+| `guan-dou/SolarTermsRing.vue` | Point | 观斗盘节气刻度（黄经→赤道映射） |
 
 新增圆心组件：
 

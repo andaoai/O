@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import SuzhouSkyMap from '../components/centers/SuzhouSkyMap.vue'
-import WorldMapCenter from '../components/centers/WorldMapCenter.vue'
+import SuzhouSkyMap from '../components/centers/suzhou-stellar-map/SuzhouSkyMap.vue'
+import WorldMapCenter from '../components/centers/suzhou-stellar-map/WorldMapCenter.vue'
 import RingStack from '../components/base/RingStack.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useLiveClock } from '@/composables/useLiveClock'

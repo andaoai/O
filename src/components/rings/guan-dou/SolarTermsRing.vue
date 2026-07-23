@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataPointRing from './DataPointRing.vue'
+import DataPointRing from '../DataPointRing.vue'
 import { sunLongitude } from '@/utils/celestial'
 import { eclipticPointToScreenAngle } from '@/utils/jianJiang'
 import { normalizeAngle } from '@/utils/geometry'

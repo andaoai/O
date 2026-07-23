@@ -21,7 +21,7 @@
  */
 import { computed, unref, type MaybeRef } from 'vue'
 import { SolarDay } from 'tyme4ts'
-import DataRing from './DataRing.vue'
+import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import {
   computeQiMenSolarTerms,

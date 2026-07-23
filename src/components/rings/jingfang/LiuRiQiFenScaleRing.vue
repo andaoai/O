@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import DataPointRing from './DataPointRing.vue'
+import DataPointRing from '../DataPointRing.vue'
 import { getYaoIndexInJingFangYear } from '@/utils/jingFangYao'
 import type { PointRingData } from '@/data/rings/types'
 

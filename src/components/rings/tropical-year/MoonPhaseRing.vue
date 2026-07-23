@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
-import PolarCanvas from '../base/PolarCanvas.vue'
+import PolarCanvas from '../../base/PolarCanvas.vue'
 import {
   normalizeAngle,
   polarToCartesian,
