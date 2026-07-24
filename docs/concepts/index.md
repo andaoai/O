@@ -9,6 +9,7 @@ title: 通用概念
 ## 时间与历法
 
 - [干支 · 六十甲子](/concepts/ganzhi) —— 天干 × 地支，六柱记时的字符集
+- [纳音 · 六十甲子五行](/concepts/nayin) —— 两柱一音，三十音配五行意象
 - [二十四节气 · 节气与中气](/concepts/solar-terms) —— 节 / 中气之别与置闰之据
 - [十二辰 · 十二时辰](/concepts/shichen) —— 一日十二段的地支坐标
 - [闰月 · 无中气置闰法](/concepts/leap-month) —— 阴阳合历的调频机制
