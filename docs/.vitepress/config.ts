@@ -228,6 +228,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: '干支 · 六十甲子', link: '/concepts/ganzhi' },
+            { text: '纳音 · 六十甲子五行', link: '/concepts/nayin' },
             { text: '二十四节气 · 节气与中气', link: '/concepts/solar-terms' },
             { text: '十二辰 · 十二时辰', link: '/concepts/shichen' },
             { text: '闰月 · 无中气置闰法', link: '/concepts/leap-month' },
@@ -256,6 +257,7 @@ export default defineConfig({
           collapsed: false,
           items: [
             { text: '京房卦气 · 六日七分', link: '/concepts/jingfang-guaqi' },
+            { text: '五运 · 岁运主运客运', link: '/concepts/wu-yun' },
             { text: '纳甲', link: '/concepts/najia' },
             { text: '世应爻位', link: '/concepts/shi-ying' },
             { text: '飞伏 · 显隐互藏', link: '/concepts/gua-relation' },
