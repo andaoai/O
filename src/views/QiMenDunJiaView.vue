@@ -6,6 +6,8 @@ import SolarTermsRing from '../components/rings/qi-men-dun-jia/SolarTermsRing.vu
 import LunarDateRing from '../components/rings/qi-men-dun-jia/LunarDateRing.vue'
 import WuYunLiuQiRing from '../components/rings/qi-men-dun-jia/WuYunLiuQiRing.vue'
 import KeQiRing from '../components/rings/qi-men-dun-jia/KeQiRing.vue'
+import MainYunRing from '../components/rings/qi-men-dun-jia/MainYunRing.vue'
+import KeYunRing from '../components/rings/qi-men-dun-jia/KeYunRing.vue'
 import SanYuanRing from '../components/rings/qi-men-dun-jia/SanYuanRing.vue'
 import JuShuRing from '../components/rings/qi-men-dun-jia/JuShuRing.vue'
 import InfoCenter from '../components/centers/qi-men-dun-jia/InfoCenter.vue'
@@ -20,15 +22,17 @@ import { provideQiMenContext } from '@/composables/useQiMenDunJiaContext'
  * 阴阳遁九局盘 —— 奇门遁甲可视化
  *
  * ═══════════════════════════════════════════════════════════════
- *  由外到内 7 环 + 圆心：
+ *  由外到内 9 环 + 圆心：
  *   ① 六轮甲子日环（60 甲子 × 6 轮 = 360 天）—— 时间物理坐标
  *   ② 二十四节气段环（岁首=冬至，本岁 24 节气 + 下岁冬至紫标）
  *   ③ 农历日期环（初一显示月名，其余日号；冬至叠加区径向分上下两层）
  *   ④ 三元段环（上元/中元/下元，72 元）
  *   ⑤ 九局数段环（1-9 洛书方位色）
- *   ⑥ 五运六气 · 主气环（暖色系，节气切六段）
- *   ⑦ 五运六气 · 客气环（冷色系，年支推六步）
- *   ⑧ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
+ *   ⑥ 五运六气 · 主气环（六段节气切分，跨冬至走紫渐变）
+ *   ⑦ 五运六气 · 客气环（年支推六步，跨冬至向本年终气渐变）
+ *   ⑧ 五运 · 主运环（每年木火土金水固定五步，太少交替）
+ *   ⑨ 五运 · 客运环（初运=岁运，按相生顺序排五步）
+ *   ⑩ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
  *
  *  所有环共享 0° 起点 = 「上元甲子日」（1900 固定历元派生），
  *  环上每格 [i, i+1) 严格对应一个具体日期，径向对齐。
@@ -132,6 +136,26 @@ const rings = computed(() => {
   // ⑦ 五运六气环 · 客气（本岁年支决定六步序列，配色与主气分离）
   base.push({
     component: markRaw(KeQiRing),
+    thickness: 24,
+    gapBefore: 2,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  })
+  // ⑧ 五运 · 主运（每年固定木火土金水五步 × 72°）
+  base.push({
+    component: markRaw(MainYunRing),
+    thickness: 24,
+    gapBefore: 2,
+    props: {
+      time: controlledTime,
+      startDegree: START_DEGREE
+    }
+  })
+  // ⑨ 五运 · 客运（初运=岁运，按相生顺序排五步）
+  base.push({
+    component: markRaw(KeYunRing),
     thickness: 24,
     gapBefore: 2,
     props: {

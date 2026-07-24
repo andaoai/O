@@ -823,17 +823,214 @@ export function computeKeQiSequence(yearBranchIndex: number): string[] {
 /**
  * 从「大寒」真实日期反查其所在的年地支索引 —— 作为客气排布的年界基准。
  *
- * 大寒为初之气起点：yearTerms 首个「大寒」的年份即客气岁的年支。
- * yearTerms[0] 是冬至，紧接是小寒(idx=1)、大寒(idx=2)。
- * 若本岁大寒不在 yearTerms 里（罕见），退化用 W1 冬至所在年 + 1。
+ * ⚠️ 关键约定：五运六气的年界是「大寒」本身，与农历年（立春起）不同。
+ *   大寒 2026-01-20 → 开启 2026 丙午运气岁（此时立春尚未到）。
+ *   因此按大寒所在公历年反查干支（公历年 ↔ 大寒起干支年 一一对应）。
+ *
+ * yearTerms[0] 是冬至，紧接是小寒、大寒；若本岁大寒缺失，退化到 W1+1 Jan 20。
  */
 export function getKeQiYearBranchIndex(yearTerms: QiMenSolarTerm[], W1: Date): number {
   const daHan = yearTerms.find(t => t.name === '大寒')
   const ref = daHan?.date ?? new Date(W1.getFullYear() + 1, 0, 20)
-  const sd = SolarDay.fromYmd(ref.getFullYear(), ref.getMonth() + 1, ref.getDate())
-  const yearCycle = sd.getLunarDay().getLunarMonth().getLunarYear().getSixtyCycle()
-  const branchName = yearCycle.getEarthBranch().getName()
-  const BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥']
-  const idx = BRANCHES.indexOf(branchName)
-  return idx >= 0 ? idx : 0
+  // 公历年 → 六十甲子索引（4 AD = 甲子 = 0）
+  const cycleIdx = (((ref.getFullYear() - 4) % 60) + 60) % 60
+  return cycleIdx % 12
+}
+
+/* ══════════════════════════════════════════════════════════════════
+ *  五运六气 · 五运（主运 / 客运）排布
+ * ──────────────────────────────────────────────────────────────────
+ *  规律一：定「岁运」（看年干）
+ *    甲己化土 / 乙庚化金 / 丙辛化水 / 丁壬化木 / 戊癸化火
+ *    阳干（甲丙戊庚壬）= 太（过）；阴干（乙丁己辛癸）= 少（不及）
+ *
+ *  规律二：定「主运」（每年木火土金水 5 步固定顺序）
+ *    初运极性由岁运反推 —— 保证太少相生链条经过岁运时太少匹配。
+ *    等价的分组口诀：
+ *      甲乙丙壬癸 起「太角」；丁戊己庚辛 起「少角」
+ *    定初运后，按太少相生（太→少→太→少）交替。
+ *
+ *  规律三：定「客运」（初运=岁运，后按相生+太少交替）
+ *    初运 = 岁运（照抄天干化运的太少结果）
+ *    后 4 步按木→火→土→金→水相生顺序循环，
+ *    极性同样太少相生交替（初运太→少→太→少→太）。
+ *
+ *  规律四：定「时段」
+ *    一年分五段，以「大寒」为起点，每运约 73 天。
+ *
+ *  📊 十天干年份 · 主运与客运权威表（用户核对基准，逐字对齐）：
+ *  ┌─────┬─────────┬──────┬────────────────────────────┬────────────────────────────┐
+ *  │ 天干 │  阴阳属性  │ 岁运  │ 主运（每年不变）              │ 客运（当年变奏）              │
+ *  ├─────┼─────────┼──────┼────────────────────────────┼────────────────────────────┤
+ *  │ 甲   │ 阳土      │ 太宫  │ 太角→少徵→太宫→少商→太羽   │ 太宫→少商→太羽→少角→太徵   │
+ *  │ 乙   │ 阴金      │ 少商  │ 太角→少徵→太宫→少商→太羽   │ 少商→太羽→少角→太徵→少宫   │
+ *  │ 丙   │ 阳水      │ 太羽  │ 太角→少徵→太宫→少商→太羽   │ 太羽→少角→太徵→少宫→太商   │
+ *  │ 丁   │ 阴木      │ 少角  │ 少角→太徵→少宫→太商→少羽   │ 少角→太徵→少宫→太商→少羽   │
+ *  │ 戊   │ 阳火      │ 太徵  │ 少角→太徵→少宫→太商→少羽   │ 太徵→少宫→太商→少羽→太角   │
+ *  │ 己   │ 阴土      │ 少宫  │ 少角→太徵→少宫→太商→少羽   │ 少宫→太商→少羽→太角→少徵   │
+ *  │ 庚   │ 阳金      │ 太商  │ 少角→太徵→少宫→太商→少羽   │ 太商→少羽→太角→少徵→太宫   │
+ *  │ 辛   │ 阴水      │ 少羽  │ 少角→太徵→少宫→太商→少羽   │ 少羽→太角→少徵→太宫→少商   │
+ *  │ 壬   │ 阳木      │ 太角  │ 太角→少徵→太宫→少商→太羽   │ 太角→少徵→太宫→少商→太羽   │
+ *  │ 癸   │ 阴火      │ 少徵  │ 太角→少徵→太宫→少商→太羽   │ 少徵→太宫→少商→太羽→少角   │
+ *  └─────┴─────────┴──────┴────────────────────────────┴────────────────────────────┘
+ * ══════════════════════════════════════════════════════════════════
+ */
+
+/** 五音 · 五行本色 */
+export const WU_YIN_TO_XING: readonly ['木', '火', '土', '金', '水'] = ['木', '火', '土', '金', '水'] as const
+
+/** 天干 → 化运五行索引（甲己土、乙庚金、丙辛水、丁壬木、戊癸火） */
+const STEM_TO_YUN_ELEMENT_INDEX: readonly number[] = [
+  /* 甲=0 */ 2, // 土
+  /* 乙=1 */ 3, // 金
+  /* 丙=2 */ 4, // 水
+  /* 丁=3 */ 0, // 木
+  /* 戊=4 */ 1, // 火
+  /* 己=5 */ 2, // 土
+  /* 庚=6 */ 3, // 金
+  /* 辛=7 */ 4, // 水
+  /* 壬=8 */ 0, // 木
+  /* 癸=9 */ 1  // 火
+] as const
+
+/** 五音名（角=木、徵=火、宫=土、商=金、羽=水） */
+export const WU_YIN_NAMES: readonly ['角', '徵', '宫', '商', '羽'] = ['角', '徵', '宫', '商', '羽'] as const
+
+/** 太 / 少 极性 */
+export type YunPolarity = '太' | '少'
+
+/** 一步「运」的完整信息 */
+export interface WuYunStep {
+  /** 主/客运在 5 步中的序号：0..4 → 初/二/三/四/终 */
+  order: number
+  /** 序号中文名 */
+  orderName: string
+  /** 五音（角/徵/宫/商/羽） */
+  yin: string
+  /** 五行（木/火/土/金/水） */
+  element: string
+  /** 太或少 */
+  polarity: YunPolarity
+  /** 展示用完整名：'太角' / '少宫' 等 */
+  fullName: string
+}
+
+const YUN_ORDER_NAMES: readonly string[] = ['初运', '二运', '三运', '四运', '终运'] as const
+
+/** 阳干（太）：甲(0)/丙(2)/戊(4)/庚(6)/壬(8) */
+function isYangStem(stemIdx: number): boolean {
+  return stemIdx % 2 === 0
+}
+
+/**
+ * 主运初运极性（起太角 or 少角）—— 从岁运反推自洽的分组：
+ *
+ *   起「太角」: 甲(0)、乙(1)、丙(2)、壬(8)、癸(9)
+ *   起「少角」: 丁(3)、戊(4)、己(5)、庚(6)、辛(7)
+ *
+ *  等价推导：主运五音位置固定 [角0/徵1/宫2/商3/羽4]，太少交替。
+ *  岁运的（位置, 极性）唯一确定 → 反推初运极性使链条自洽：
+ *    · 岁运位置偶（角/宫/羽）→ 初运极性 = 岁运极性
+ *    · 岁运位置奇（徵/商）  → 初运极性 = 岁运反极性
+ *  两种方式等价，此处用显式分组表以匹配传统口诀。
+ */
+function mainYunFirstPolarity(stemIdx: number): YunPolarity {
+  const s = ((stemIdx % 10) + 10) % 10
+  // 甲(0) 乙(1) 丙(2) 壬(8) 癸(9) → 太角
+  const isTaiJue = s === 0 || s === 1 || s === 2 || s === 8 || s === 9
+  return isTaiJue ? '太' : '少'
+}
+
+/**
+ * 太少相生：给定初运极性，5 步交替 (太→少→太→少→太 或 反之)
+ */
+function polaritySequence(first: YunPolarity): YunPolarity[] {
+  const seq: YunPolarity[] = []
+  let cur = first
+  for (let i = 0; i < 5; i++) {
+    seq.push(cur)
+    cur = cur === '太' ? '少' : '太'
+  }
+  return seq
+}
+
+/** 计算「岁运」信息（天干化运 + 太少） */
+export interface SuiYunInfo {
+  element: string   // 化运五行（木/火/土/金/水）
+  yin: string       // 五音名
+  polarity: YunPolarity
+  fullName: string  // 如「太羽」「少宫」
+}
+
+export function computeSuiYun(yearStemIndex: number): SuiYunInfo {
+  const s = ((yearStemIndex % 10) + 10) % 10
+  const elementIdx = STEM_TO_YUN_ELEMENT_INDEX[s]!
+  const polarity: YunPolarity = isYangStem(s) ? '太' : '少'
+  const yin = WU_YIN_NAMES[elementIdx]!
+  const element = WU_YIN_TO_XING[elementIdx]!
+  return { element, yin, polarity, fullName: `${polarity}${yin}` }
+}
+
+/**
+ * 主运五步：初运恒定「角(木)」，极性由 mainYunFirstPolarity 决定，
+ * 后 4 步按木→火→土→金→水固定顺序，太少交替。
+ */
+export function computeMainYun(yearStemIndex: number): WuYunStep[] {
+  const first = mainYunFirstPolarity(yearStemIndex)
+  const polarSeq = polaritySequence(first)
+  const steps: WuYunStep[] = []
+  for (let i = 0; i < 5; i++) {
+    const yin = WU_YIN_NAMES[i]!
+    const element = WU_YIN_TO_XING[i]!
+    const polarity = polarSeq[i]!
+    steps.push({
+      order: i,
+      orderName: YUN_ORDER_NAMES[i]!,
+      yin,
+      element,
+      polarity,
+      fullName: `${polarity}${yin}`
+    })
+  }
+  return steps
+}
+
+/**
+ * 客运五步：初运 = 岁运（天干化运结果），后 4 步按木→火→土→金→水
+ * 相生顺序（即在 WU_YIN_NAMES 中从初运位置往后循环），
+ * 极性同样按太少交替相生。
+ */
+export function computeKeYun(yearStemIndex: number): WuYunStep[] {
+  const sui = computeSuiYun(yearStemIndex)
+  const startYinIdx = WU_YIN_NAMES.indexOf(sui.yin as (typeof WU_YIN_NAMES)[number])
+  const polarSeq = polaritySequence(sui.polarity)
+  const steps: WuYunStep[] = []
+  for (let i = 0; i < 5; i++) {
+    const yinIdx = (startYinIdx + i) % 5
+    const yin = WU_YIN_NAMES[yinIdx]!
+    const element = WU_YIN_TO_XING[yinIdx]!
+    const polarity = polarSeq[i]!
+    steps.push({
+      order: i,
+      orderName: YUN_ORDER_NAMES[i]!,
+      yin,
+      element,
+      polarity,
+      fullName: `${polarity}${yin}`
+    })
+  }
+  return steps
+}
+
+/**
+ * 从本岁大寒真实日期反查其年干索引 —— 作为五运排布的年界基准。
+ *
+ * ⚠️ 与 getKeQiYearBranchIndex 同理：五运六气年界 = 大寒，早于立春
+ *    的农历年干支会滞后一年，故按大寒所在公历年反查天干。
+ */
+export function getWuYunYearStemIndex(yearTerms: QiMenSolarTerm[], W1: Date): number {
+  const daHan = yearTerms.find(t => t.name === '大寒')
+  const ref = daHan?.date ?? new Date(W1.getFullYear() + 1, 0, 20)
+  const cycleIdx = (((ref.getFullYear() - 4) % 60) + 60) % 60
+  return cycleIdx % 10
 }

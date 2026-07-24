@@ -45,9 +45,15 @@ import {
   computeSixYun,
   computeKeQiSequence,
   getKeQiYearBranchIndex,
+  computeSuiYun,
+  computeMainYun,
+  computeKeYun,
+  getWuYunYearStemIndex,
   type QiMenSolarTerm,
   type LunarRingEntry,
-  type YuanJuInfo
+  type YuanJuInfo,
+  type WuYunStep,
+  type SuiYunInfo
 } from '@/utils/qimenDunJia'
 
 const CYCLE_DAYS = 360
@@ -113,6 +119,14 @@ export interface QiMenContext {
   keQi: string[]
   /** 本岁年地支索引（子=0…亥=11），供调试或圆心卡展示 */
   keQiYearBranchIndex: number
+  /** 本岁年干索引（甲=0…癸=9），五运排布基准 */
+  wuYunYearStemIndex: number
+  /** 岁运（天干化运结果，太/少 + 五音） */
+  suiYun: SuiYunInfo
+  /** 主运五步（每年固定木火土金水，太少交替；初运极性依年干） */
+  mainYun: WuYunStep[]
+  /** 客运五步（初运=岁运，后按相生顺序，太少交替） */
+  keYun: WuYunStep[]
 
   /* ── 今日派生量（日粒度） ── */
   todayInRing: number             // 今日环上 index [0, 360)
@@ -244,6 +258,12 @@ function buildContext(now: Date): QiMenContext {
   const keQiYearBranchIndex = getKeQiYearBranchIndex(yearTerms, W1)
   const keQi = computeKeQiSequence(keQiYearBranchIndex)
 
+  // 五运：主运 / 客运 / 岁运（以本岁大寒的年干为准）
+  const wuYunYearStemIndex = getWuYunYearStemIndex(yearTerms, W1)
+  const suiYun = computeSuiYun(wuYunYearStemIndex)
+  const mainYun = computeMainYun(wuYunYearStemIndex)
+  const keYun = computeKeYun(wuYunYearStemIndex)
+
   return {
     upperYuan,
     W1,
@@ -265,6 +285,10 @@ function buildContext(now: Date): QiMenContext {
     termDayInRing,
     keQi,
     keQiYearBranchIndex,
+    wuYunYearStemIndex,
+    suiYun,
+    mainYun,
+    keYun,
     todayInRing,
     kToday,
     isInOverlayTail,
