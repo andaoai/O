@@ -34,6 +34,7 @@ title: 通用概念
 ## 占验方法
 
 - [京房卦气 · 六日七分](/concepts/jingfang-guaqi) —— 六十四卦匀分周年
+- [五运 · 岁运主运客运](/concepts/wu-yun) —— 天干化五运，大寒起五步推运
 - [纳甲](/concepts/najia) —— 十天干配六爻
 - [世应爻位](/concepts/shi-ying) —— 占卜中的己方与对应
 
