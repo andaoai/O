@@ -23,7 +23,7 @@ import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
+import { useDayGridContext } from '@/composables/useDayGridContext'
 import type { WuYunStep } from '@/utils/qimenDunJia'
 
 interface Props {
@@ -41,7 +41,7 @@ const props = withDefaults(defineProps<Props>(), {
   rotationDirection: 'clockwise'
 })
 
-const ctx = useQiMenContext()
+const ctx = useDayGridContext()
 
 /** 走 tyme4ts 儒略日整数运算的整日差 */
 function diffDays(later: Date, earlier: Date): number {

@@ -31,7 +31,7 @@
 import { computed, type MaybeRef } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
-import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
+import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -49,7 +49,7 @@ withDefaults(defineProps<Props>(), {
 })
 
 /** 共享上下文（跨天才变） */
-const ctx = useQiMenContext()
+const ctx = useDayGridContext()
 
 const ringData = computed<RingData>(() => {
   const c = ctx.value

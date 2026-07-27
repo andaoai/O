@@ -25,7 +25,7 @@ import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { ganzhiName } from '@/utils/constants/ganzhi'
 import { YUN_COLORS, jiaziIndexAt } from '@/utils/qimenDunJia'
-import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
+import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
   /** 时间源（MaybeRef<Date>） */
@@ -48,7 +48,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 /** ⚠️ 时间状态改从共享 context 读取，秒级 tick 不会触发 tyme4ts 重算 */
-const ctx = useQiMenContext()
+const ctx = useDayGridContext()
 
 /** 6 轮微差背景色（每轮 60 天普通日，一运深→六运浅） */
 const ROUND_BG_COLORS = [

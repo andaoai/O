@@ -27,7 +27,7 @@ import { computed, type MaybeRef } from 'vue'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
+import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -45,7 +45,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 /** 共享上下文（跨天才变） */
-const ctx = useQiMenContext()
+const ctx = useDayGridContext()
 
 /** 走 tyme4ts 儒略日整数运算的整日差（抗时区标准化） —— 已由 ctx 覆盖，此处不再需要 */
 

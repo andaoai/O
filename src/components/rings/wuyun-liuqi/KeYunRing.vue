@@ -1,30 +1,17 @@
 <script setup lang="ts">
 /**
- * 奇门 · 客气环 —— 五运六气之「客气」六步排布（日粒度 + 冬至叠加）
+ * 奇门 · 客运环 —— 五运六气之「客运」五步排布（日粒度 + 冬至叠加）
  *
  * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
  *
  * ═══════════════════════════════════════════════════════════════
- *  🔑 与主气环完全同构：
- *   · 360 格 × 1° 主层，每格 = 一个具体日期，与外圈六轮甲子日环
- *     严格对齐（0° = 上元甲子日）
- *   · 岁末 overflow 天（含 W2 下一岁冬至）以 overlay 径向切上下两层：
- *       — 外半层：本岁头 overflow+1 天（含 W1）
- *       — 内半层：本岁末 overflow+1 天（含 W2，即下岁冬至）
- *     视觉表达：冬至日同时"结束当岁 + 开始下岁"
+ *  🔑 与主运环同构：段边界完全一致（大寒起 5 段 × 72°）
  *
- *  客气排布规则（只看「年地支」）：
- *    · 司天之气(三之气) 由年支决定
- *    · 固定循环顺序：厥阴风木 → 少阴君火 → 太阴湿土 →
- *                    少阳相火 → 阳明燥金 → 太阳寒水
- *    · ctx.keQi[0..5] 即为初 / 二 / 三 / 四 / 五 / 终之气客气名
+ *  客运规则：
+ *    · 初运 = 岁运（天干化运结果）
+ *    · 后 4 步按木→火→土→金→水相生顺序循环，太少交替相生
  *
- *  客气配色（与主气一致的五行本色）：
- *    · 五个普通段直接取该客气的五行本色
- *    · 跨冬至段（seg 5）走「紫 → 该客气本色」渐变：
- *        - 紧贴 W1/W2 冬至 → 紫 #5B2C6F
- *        - 远离冬至        → 该客气对应五行本色
- *      —— 冬至日始终为紫，但每年的紫是从不同客气本色渐变来的。
+ *  颜色沿用主气/客气/主运的五行本色，跨 W1 段走「紫 → 本色」渐变。
  * ═══════════════════════════════════════════════════════════════
  */
 import { computed, type MaybeRef } from 'vue'
@@ -32,7 +19,8 @@ import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import { useQiMenContext } from '@/composables/useQiMenDunJiaContext'
+import { useDayGridContext } from '@/composables/useDayGridContext'
+import type { WuYunStep } from '@/utils/qimenDunJia'
 
 interface Props {
   time?: MaybeRef<Date>
@@ -43,66 +31,56 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  radius: 328,
-  innerRadius: 304,
+  radius: 232,
+  innerRadius: 208,
   startDegree: -90,
   rotationDirection: 'clockwise'
 })
 
-/** 共享上下文（跨天才变） */
-const ctx = useQiMenContext()
+const ctx = useDayGridContext()
 
-/** 走 tyme4ts 儒略日整数运算的整日差（抗时区标准化） */
 function diffDays(later: Date, earlier: Date): number {
   const a = SolarDay.fromYmd(later.getFullYear(), later.getMonth() + 1, later.getDate())
   const b = SolarDay.fromYmd(earlier.getFullYear(), earlier.getMonth() + 1, earlier.getDate())
   return a.subtract(b)
 }
 
-/** 极坐标 → 笛卡尔 */
 const toXY = usePolar(
   () => props.startDegree,
   () => props.rotationDirection
 )
 
-/** 环带径向中线（overlay 分层分界） */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
-
-/** overlay 索引集 */
 const overlaySet = computed<Set<number>>(() => ctx.value.overlaySet)
 
 /* ──────────────────────────────────────────────────────────
- *  六气配色（与主气一致，按「五行属性名」查表）
- *  · 五个普通段 → 直接使用该客气的五行本色
- *  · 跨 W1 冬至段（seg 5，即客气终之气位置）→ 紫 → 该客气本色 渐变：
- *      - 贴近 W1/W2 冬至（dist=0）→ 紫 #5B2C6F
- *      - 远离冬至（dist≥30）→ 该客气对应的五行本色
- *    冬至同时"结束当岁 / 开始下岁"仍以 overlay 上下层表达。
+ *  五音配色（与主运环共用同一套）
  * ──────────────────────────────────────────────────────── */
-interface KeQiStyle {
-  bgColor: string
+interface WuYinStyle {
+  bgTai: string
+  bgShao: string
   labelColor: string
 }
 
-/** 按五行属性查配色（与主气 QI_LIST 完全一致的暖色五行本色） */
-const KE_QI_STYLE: Record<string, KeQiStyle> = {
-  '厥阴风木': { bgColor: '#1a3a24', labelColor: '#7ED6A4' },
-  '少阴君火': { bgColor: '#3a1a1a', labelColor: '#F5B7B1' },
-  '少阳相火': { bgColor: '#3a2410', labelColor: '#FAD7A0' },
-  '太阴湿土': { bgColor: '#3a1e0a', labelColor: '#F5CBA7' },
-  '阳明燥金': { bgColor: '#3a3010', labelColor: '#F9E79F' },
-  '太阳寒水': { bgColor: '#0f2438', labelColor: '#AED6F1' }
+const WU_YIN_STYLE: Record<string, WuYinStyle> = {
+  '角': { bgTai: '#1a3a24', bgShao: '#122a19', labelColor: '#7ED6A4' },
+  '徵': { bgTai: '#3a1a1a', bgShao: '#2a1212', labelColor: '#F5B7B1' },
+  '宫': { bgTai: '#3a1e0a', bgShao: '#2a1608', labelColor: '#F5CBA7' },
+  '商': { bgTai: '#3a3010', bgShao: '#2a220b', labelColor: '#F9E79F' },
+  '羽': { bgTai: '#0f2438', bgShao: '#0a1a29', labelColor: '#AED6F1' }
 }
 
-const FALLBACK_STYLE: KeQiStyle = { bgColor: '#1a1a1a', labelColor: '#CCCCCC' }
-function styleFor(name: string): KeQiStyle {
-  return KE_QI_STYLE[name] ?? FALLBACK_STYLE
+const FALLBACK: WuYinStyle = { bgTai: '#1a1a1a', bgShao: '#0f0f0f', labelColor: '#CCCCCC' }
+function styleFor(step: WuYunStep): { bg: string; labelColor: string } {
+  const s = WU_YIN_STYLE[step.yin] ?? FALLBACK
+  return {
+    bg: step.polarity === '太' ? s.bgTai : s.bgShao,
+    labelColor: s.labelColor
+  }
 }
 
-/** 冬至端点紫色 */
 const COLOR_PURPLE = '#5B2C6F'
 
-/** 十六进制颜色线性插值 */
 function lerpHex(a: string, b: string, t: number): string {
   const ah = a.replace('#', '')
   const bh = b.replace('#', '')
@@ -118,75 +96,62 @@ function lerpHex(a: string, b: string, t: number): string {
   return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${bl.toString(16).padStart(2, '0')}`
 }
 
-/**
- * 跨冬至段渐变：紫 → 该客气本色
- *   dist = 距最近冬至天数(0..~30) → 归一 t → 从紫插值到本色
- */
 function winterGradient(distToWinter: number, targetHex: string): string {
   const t = Math.min(1, Math.max(0, distToWinter / 30))
   const eased = Math.pow(t, 0.85)
   return lerpHex(COLOR_PURPLE, targetHex, eased)
 }
 
-const KE_QI_ORDER_NAMES = ['初之气', '二之气', '三之气', '四之气', '五之气', '终之气'] as const
-const KE_QI_SHORT_ORDER = ['初', '二', '三', '四', '五', '终'] as const
-
 /* ──────────────────────────────────────────────────────────
- *  段索引查表：与主气段边界完全一致
- *  · [大寒, 春分)   → seg 0 (初之气)
- *  · [春分, 小满)   → seg 1 (二之气)
- *  · [小满, 大暑)   → seg 2 (三之气 = 司天)
- *  · [大暑, 秋分)   → seg 3 (四之气)
- *  · [秋分, 小雪)   → seg 4 (五之气)
- *  · [小雪, 大寒)   → seg 5 (终之气，跨 W1 冬至)
+ *  五运段边界：大寒起，每段 72°（= 主层 72 天）
+ *  · 主层 360 格，多出的 5-6 天走 overlay 独立处理，不并入五段
+ *  · seg 4（终运）跨 W1 冬至 → 走紫渐变
+ *
+ *  ⚠️ 段边界须与「标签角度」严格同源，两处都用 72°，否则错位。
  * ──────────────────────────────────────────────────────── */
-const SEG_BOUNDARIES: readonly { seg: number; start: string; end: string }[] = [
-  { seg: 0, start: '大寒', end: '春分' },
-  { seg: 1, start: '春分', end: '小满' },
-  { seg: 2, start: '小满', end: '大暑' },
-  { seg: 3, start: '大暑', end: '秋分' },
-  { seg: 4, start: '秋分', end: '小雪' },
-  { seg: 5, start: '小雪', end: '大寒' }  // 跨 W1
-] as const
-
-/**
- * 构造 k(距 W1 天数) → { 段索引, 距最近冬至天数 } 查表。
- * 终之气段 [小雪, 大寒) 跨 W1(k=0) → 拆 [zhongStartK, L) ∪ [0, zhongEndK)
- * distToWinter 仅对跨冬至段有意义（其他段返回 0）。
- */
-function buildSegLookup(termDayFromWinter: Map<string, number>, L: number) {
-  const segs: Array<{ seg: number; startK: number; endK: number }> = []
-  let zhongStartK = 0
-  let zhongEndK = 0
-
-  for (const b of SEG_BOUNDARIES) {
-    const s = termDayFromWinter.get(b.start)
-    const e = termDayFromWinter.get(b.end)
-    if (s === undefined || e === undefined) continue
-    if (b.seg === 5) {
-      zhongStartK = s
-      zhongEndK = e
-    } else {
-      segs.push({ seg: b.seg, startK: s, endK: e })
-    }
-  }
-
-  return (k: number): { seg: number; distToWinter: number } => {
-    if (k >= zhongStartK || k < zhongEndK) {
-      // 距最近冬至天数：min(k, L - k)
-      const distToWinter = Math.min(k, L - k)
-      return { seg: 5, distToWinter }
-    }
-    for (const seg of segs) {
-      if (k >= seg.startK && k < seg.endK) return { seg: seg.seg, distToWinter: 0 }
-    }
-    return { seg: 5, distToWinter: 0 }
-  }
+interface SegRange {
+  seg: number
+  step: WuYunStep
+  startK: number
+  endK: number
 }
 
-/* ──────────────────────────────────────────────────────────
- *  360 格 + overlay 层 cell 构造：与主气环同构
- * ──────────────────────────────────────────────────────── */
+const RUN_LEN = 72
+
+function buildSegRanges(daHanK: number, steps: WuYunStep[]): SegRange[] {
+  const ranges: SegRange[] = []
+  for (let i = 0; i < 5; i++) {
+    ranges.push({
+      seg: i,
+      step: steps[i]!,
+      startK: daHanK + i * RUN_LEN,
+      endK: daHanK + (i + 1) * RUN_LEN
+    })
+  }
+  return ranges
+}
+
+function distToNearestWinter(k: number, L: number): number {
+  return Math.min(k, L - k)
+}
+
+function segLookup(k: number, ranges: SegRange[], L: number): { seg: number; distToWinter: number } {
+  for (const r of ranges) {
+    const kNorm = ((k % 360) + 360) % 360
+    if (r.endK <= 360) {
+      if (kNorm >= r.startK && kNorm < r.endK) {
+        return { seg: r.seg, distToWinter: distToNearestWinter(k, L) }
+      }
+    } else {
+      const wrapEnd = r.endK - 360
+      if ((kNorm >= r.startK && kNorm < 360) || (kNorm >= 0 && kNorm < wrapEnd)) {
+        return { seg: r.seg, distToWinter: distToNearestWinter(k, L) }
+      }
+    }
+  }
+  return { seg: 4, distToWinter: distToNearestWinter(k, L) }
+}
+
 interface Cell {
   index: number
   kMain: number
@@ -205,36 +170,28 @@ const cells = computed<Cell[]>(() => {
   const L = c.yearLength
   const of = c.overflow
   const overlays = c.overlaySet
-  const keQi = c.keQi
+  const keYun = c.keYun
 
-  const segLookup = buildSegLookup(c.termDayFromWinter, L)
+  const daHanK = c.termDayFromWinter.get('大寒') ?? 30
+  const ranges = buildSegRanges(daHanK, keYun)
 
   function bgFor(k: number): string {
-    const info = segLookup(k)
-    const qiName = keQi[info.seg] ?? '—'
-    const targetBg = styleFor(qiName).bgColor
-    if (info.seg === 5) {
-      // 跨冬至段：从紫渐变到该客气本色
-      return winterGradient(info.distToWinter, targetBg)
-    }
-    return targetBg
+    const info = segLookup(k, ranges, L)
+    const step = keYun[info.seg]
+    if (!step) return '#1a1a1a'
+    const { bg } = styleFor(step)
+    if (info.seg === 4) return winterGradient(info.distToWinter, bg)
+    return bg
   }
 
   const arr: Cell[] = []
   for (let i = 0; i < 360; i++) {
     const kMain = ((i - D1) % 360 + 360) % 360
-    const cell: Cell = {
-      index: i,
-      kMain,
-      mainBg: bgFor(kMain)
-    }
-    if (overlays.has(i)) {
-      cell.overlay = { kTail: 0, bg: '' }
-    }
+    const cell: Cell = { index: i, kMain, mainBg: bgFor(kMain) }
+    if (overlays.has(i)) cell.overlay = { kTail: 0, bg: '' }
     arr.push(cell)
   }
 
-  // 后处理 overlay cells 精确 kTail
   const nextWinter = c.W2
   if (nextWinter) {
     const nextSD = SolarDay.fromYmd(
@@ -256,7 +213,6 @@ const cells = computed<Cell[]>(() => {
   return arr
 })
 
-/** 主层普通扇形（无 overlay 的 355 格）*/
 const mainNormalSectors = computed(() =>
   cells.value
     .filter(c => !c.overlay)
@@ -271,7 +227,6 @@ const mainNormalSectors = computed(() =>
     })
 )
 
-/** overlay 外半层（本岁头，含 W1） */
 const overlayOuterSectors = computed(() =>
   cells.value
     .filter(c => !!c.overlay)
@@ -286,7 +241,6 @@ const overlayOuterSectors = computed(() =>
     })
 )
 
-/** overlay 内半层（本岁末，含 W2） */
 const overlayInnerSectors = computed(() =>
   cells.value
     .filter(c => !!c.overlay)
@@ -301,7 +255,6 @@ const overlayInnerSectors = computed(() =>
     })
 )
 
-/** overlay 上下层分隔弧线 */
 const overlayMidArc = computed(() => {
   const indices = Array.from(overlaySet.value).sort((a, b) => a - b)
   if (indices.length === 0) return ''
@@ -328,7 +281,6 @@ const overlayMidArc = computed(() => {
     .join(' ')
 })
 
-/** 今日格高亮 —— 落在 overlay 时仅高亮所属层 */
 const highlightSectors = computed(() => {
   const c = ctx.value
   const now = { index: c.todayInRing, isInOverlayTail: c.isInOverlayTail }
@@ -354,14 +306,9 @@ const highlightSectors = computed(() => {
   }]
 })
 
-/* ──────────────────────────────────────────────────────────
- *  客气六段标签：与主气共用相同的节气边界
- * ──────────────────────────────────────────────────────── */
-interface KeSeg {
+interface Seg {
   seg: number
-  orderName: string
-  shortOrder: string
-  qiName: string
+  step: WuYunStep
   labelColor: string
   labelArcStart: number
   labelArcEnd: number
@@ -369,40 +316,35 @@ interface KeSeg {
   boundaryAngle: number
 }
 
-const segments = computed<KeSeg[]>(() => {
+const segments = computed<Seg[]>(() => {
   const c = ctx.value
-  const termDayInRing = c.termDayInRing
+  const daHanRing = c.termDayInRing.get('大寒')
+  if (daHanRing === undefined) return []
+
+  const runArc = RUN_LEN // 每运严格 72°，与颜色 buildSegRanges 同源
   const today = c.todayInRing
-  const keQi = c.keQi
-  const results: KeSeg[] = []
+  const results: Seg[] = []
 
-  for (const b of SEG_BOUNDARIES) {
-    const s = termDayInRing.get(b.start)
-    const e = termDayInRing.get(b.end)
-    if (s === undefined || e === undefined) continue
-
-    const rawSpan = s < e ? e - s : e + 360 - s
-    const delta = ((today - s) % 360 + 360) % 360
-    const isCurrent = delta >= 0 && delta < rawSpan
-    const qiName = keQi[b.seg] ?? '—'
-    const style = styleFor(qiName)
-
+  for (let i = 0; i < 5; i++) {
+    const start = (daHanRing + i * runArc) % 360
+    const end = start + runArc
+    const delta = ((today - start) % 360 + 360) % 360
+    const isCurrent = delta >= 0 && delta < runArc
+    const step = c.keYun[i]!
+    const { labelColor } = styleFor(step)
     results.push({
-      seg: b.seg,
-      orderName: KE_QI_ORDER_NAMES[b.seg]!,
-      shortOrder: KE_QI_SHORT_ORDER[b.seg]!,
-      qiName,
-      labelColor: style.labelColor,
-      labelArcStart: s,
-      labelArcEnd: s + rawSpan,
+      seg: i,
+      step,
+      labelColor,
+      labelArcStart: start,
+      labelArcEnd: end,
       isCurrent,
-      boundaryAngle: s
+      boundaryAngle: start
     })
   }
   return results
 })
 
-/** 段间径向分隔线（与主气 boundary 完全对齐） */
 const boundaryLines = computed(() =>
   segments.value.map(seg => {
     const i = toXY(seg.boundaryAngle, props.innerRadius)
@@ -411,9 +353,6 @@ const boundaryLines = computed(() =>
   })
 )
 
-/* ──────────────────────────────────────────────────────────
- *  标签：逐字沿弧线径向分布
- * ──────────────────────────────────────────────────────── */
 interface CharPos { ch: string; x: number; y: number; rot: number }
 
 const CHAR_ANGLE_STEP = computed(() => {
@@ -421,8 +360,10 @@ const CHAR_ANGLE_STEP = computed(() => {
   return (arcPerChar / (2 * Math.PI * midRadius.value)) * 360
 })
 
-function labelChars(seg: KeSeg): CharPos[] {
-  const text = `${seg.shortOrder}客 · ${seg.qiName}`
+const SEG_SHORT = ['初', '二', '三', '四', '终'] as const
+
+function labelChars(seg: Seg): CharPos[] {
+  const text = `${SEG_SHORT[seg.seg]}客 · ${seg.step.fullName}`
   const chars = Array.from(text)
   const step = CHAR_ANGLE_STEP.value
   const totalSpan = (chars.length - 1) * step
@@ -441,8 +382,7 @@ function labelChars(seg: KeSeg): CharPos[] {
 <template>
   <PolarCanvas :center-x="0" :center-y="0" :rotation-direction="rotationDirection">
     <template #default>
-      <g class="qimen-keqi-ring">
-        <!-- 主层 355 格 -->
+      <g class="qimen-keyun-ring">
         <path
           v-for="s in mainNormalSectors"
           :key="`mn-${s.key}`"
@@ -451,7 +391,6 @@ function labelChars(seg: KeSeg): CharPos[] {
           opacity="0.9"
         />
 
-        <!-- overlay 外半层：本岁头（含 W1）-->
         <path
           v-for="s in overlayOuterSectors"
           :key="s.key"
@@ -460,7 +399,6 @@ function labelChars(seg: KeSeg): CharPos[] {
           opacity="0.9"
         />
 
-        <!-- overlay 内半层：本岁末（含 W2）-->
         <path
           v-for="s in overlayInnerSectors"
           :key="s.key"
@@ -469,11 +407,9 @@ function labelChars(seg: KeSeg): CharPos[] {
           opacity="0.95"
         />
 
-        <!-- 内外圆边线 -->
         <circle :cx="0" :cy="0" :r="radius" fill="none" stroke="#555555" stroke-width="0.6" />
         <circle :cx="0" :cy="0" :r="innerRadius" fill="none" stroke="#555555" stroke-width="0.6" />
 
-        <!-- overlay 上下层分隔弧 -->
         <path
           v-if="overlayMidArc"
           :d="overlayMidArc"
@@ -484,7 +420,6 @@ function labelChars(seg: KeSeg): CharPos[] {
           opacity="0.7"
         />
 
-        <!-- 段间径向分隔线 -->
         <line
           v-for="l in boundaryLines"
           :key="l.key"
@@ -497,7 +432,6 @@ function labelChars(seg: KeSeg): CharPos[] {
           opacity="0.55"
         />
 
-        <!-- 今日格金色高亮 -->
         <path
           v-for="hs in highlightSectors"
           :key="hs.key"
@@ -506,7 +440,6 @@ function labelChars(seg: KeSeg): CharPos[] {
           fill="#FFD700"
         />
 
-        <!-- 客气标签：逐字沿弧线分布 -->
         <g v-for="seg in segments" :key="seg.seg">
           <text
             v-for="(c, ci) in labelChars(seg)"
@@ -531,7 +464,7 @@ function labelChars(seg: KeSeg): CharPos[] {
 </template>
 
 <style scoped>
-.qimen-keqi-ring {
+.qimen-keyun-ring {
   pointer-events: none;
   transform-origin: center;
   will-change: transform;
@@ -539,11 +472,11 @@ function labelChars(seg: KeSeg): CharPos[] {
 }
 
 .highlight-sector-strong {
-  animation: qimen-keqi-breathe 1.2s ease-in-out infinite;
+  animation: qimen-keyun-breathe 1.2s ease-in-out infinite;
   pointer-events: none;
 }
 
-@keyframes qimen-keqi-breathe {
+@keyframes qimen-keyun-breathe {
   0%, 100% { opacity: 0.35; }
   50% { opacity: 0.9; }
 }

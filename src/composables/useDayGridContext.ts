@@ -1,17 +1,18 @@
 /**
- * 奇门遁甲盘 · 日粒度共享计算上下文
+ * 日粒度共享年历上下文 —— 奇门盘 & 黄帝内经盘共用
  *
  * ════════════════════════════════════════════════════════════════════
  *  为什么需要这个 composable？
  *  ─────────────────────────────────────────────────────────────────
- *  QiMenDunJiaView 有 6 个时间驱动环，历史上每个环各自独立地把同一
- *  份日粒度重量级计算（tyme4ts 儒略日 + 冬至扫描 + 24 节气排列 +
- *  农历遍历 + 三元九局定位）跑一遍。加上 controlledTime 是 1Hz 实时
- *  时钟，秒级触发 → 全部重算：
- *    · findUpperYuanJiaziDay ≥7 次 / tick
- *    · computeQiMenSolarTerms ≥7 次 / tick
+ *  奇门盘（QiMenDunJiaView）与黄帝内经·五运六气盘（HuangDiNeiJingView）
+ *  都建立在同一套「以上元甲子日 0° 起序、360 天/环」的日粒度年历坐标上。
+ *  历史上每个时间驱动环都各自独立地把同一份日粒度重量级计算
+ *  （tyme4ts 儒略日 + 冬至扫描 + 24 节气排列 + 农历遍历 + 三元九局定位）
+ *  跑一遍，加上 controlledTime 是 1Hz 实时时钟，秒级触发 → 全部重算：
+ *    · findUpperYuanJiaziDay ≥N 次 / tick
+ *    · computeQiMenSolarTerms ≥N 次 / tick
  *    · getYuanJuAt 720 次 / tick（SanYuan + JuShu）
- *    · findLastWinterSolstice ≥9 次 / tick（每次 366 天 SolarDay 扫描）
+ *    · findLastWinterSolstice ≥N 次 / tick（每次 366 天 SolarDay 扫描）
  *
  *  关键观察：这些结果 24 小时内是不变的。
  *
@@ -21,8 +22,20 @@
  *              └─► ctx (computed，昂贵计算，一天一次)
  *
  *  Vue computed 的行为：若 dayKey 输出值不变（Object.is 相等），
- *  下游 ctx 不会被通知重算。秒级 tick 命中 dayKey 缓存 → 5 环下游
+ *  下游 ctx 不会被通知重算。秒级 tick 命中 dayKey 缓存 → 所有下游
  *  ringData 全部命中缓存 → 秒级 tick 成本 ≈ 0。
+ *
+ *  字段分组：
+ *    · 基础年历字段（两盘都用）：upperYuan / W1 / W2 / D1 / yearLength /
+ *      overflow / overlaySet / lunarEntries / terms / yearTerms /
+ *      termDayFromWinter / termDayInRing / todayInRing / kToday /
+ *      isInOverlayTail
+ *    · 奇门专属：yuanJuAt / startIdxOf / realTermIdxOf / segAssignment /
+ *      currentYunIndex
+ *    · 五运六气专属：keQi / keQiYearBranchIndex / wuYunYearStemIndex /
+ *      suiYun / mainYun / keYun
+ *  两盘 View 都调用 provideDayGridContext(controlledTime)，各自的环
+ *  按需 useDayGridContext() 取字段。
  * ════════════════════════════════════════════════════════════════════
  */
 import {
@@ -82,8 +95,8 @@ export interface RealTermMark {
   chaoshenLabel: 'chaoshen' | 'jieqi'
 }
 
-/** 奇门盘 · 日粒度共享上下文 */
-export interface QiMenContext {
+/** 日粒度共享年历上下文 —— 奇门盘 & 黄帝内经·五运六气盘共用 */
+export interface DayGridContext {
   /* ── 时间锚点 ── */
   upperYuan: Date
   W1: Date                        // 本岁冬至
@@ -135,7 +148,7 @@ export interface QiMenContext {
   currentYunIndex: number         // 今日所在运 1-6
 }
 
-const QI_MEN_KEY: InjectionKey<ComputedRef<QiMenContext>> = Symbol('QiMenDunJiaContext')
+const DAY_GRID_KEY: InjectionKey<ComputedRef<DayGridContext>> = Symbol('DayGridContext')
 
 /** 网格节气日 vs 真实天文节气日 → 符头状态 */
 function computeChaoshenLabel(
@@ -156,8 +169,8 @@ function computeChaoshenLabel(
   return 'zhengshou'
 }
 
-/** 完整构建一次 QiMenContext（日粒度：跨天才调用一次） */
-function buildContext(now: Date): QiMenContext {
+/** 完整构建一次 DayGridContext（日粒度：跨天才调用一次） */
+function buildContext(now: Date): DayGridContext {
   const upperYuan = findUpperYuanJiaziDay(now)
   const W1 = findLastWinterSolstice(now)
   const W2 = findNextWinterSolstice(W1)
@@ -302,14 +315,14 @@ function buildContext(now: Date): QiMenContext {
  * 关键：ctx 只依赖 dayKey（整数），秒级 time 变化时 dayKey 值不变
  *      → Vue computed 缓存命中 → ctx 不重算 → 下游环 ringData 全部命中缓存。
  */
-export function provideQiMenContext(time: Ref<Date>): ComputedRef<QiMenContext> {
+export function provideDayGridContext(time: Ref<Date>): ComputedRef<DayGridContext> {
   // 整数化的日 key：YYYYMMDD，秒变化时值稳定
   const dayKey = computed(() => {
     const d = time.value
     return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate()
   })
 
-  const ctx = computed<QiMenContext>(() => {
+  const ctx = computed<DayGridContext>(() => {
     const key = dayKey.value
     // 从 key 还原到当日 00:00 Date —— 完全不读 time.value，避免秒级依赖
     const y = Math.floor(key / 10000)
@@ -318,21 +331,21 @@ export function provideQiMenContext(time: Ref<Date>): ComputedRef<QiMenContext> 
     return buildContext(new Date(y, m, d))
   })
 
-  provide(QI_MEN_KEY, ctx)
+  provide(DAY_GRID_KEY, ctx)
   return ctx
 }
 
 /**
  * Ring 侧调用：读取共享上下文。
  *
- * ⚠️ 必须在 provideQiMenContext 之下调用；上游未 provide 时抛错，
+ * ⚠️ 必须在 provideDayGridContext 之下调用；上游未 provide 时抛错，
  *    以便早发现「忘挂 context」的低级错误（架构合规检查）。
  */
-export function useQiMenContext(): ComputedRef<QiMenContext> {
-  const ctx = inject(QI_MEN_KEY, null)
+export function useDayGridContext(): ComputedRef<DayGridContext> {
+  const ctx = inject(DAY_GRID_KEY, null)
   if (!ctx) {
     throw new Error(
-      '[qi-men-dun-jia] useQiMenContext 必须在 provideQiMenContext 之下调用 —— 通常挂在 QiMenDunJiaView.vue'
+      '[day-grid] useDayGridContext 必须在 provideDayGridContext 之下调用 —— 通常挂在 QiMenDunJiaView / HuangDiNeiJingView'
     )
   }
   return ctx

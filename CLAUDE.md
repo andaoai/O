@@ -17,7 +17,8 @@ Compasses currently shipped:
 - **卦关系盘 (gua-relation)** — 六十四卦多种关系可视化：可选飞伏、互卦、对卦、综卦、交卦五种关系，中央有向箭头动态渲染卦与卦之间的关联。五种关系类型可随意切换，与京房八宫/先天布局自由组合。
 - **苏州石刻天文图 (suzhou-stellar-map)** — digital reconstruction of the celestial map inscribed by Wang Zhiyuan at the Suzhou Prefectural School in 1247 (Southern Song, Chunyou 7th year): three regulator circles (inner δ+55° / equator / outer δ−55°) + 28 mansions as unequal-width radial spokes + Beidou at the polar center. The dipper handle rotates with local sidereal time and auto-labels the mansion it points to (east=Jiao, south=Xin, west=Niu, north=Kui). An optional world-map base-layer (Natural Earth 110m coastlines, azimuthal equidistant projection) sits under the sky, locked to LST so ground longitude and celestial RA are pixel-aligned — 「地面 ↔ 天球」直接对读.
 - **二十四山风水盘 (fengshui24)** — 手机端风水罗盘：DeviceOrientation API 获取磁北朝向 + `useGeolocation` GPS 定位 + WMM 地磁模型自动校正磁偏角 → 真北朝向，整盘随手机旋转、方位始终正确，同时显示当前太阳在廿四山中的位置。定位与传感器授权互相独立。
-- **阴阳遁九局盘 (qi-men-dun-jia)** — 奇门遁甲阴阳遁九局可视化：冬至 = 0° 起序，24 节气 15° × 3 元 5° × 5 天 1° 三层嵌套。8 环由外到内为六轮甲子日环（360 段）/ 九局数 / 上中下三元 / 24 节气点环 / 超神-接气-正授段环 / 后天八卦 / 四象 / 阴阳两遁，圆心信息卡显示当日阳/阴遁 · 节气 · 三元 · 局 · 状态。
+- **阴阳遁九局盘 (qi-men-dun-jia)** — 奇门遁甲阴阳遁九局可视化：冬至 = 0° 起序，24 节气 15° × 3 元 5° × 5 天 1° 三层嵌套。5 环由外到内为六轮甲子日环（360 段）/ 24 节气点环 / 农历日期段环 / 上中下三元 / 九局数，圆心信息卡显示当日阳/阴遁 · 节气 · 三元 · 局 · 状态。
+- **黄帝内经·五运六气盘 (huangdi-neijing)** — 《素问》七篇大论所述五运六气学说可视化：与奇门盘共用日粒度年历坐标（六轮甲子 / 24 节气 / 农历日期外层三环），内嵌主气 / 客气 / 主运 / 客运四环，中央 WuYunInfoCenter 展示年干支 · 岁运 · 司天 · 在泉 · 当令主客气与主客运 · 干支四柱。
 
 Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations. Hosting: **VitePress 1.6** (no Vue Router, no SPA entry). Compass pages live as `docs/compass/*.md` with a custom `layout: compass` that full-screen-renders `src/views/*.vue`. See §"VitePress ↔ src/ 融合关系" below.
 
@@ -43,7 +44,8 @@ The project evolved from a "one .vue component per ring" design → **data-drive
 │     LiushiJiaziView, SixtyFourGuaView, JingFangView,          │
 │     PlanetMansionView, TropicalYearView, GuanDouView,         │
 │     GuaRelationView, SuzhouStellarMapView,                     │
-│     FengShui24View, QiMenDunJiaView                            │
+│     FengShui24View, QiMenDunJiaView,                             │
+│     HuangDiNeiJingView                                           │
 │     🔹 RingStack: 「圆心 → 圆环」统一分层布局容器              │
 └────────────────────────────────────┬────────────────────────┘
                                      │
@@ -190,7 +192,10 @@ const ringData = computed(() => transform(timeRef.value))
 | `qi-men-dun-jia/SanYuanRing.vue` | Segment | 奇门三元 | 上中下三元循环，72 段 × 5° |
 | `qi-men-dun-jia/SolarTermsRing.vue` | Point | 奇门节气 | 24 节气 tick，落在具体日期 |
 | `qi-men-dun-jia/LunarDateRing.vue` | Segment | 奇门农历日 | 初一显示月名，其他日号；冬至叠加区径向分层 |
-| `qi-men-dun-jia/WuYunLiuQiRing.vue` | Segment | 五运六气 | 冬至起序，终之气跨冬至拆两段 |
+| `wuyun-liuqi/WuYunLiuQiRing.vue` | Segment | 五运六气·主气 | 冬至起序，终之气跨冬至拆两段，紫→蓝渐变 |
+| `wuyun-liuqi/KeQiRing.vue` | Segment | 五运六气·客气 | 年支推六步，跨冬至向本年终气渐变 |
+| `wuyun-liuqi/MainYunRing.vue` | Segment | 五运·主运 | 每年木火土金水固定五步，太少交替 |
+| `wuyun-liuqi/KeYunRing.vue` | Segment | 五运·客运 | 初运=岁运，按相生顺序排五步 |
 
 ---
 
@@ -331,6 +336,7 @@ interface CenterProps {
 | `GuaRelationCenter.vue` | 卦关系 | GuaRelationView 中央：飞伏/互卦/对卦/综卦/交卦有向箭头动态收敛 |
 | `qi-men-dun-jia/InfoCenter.vue` | 奇门信息卡 | QiMenDunJiaView 圆心：阳/阴遁 · 节气 · 三元 · 局 · 超神/接气/正授状态 |
 | `qi-men-dun-jia/LuoshuCenter.vue` | 洛书九宫 | QiMenDunJiaView 圆心叠层：河图洛书 + 后天八卦 + 当前局所在宫高亮 |
+| `wuyun-liuqi/WuYunInfoCenter.vue` | 五运六气信息卡 | HuangDiNeiJingView 圆心：年干支 · 岁运 · 司天 · 在泉 · 当令主客气与主客运 · 干支四柱 |
 
 **BaseCenter 基础容器：**
 - 可选的辅助容器，用于复杂插槽分发
@@ -489,7 +495,8 @@ docs/                              # VitePress 站点根
     ├── gua-relation.md            # <GuaRelationView />
     ├── suzhou-stellar-map.md      # <SuzhouStellarMapView />
     ├── fengshui24.md              # <FengShui24View />
-    └── qi-men-dun-jia.md          # <QiMenDunJiaView />
+    ├── qi-men-dun-jia.md          # <QiMenDunJiaView />
+    └── huangdi-neijing.md         # <HuangDiNeiJingView />
 
 src/                               # 组件库（无 main.ts / App.vue / router）
 ├── compasses/
@@ -505,7 +512,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   ├── GuaRelationView.vue              # 卦关系盘 compass（飞伏/互卦/对卦/综卦/交卦）
 │   ├── SuzhouStellarMapView.vue   # 苏州石刻天文图 compass
 │   ├── FengShui24View.vue         # 二十四山风水盘 compass（手机端）
-│   └── QiMenDunJiaView.vue        # 阴阳遁九局盘 compass
+│   ├── QiMenDunJiaView.vue        # 阴阳遁九局盘 compass
+│   └── HuangDiNeiJingView.vue     # 黄帝内经·五运六气盘 compass
 ├── components/
 │   ├── base/                       # Layer 4: Base Render Layer
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
@@ -560,8 +568,12 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   │       ├── SolarTermsRing.vue         # 奇门 24 节气点环（冬至起序）
 │   │       ├── LunarDateRing.vue          # 农历日期环（初一显示月名）
 │   │       ├── SanYuanRing.vue            # 上中下三元段环
-│   │       ├── JuShuRing.vue              # 九局数段环（1-9 洛书方位色）
-│   │       └── WuYunLiuQiRing.vue         # 五运六气环（终之气跨冬至拆两段）
+│   │       └── JuShuRing.vue              # 九局数段环（1-9 洛书方位色）
+│   │   └── wuyun-liuqi/
+│   │       ├── WuYunLiuQiRing.vue         # 五运六气·主气环（六段，紫渐变）
+│   │       ├── KeQiRing.vue               # 五运六气·客气环（年支推六步）
+│   │       ├── MainYunRing.vue            # 五运·主运环（木火土金水，太少交替）
+│   │       └── KeYunRing.vue              # 五运·客运环（岁运起，相生排五步）
 │   ├── centers/                     # Layer 3: Center Domain Components
 │   │   │  ─── 共享（根目录，全局注册供 md 内嵌） ───
 │   │   ├── GuaRelationCenter.vue   # 飞伏/互卦/对卦/综卦/交卦有向箭头
@@ -578,6 +590,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   │   └── qi-men-dun-jia/
 │   │       ├── InfoCenter.vue             # 阴阳遁 · 节气 · 三元 · 局 · 状态卡
 │   │       └── LuoshuCenter.vue           # 洛书九宫 + 河图 + 后天八卦
+│   │   └── wuyun-liuqi/
+│   │       └── WuYunInfoCenter.vue        # 年干支 · 岁运 · 司天 · 在泉 · 当令主客气/主客运卡
 │   ├── sidebar/                     # 罗盘左侧嵌入式 Sidebar（取代旧 Control 面板）
 │   │   ├── CompassSidebar.vue      # Sidebar 外壳（挂在 CompassLayout，单点挂载）
 │   │   ├── SidebarHeader.vue       # 顶部：返回罗盘列表 + 当前罗盘名 + 折叠按钮
@@ -638,6 +652,7 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   ├── useMediaQuery.ts            # 媒体查询响应式 composable
 │   ├── useGuaRelationInteraction.ts # 卦关系盘交互（选卦/关系类型切换）
 │   ├── useLiveClock.ts             # 1Hz 实时时钟 composable（Liushi/PlanetMansion View）
+│   ├── useDayGridContext.ts        # 日粒度年历上下文（奇门盘 & 黄帝内经盘共用）
 │   └── useUrlTime.ts               # URL ↔ controlledTime 双向绑定（History API 实现）
 └── utils/                          # Layer 5: Utility Layer (Pure Functions)
     ├── constants/

@@ -4,10 +4,11 @@ import RingStack from '../components/base/RingStack.vue'
 import LiuJiaziDayRing from '../components/rings/qi-men-dun-jia/LiuJiaziDayRing.vue'
 import SolarTermsRing from '../components/rings/qi-men-dun-jia/SolarTermsRing.vue'
 import LunarDateRing from '../components/rings/qi-men-dun-jia/LunarDateRing.vue'
-import SanYuanRing from '../components/rings/qi-men-dun-jia/SanYuanRing.vue'
-import JuShuRing from '../components/rings/qi-men-dun-jia/JuShuRing.vue'
-import InfoCenter from '../components/centers/qi-men-dun-jia/InfoCenter.vue'
-import LuoshuCenter from '../components/centers/qi-men-dun-jia/LuoshuCenter.vue'
+import WuYunLiuQiRing from '../components/rings/wuyun-liuqi/WuYunLiuQiRing.vue'
+import KeQiRing from '../components/rings/wuyun-liuqi/KeQiRing.vue'
+import MainYunRing from '../components/rings/wuyun-liuqi/MainYunRing.vue'
+import KeYunRing from '../components/rings/wuyun-liuqi/KeYunRing.vue'
+import WuYunInfoCenter from '../components/centers/wuyun-liuqi/WuYunInfoCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
 import { useAltDragPan } from '@/composables/useAltDragPan'
 import { useViewport } from '@/composables/useViewport'
@@ -15,16 +16,23 @@ import { provideCompassContext } from '@/composables/useCompassContext'
 import { provideDayGridContext } from '@/composables/useDayGridContext'
 
 /**
- * 阴阳遁九局盘 —— 奇门遁甲可视化
+ * 黄帝内经·五运六气盘
  *
  * ═══════════════════════════════════════════════════════════════
- *  由外到内 5 环 + 圆心：
+ *  《素问》七篇大论所述五运六气学说的可视化图盘。以日粒度年历
+ *  上下文（DayGridContext）为共用坐标系，与奇门盘共享外层三环
+ *  （六轮甲子日 / 24 节气 / 农历日期），内嵌五运六气 4 环。
+ *
+ *  由外到内 7 环 + 圆心：
  *   ① 六轮甲子日环（60 甲子 × 6 轮 = 360 天）—— 时间物理坐标
  *   ② 二十四节气段环（岁首=冬至，本岁 24 节气 + 下岁冬至紫标）
  *   ③ 农历日期环（初一显示月名，其余日号；冬至叠加区径向分上下两层）
- *   ④ 三元段环（上元/中元/下元，72 元）
- *   ⑤ 九局数段环（1-9 洛书方位色）
- *   ⑥ InfoCenter 中央：局数/元位/超神接气/六运/干支四柱
+ *   ④ 五运六气 · 主气环（六段节气切分，跨冬至走紫渐变）
+ *   ⑤ 五运六气 · 客气环（年支推六步，跨冬至向本年终气渐变）
+ *   ⑥ 五运 · 主运环（每年木火土金水固定五步，太少交替）
+ *   ⑦ 五运 · 客运环（初运=岁运，按相生顺序排五步）
+ *   ⑧ WuYunInfoCenter 圆心：年干支 · 岁运 · 司天 · 在泉 ·
+ *                            当令主气 / 客气 / 主运 / 客运 · 干支四柱
  *
  *  所有环共享 0° 起点 = 「上元甲子日」（1900 固定历元派生），
  *  环上每格 [i, i+1) 严格对应一个具体日期，径向对齐。
@@ -41,12 +49,8 @@ const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
 provideCompassContext({ time: controlledTime, viewport })
 
 /**
- * 🔑 日粒度共享上下文（DayGridContext）
- * ─────────────────────────────────────────────────────────
- *  5 个环历史上各自独立跑同一份 tyme4ts 昂贵计算，秒级 tick
- *  时被反复执行。改由此处统一 provide 一份上下文，只在跨天
- *  时才重算；下游各环通过 useDayGridContext() 读取。
- *  与黄帝内经·五运六气盘共用同一 context composable。
+ * 🔑 日粒度共享上下文（与奇门盘共用同一份 composable）
+ * 5 个五运六气 & 3 个外层环共享，只在跨天时才重算。
  */
 provideDayGridContext(controlledTime)
 
@@ -59,66 +63,57 @@ const START_DEGREE = -90
 /** 圆心信息卡显隐（默认关闭，与其它罗盘图层默认关闭一致） */
 const showInfoCenter = ref(false)
 
-/** 洛书九宫圆心显隐（默认关闭） */
-const showLuoshuCenter = ref(false)
-
-/** 由外到内的环配置 */
-const rings = computed(() => {
-  const base = [
-    // ① 最外：六轮甲子日环（60 × 6 = 360 天，时间物理坐标）
-    {
-      component: markRaw(LiuJiaziDayRing),
-      thickness: 30,
-      props: {
-        time: controlledTime,
-        startDegree: START_DEGREE
-      }
-    },
-    // ② 二十四节气段环（岁首冬至 + 下岁冬至紫色标）
-    {
-      component: markRaw(SolarTermsRing),
-      thickness: 26,
-      gapBefore: 2,
-      props: {
-        time: controlledTime,
-        startDegree: START_DEGREE
-      }
-    },
-    // ③ 农历日期环（初一显示月名，其他显示日号；冬至叠加区径向上下分层）
-    {
-      component: markRaw(LunarDateRing),
-      thickness: 24,
-      gapBefore: 2,
-      props: {
-        time: controlledTime,
-        startDegree: START_DEGREE
-      }
-    }
-  ]
-
-  // ④ 三元段环（上元/中元/下元）
-  base.push({
-    component: markRaw(SanYuanRing),
+/** 由外到内的 7 环配置 */
+const rings = computed(() => [
+  // ① 六轮甲子日环（60 × 6 = 360 天）
+  {
+    component: markRaw(LiuJiaziDayRing),
+    thickness: 30,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ② 二十四节气段环
+  {
+    component: markRaw(SolarTermsRing),
+    thickness: 26,
+    gapBefore: 2,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ③ 农历日期环
+  {
+    component: markRaw(LunarDateRing),
     thickness: 24,
     gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  })
-  // ⑤ 九局数段环（1-9 洛书色）
-  base.push({
-    component: markRaw(JuShuRing),
-    thickness: 24,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ④ 主气环
+  {
+    component: markRaw(WuYunLiuQiRing),
+    thickness: 26,
     gapBefore: 2,
-    props: {
-      time: controlledTime,
-      startDegree: START_DEGREE
-    }
-  })
-
-  return base
-})
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ⑤ 客气环
+  {
+    component: markRaw(KeQiRing),
+    thickness: 26,
+    gapBefore: 2,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ⑥ 主运环
+  {
+    component: markRaw(MainYunRing),
+    thickness: 26,
+    gapBefore: 2,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  },
+  // ⑦ 客运环
+  {
+    component: markRaw(KeYunRing),
+    thickness: 26,
+    gapBefore: 2,
+    props: { time: controlledTime, startDegree: START_DEGREE }
+  }
+])
 </script>
 
 <template>
@@ -131,13 +126,8 @@ const rings = computed(() => {
           <button
             :class="{ active: showInfoCenter }"
             @click="showInfoCenter = !showInfoCenter"
-            :title="showInfoCenter ? '关闭圆心信息卡（阴阳遁·节气·三元·局数）' : '开启圆心信息卡（阴阳遁·节气·三元·局数）'"
-          >{{ showInfoCenter ? '✔ 阴阳遁信息' : '  阴阳遁信息' }}</button>
-          <button
-            :class="{ active: showLuoshuCenter }"
-            @click="showLuoshuCenter = !showLuoshuCenter"
-            :title="showLuoshuCenter ? '关闭洛书九宫图（河图洛书 · 后天八卦 · 当前局所在宫高亮）' : '开启洛书九宫图（河图洛书 · 后天八卦 · 当前局所在宫高亮）'"
-          >{{ showLuoshuCenter ? '✔ 洛书九宫' : '  洛书九宫' }}</button>
+            :title="showInfoCenter ? '关闭五运六气信息卡（年干支·岁运·司天·在泉·当令主客气/运）' : '开启五运六气信息卡（年干支·岁运·司天·在泉·当令主客气/运）'"
+          >{{ showInfoCenter ? '✔ 五运六气信息' : '  五运六气信息' }}</button>
         </div>
       </div>
     </Teleport>
@@ -157,15 +147,9 @@ const rings = computed(() => {
           :rotation-direction="rotationDirection"
         >
           <template #center="{ innerRadius }">
-            <LuoshuCenter
-              v-if="showLuoshuCenter"
-              :radius="innerRadius * 0.95"
-              :time="controlledTime"
-              :rotation-angle="rotationAngle"
-            />
-            <InfoCenter
+            <WuYunInfoCenter
               v-if="showInfoCenter"
-              :radius="innerRadius * 0.85"
+              :radius="innerRadius * 0.9"
               :time="controlledTime"
               :rotation-angle="rotationAngle"
             />
