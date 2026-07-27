@@ -26,7 +26,7 @@ import type { RotationDirection } from './geometry'
 // ─── 关系类型定义 ───
 
 /** 支持的卦关系类型 */
-export type GuaRelationType = 'feifu' | 'hugua' | 'duigua' | 'zonggua' | 'jiaogua' | 'biangua'
+export type GuaRelationType = 'feifu' | 'hugua' | 'duigua' | 'zonggua' | 'jiaogua' | 'biangua' | 'weigua'
 
 /**
  * 可视化方向约束
@@ -118,6 +118,13 @@ export const RELATION_METAS: Record<GuaRelationType, GuaRelationMeta> = {
     direction: 'unidirectional',
     filterSourceOnly: true,
   },
+  weigua: {
+    type: 'weigua',
+    label: '位卦',
+    description: '按爻位阴阳重组：阳位（初、三、五）三爻依序组为外卦，阴位（二、四、上）三爻依序组为内卦，上下相合成新卦。',
+    direction: 'unidirectional',
+    filterSourceOnly: true,
+  },
 }
 
 /** 供模板遍历的数组形态 */
@@ -128,6 +135,7 @@ export const RELATION_METAS_LIST: readonly GuaRelationMeta[] = [
   RELATION_METAS.zonggua,
   RELATION_METAS.jiaogua,
   RELATION_METAS.biangua,
+  RELATION_METAS.weigua,
 ]
 
 /** 各类型在模板中的配色提示 */
@@ -138,6 +146,7 @@ export const RELATION_COLORS: Record<GuaRelationType, string> = {
   zonggua: '#3498DB',  // 水
   jiaogua: '#A0522D',  // 土
   biangua: '#9B59B6',  // 紫（动爻之变）
+  weigua: '#1ABC9C',   // 青（阴阳位重组）
 }
 
 // ─── 排序布局 ───
@@ -261,6 +270,42 @@ export function computeBiangua(value: number, movingLines: readonly number[]): n
   return (value ^ mask) & 0b111111
 }
 
+/**
+ * 位卦：按爻位阴阳属性重组
+ *
+ *  周易六爻位次分阴阳：
+ *    阳位 —— 初(0)、三(2)、五(4) 三奇数位，象征动、刚，取为「外卦」
+ *    阴位 —— 二(1)、四(3)、上(5) 三偶数位，象征静、柔，取为「内卦」
+ *
+ *  规则：
+ *    外卦（上卦）三爻自下而上 = 原卦 [初, 三, 五] 三爻（依次）
+ *    内卦（下卦）三爻自下而上 = 原卦 [二, 四, 上] 三爻（依次）
+ *    位卦 value = (外卦 << 3) | 内卦
+ *
+ *  由此推得：
+ *    b0=初爻 → 位卦 bit3（外卦低位）
+ *    b2=三爻 → 位卦 bit4
+ *    b4=五爻 → 位卦 bit5
+ *    b1=二爻 → 位卦 bit0（内卦低位）
+ *    b3=四爻 → 位卦 bit1
+ *    b5=上爻 → 位卦 bit2
+ *
+ *  举例：泰䷊ (000111) → 阳位 (b0,b2,b4)=(1,1,0) 外=011=兑；
+ *                         阴位 (b1,b3,b5)=(1,0,0) 内=001=震；位卦=兑上震下=归妹䷵
+ *  纯阳/纯阴自映射：乾63→乾63、坤0→坤0。
+ */
+export function computeWeigua(value: number): number {
+  const b0 = (value >> 0) & 1  // 初
+  const b1 = (value >> 1) & 1  // 二
+  const b2 = (value >> 2) & 1  // 三
+  const b3 = (value >> 3) & 1  // 四
+  const b4 = (value >> 4) & 1  // 五
+  const b5 = (value >> 5) & 1  // 上
+  const upper = b0 | (b2 << 1) | (b4 << 2)  // 外卦：初三五 自下而上
+  const lower = b1 | (b3 << 1) | (b5 << 2)  // 内卦：二四上 自下而上
+  return lower | (upper << 3)
+}
+
 // ─── 通用关系条目 ───
 
 /**
@@ -361,6 +406,8 @@ export function computeRelationTable(
       return computeGenericRelationTable(computeJiaogua)
     case 'biangua':
       return computeGenericRelationTable(v => computeBiangua(v, movingLines))
+    case 'weigua':
+      return computeGenericRelationTable(computeWeigua)
   }
 }
 
@@ -422,6 +469,8 @@ export function computeFocusRelations(
       targetValue = computeZonggua(sourceValue)
     } else if (type === 'jiaogua') {
       targetValue = computeJiaogua(sourceValue)
+    } else if (type === 'weigua') {
+      targetValue = computeWeigua(sourceValue)
     } else {
       // biangua
       targetValue = computeBiangua(sourceValue, movingLines)

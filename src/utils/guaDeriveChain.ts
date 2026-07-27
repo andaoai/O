@@ -25,6 +25,7 @@ import {
   computeZonggua,
   computeJiaogua,
   computeBiangua,
+  computeWeigua,
   type GuaRelationType,
 } from './guaRelations'
 import { FEIFU_TABLE } from './guaRelationArrows'
@@ -54,6 +55,8 @@ function getStepFn(
       return computeZonggua
     case 'jiaogua':
       return computeJiaogua
+    case 'weigua':
+      return computeWeigua
     case 'biangua':
       return v => computeBiangua(v, movingLines)
   }
