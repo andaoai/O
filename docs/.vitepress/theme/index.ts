@@ -41,7 +41,7 @@ import MansionDegreeRing from '@/components/rings/MansionDegreeRing.vue'
 import DegreeScale from '@/components/rings/DegreeScale.vue'
 
 // 文档可视化组件
-import SingleGuaChart from '@/components/viz/SingleGuaChart.vue'
+import SingleGuaViz from '@/components/viz/SingleGuaViz.vue'
 import PolygonViz from '@/components/viz/PolygonViz.vue'
 import DivChartViz from '@/components/viz/DivChartViz.vue'
 import TripleViz from '@/components/viz/TripleViz.vue'
@@ -105,7 +105,7 @@ export default {
     app.component('SevenLuminariesRing', SevenLuminariesRing)
     app.component('MansionDegreeRing', MansionDegreeRing)
     app.component('DegreeScale', DegreeScale)
-    app.component('SingleGuaChart', SingleGuaChart)
+    app.component('SingleGuaViz', SingleGuaViz)
     app.component('PolygonViz', PolygonViz)
     app.component('DivChartViz', DivChartViz)
     app.component('TripleViz', TripleViz)

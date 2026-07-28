@@ -121,9 +121,9 @@ function isIOS(): boolean {
     (p === 'MacIntel' && navigator.maxTouchPoints > 1)
 }
 
-export const usePhoneOrientation = (
+export function usePhoneOrientation(
   options: UsePhoneOrientationOptions = {}
-): UsePhoneOrientationReturn => {
+): UsePhoneOrientationReturn {
   const {
     betaThreshold = 15,
     gammaThreshold = 15,
@@ -359,4 +359,3 @@ export const usePhoneOrientation = (
   }
 }
 
-export default usePhoneOrientation

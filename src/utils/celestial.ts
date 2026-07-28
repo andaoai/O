@@ -131,39 +131,11 @@ export const planetPosition = (time: Date, key: PlanetKey): PlanetEclipticPositi
 /**
  * 行星运动状态枚举（源自《史记·天官书》五星运动分类）
  *
- * 古代天文术语与现代天文对应关系：
- * - fast     疾：快速顺行（日运动 > 1.2°）
- * - normal   顺：正常顺行（日运动 0.5°~1.2°）
- * - slow     迟：慢速顺行（日运动 0°~0.5°）
- * - stationary 守/留：静止（日运动 |v| < 0.05°，顺逆转换点）
- * - retrograde 逆/退：向西退行（日运动 < 0°）
- *
+ * ⚠️ 类型定义已迁移至 data/rings/types.ts，此处 re-export 保持向后兼容。
  * 五星平均日运动参考：水星~1.5°、金星~1.2°、火星~0.5°、木星~0.08°、土星~0.03°
  */
-export type MotionState = 'fast' | 'normal' | 'slow' | 'stationary' | 'retrograde'
-
-/**
- * 行星运动完整信息结构
- *
- * 包含运动分类、速度、渲染样式三部分信息，
- * 供 DataBodyRing / MansionDegreeRing 渲染运动状态标记使用。
- */
-export interface PlanetMotion {
-  /** 运动状态分类（疾/顺/迟/守/逆） */
-  state: MotionState
-  /** 地心黄经日变化率（度/天，正值=顺行向东） */
-  speed: number
-  /** 是否处于逆行状态 */
-  isRetrograde: boolean
-  /** 是否处于留守静止状态 */
-  isStationary: boolean
-  /** 刻线渲染样式：实线/虚线/淡线 */
-  lineStyle: 'solid' | 'dashed' | 'faint'
-  /** 运动方向箭头指示：顺行沿盘面逆时针，逆行沿顺时针 */
-  arrowDirection: 'clockwise' | 'counterclockwise' | 'none'
-  /** 古代天文术语单字（用于标签显示：疾/顺/迟/守/逆） */
-  character: string
-}
+import type { MotionState, PlanetMotion } from '@/data/rings/types'
+export type { MotionState, PlanetMotion } from '@/data/rings/types'
 
 /**
  * 运动状态视觉配置常量

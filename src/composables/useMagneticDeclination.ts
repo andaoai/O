@@ -42,9 +42,9 @@ export interface UseMagneticDeclinationReturn {
   error: ComputedRef<string | null>
 }
 
-export const useMagneticDeclination = (
+export function useMagneticDeclination(
   options: UseMagneticDeclinationOptions
-): UseMagneticDeclinationReturn => {
+): UseMagneticDeclinationReturn {
   const { latitude, longitude, time, altitudeKm = 0 } = options
 
   const declination = computed(() => {

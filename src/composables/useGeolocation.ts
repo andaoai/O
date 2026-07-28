@@ -112,7 +112,7 @@ async function queryPermissionState(): Promise<GeolocationPermissionState> {
   }
 }
 
-export const useGeolocation = (options: UseGeolocationOptions): UseGeolocationReturn => {
+export function useGeolocation(options: UseGeolocationOptions): UseGeolocationReturn {
   const {
     lat: fallbackLat,
     lon: fallbackLon,

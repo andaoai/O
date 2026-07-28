@@ -9,7 +9,7 @@
  */
 
 import { SolarDay } from 'tyme4ts'
-import { findDynasty, formatYearShort } from '@/data/dynasties'
+import { findDynasty } from '@/data/dynasties'
 import type { GanzhiInfo } from './chineseCalendar'
 import { STEMS as HEAVENLY_STEMS, BRANCHES as EARTHLY_BRANCHES, HOUR_START_STEM } from './constants/ganzhi'
 
@@ -26,6 +26,20 @@ const ZODIAC_BY_BRANCH: Record<string, string> = {
 }
 
 // ── 公历格式化 ──
+
+/** 将 JS year 转为人类可读的年份文字 */
+export function formatYear(jsYear: number): string {
+  if (jsYear > 0) return `公元${jsYear}年`
+  if (jsYear === 0) return '公元前1年'
+  return `公元前${1 - jsYear}年`
+}
+
+/** 将 JS year 转为简写（如"前221"、"2024"） */
+export function formatYearShort(jsYear: number): string {
+  if (jsYear > 0) return `${jsYear}`
+  if (jsYear === 0) return '前1'
+  return `前${1 - jsYear}`
+}
 
 /**
  * 改进的公历日期时间格式化（公元前友好）

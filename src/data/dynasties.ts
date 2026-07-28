@@ -56,17 +56,3 @@ export function findDynasty(jsYear: number): Dynasty | null {
   }
   return null
 }
-
-/** 将 JS year 转为人类可读的年份文字 */
-export function formatYear(jsYear: number): string {
-  if (jsYear > 0) return `公元${jsYear}年`
-  if (jsYear === 0) return '公元前1年'
-  return `公元前${1 - jsYear}年`
-}
-
-/** 将 JS year 转为简写（如"前221"、"2024"） */
-export function formatYearShort(jsYear: number): string {
-  if (jsYear > 0) return `${jsYear}`
-  if (jsYear === 0) return '前1'
-  return `前${1 - jsYear}`
-}

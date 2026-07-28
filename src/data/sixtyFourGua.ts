@@ -147,34 +147,14 @@ export const WENWANG_GUA_BY_VALUE: readonly GuaMeta[] = [
 ]
 
 /** 6 位整体位反转：bit0↔bit5, bit1↔bit4, bit2↔bit3 */
-export function bitReverse6(value: number): number {
-  let r = 0
-  for (let i = 0; i < 6; i++) {
-    r = (r << 1) | ((value >> i) & 1)
-  }
-  return r
-}
-
-/** 由 value 取六爻数组（自下而上，下标0=初爻；true=阳爻） */
-export function getGuaLines(value: number): boolean[] {
-  return Array.from({ length: 6 }, (_, i) => Boolean(value & (1 << i)))
-}
-
-/** 由 value 取先天圆周位置 0-63 */
-export function getXiantianPos(value: number): number {
-  return bitReverse6(value)
-}
+export { bitReverse6, getGuaLines, getXiantianPos, getUnicodeHexagram } from '@/utils/guaUtils'
+import { bitReverse6, getGuaLines, getXiantianPos, getUnicodeHexagram } from '@/utils/guaUtils'
 
 /** 由先天位置 pos 取圆心角（SVG 空间，度）。乾顶坤底、两仪对称。 */
 export function getXiantianCenterAngle(pos: number): number {
   return pos >= 32
     ? 270 + (63 - pos) * GUA_STEP // 阳仪：乾(pos63)=270 顶，沿右半下行
     : 270 - (32 - pos) * GUA_STEP // 阴仪：坤(pos0)=90 底，沿左半上行
-}
-
-/** 由文王序取 Unicode 卦符字符 */
-export function getUnicodeHexagram(wenwangOrder: number): string {
-  return String.fromCodePoint(0x4dc0 + wenwangOrder - 1)
 }
 
 /**
