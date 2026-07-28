@@ -54,68 +54,15 @@
  * 可视化上呈现「64→8」的放射状收敛图形。
  */
 import { polarToCartesian, type RotationDirection } from '@/utils/geometry'
-import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
-import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
+import { JING_FANG_64_GUA, JING_FANG_64_GUA_BY_VALUE } from '@/data/rings/jingFangEightPalaces'
+import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
+import { type GuaLayout, FEIFU_PALACE_ORDER, getGuaAngle } from './guaLayoutConstants'
 
 // ─── 布局类型 ───
 
-/**
- * 卦象排列方式
- *
- * 与 `src/utils/guaRelations.ts` 的 `GuaLayout` 保持同构（避免循环导入而独立声明）：
- *   jingfang / xiantian / binary / wenwang / zaguazhuan
- */
-export type GuaRelationLayout = 'jingfang' | 'xiantian' | 'binary' | 'wenwang' | 'zaguazhuan'
-
-/**
- * 京房八宫序下重排宫位，使四对宫处于对径位置（180°）：
- *   乾↔坤、坎↔离、艮↔兑、震↔巽
- *
- * 原始京房序：乾(0) 坎(1) 艮(2) 震(3) 巽(4) 离(5) 坤(6) 兑(7)
- * 重排后序：   乾(0) 坎(1) 艮(2) 震(3) 坤(4) 离(5) 兑(6) 巽(7)
- *                          ↕ 对径 ↕           ↕ 对径 ↕
- *             每宫占 45°（8 卦 × 5.625°），4 宫刚好 180°
- */
-const FEIFU_PALACE_ORDER: readonly string[] = ['乾', '坎', '艮', '震', '坤', '离', '兑', '巽']
-
-/** 重排后的京房八宫序 order（0-63），使四对宫对径 */
-function reorderPalaces(palace: string, orderInPalace: number): number {
-  const newPalacePos = FEIFU_PALACE_ORDER.indexOf(palace)
-  return newPalacePos * 8 + orderInPalace
-}
-
-/** 获取某卦在指定布局下的圆心角（SVG 空间，度） */
-function getAngle(value: number, layout: GuaRelationLayout, startDegree: number): number {
-  switch (layout) {
-    case 'jingfang': {
-      const gua = JING_FANG_64_GUA.find(g => g.value === value)
-      if (!gua) return 0
-      // 京房八宫序：用重排后的序定位，使对宫对径
-      const order = reorderPalaces(gua.palace, gua.jingFangOrder % 8)
-      return (270 + order * JING_FANG_EIGHT_PALACE_STEP + startDegree) % 360
-    }
-    case 'xiantian': {
-      // 先天八卦：按二进制位反转（伏羲圆图）定位
-      const pos = bitReverse6(value)
-      const angle = pos >= 32
-        ? 270 + (63 - pos) * GUA_STEP
-        : 270 - (32 - pos) * GUA_STEP
-      return (angle + startDegree) % 360
-    }
-    case 'binary':
-      return (270 + value * GUA_STEP + startDegree) % 360
-    case 'wenwang': {
-      const meta = WENWANG_GUA_BY_VALUE[value]
-      const pos = meta ? meta.wenwangOrder - 1 : 0
-      return (270 + pos * GUA_STEP + startDegree) % 360
-    }
-    case 'zaguazhuan': {
-      const pos = ZAGUAZHUAN_POS_BY_VALUE[value] ?? 0
-      return (270 + pos * GUA_STEP + startDegree) % 360
-    }
-  }
-}
+/** GuaRelationLayout 是 GuaLayout 的别名，保持向后兼容 */
+export type GuaRelationLayout = GuaLayout
 
 /**
  * 由飞卦的 value 和世位类型计算伏卦的 value
@@ -178,7 +125,7 @@ export interface FeifuEntry {
 export const FEIFU_TABLE: readonly FeifuEntry[] = JING_FANG_64_GUA.map(gua => {
   const fuValue = computeFuValue(gua.value, gua.shiyingType)
   // 查伏卦的京房序
-  const fuGua = JING_FANG_64_GUA.find(g => g.value === fuValue)!
+  const fuGua = JING_FANG_64_GUA_BY_VALUE.get(fuValue)!
   const fuMeta = WENWANG_GUA_BY_VALUE[fuValue]!
   return {
     feiValue: gua.value,
@@ -218,8 +165,8 @@ export function computeFeifuArrows(
   layout: GuaRelationLayout = 'jingfang'
 ): FeifuArrowData[] {
   return FEIFU_TABLE.map(entry => {
-    const feiAngle = getAngle(entry.feiValue, layout, startDegree)
-    const fuAngle = getAngle(entry.fuValue, layout, startDegree)
+    const feiAngle = getGuaAngle(entry.feiValue, layout, startDegree)
+    const fuAngle = getGuaAngle(entry.fuValue, layout, startDegree)
     const from = polarToCartesian(feiAngle, nodeRadius, direction)
     const to = polarToCartesian(fuAngle, nodeRadius, direction)
     return { entry, x1: from.x, y1: from.y, x2: to.x, y2: to.y }
@@ -239,9 +186,9 @@ export function getNodePosition(
   direction: RotationDirection = 'clockwise',
   layout: GuaRelationLayout = 'jingfang'
 ): { x: number; y: number } {
-  const angle = getAngle(value, layout, startDegree)
+  const angle = getGuaAngle(value, layout, startDegree)
   return polarToCartesian(angle, nodeRadius, direction)
 }
 
-/** 8 个纯卦的 value 集合（伏卦全落在此集合中） */
-export const PURE_GUA_VALUES: readonly number[] = [63, 27, 45, 9, 54, 18, 36, 0]
+/** 8 个纯卦的 value 集合（re-export from guaLayoutConstants.ts） */
+export { PURE_GUA_VALUES } from './guaLayoutConstants'

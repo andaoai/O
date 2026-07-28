@@ -44,7 +44,7 @@ export interface MansionStar {
  * 四象配色(与 mansionStars.ts::MANSION_ASTERISMS[i].color 一致,
  * 但独立在此处维护,避免下游误以为色彩也是 Stellarium 数据)。
  */
-const MANSION_COLORS: Record<string, string> = {
+export const MANSION_COLORS: Record<string, string> = {
   // 东青龙
   角: '#2ECC71', 亢: '#27AE60', 氐: '#229954', 房: '#1D8348',
   心: '#196F3D', 尾: '#145A32', 箕: '#0E6251',

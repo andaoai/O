@@ -16,7 +16,8 @@
 
 export type RotationDirection = 'clockwise' | 'counterclockwise'
 
-const D2R = Math.PI / 180
+export const D2R = Math.PI / 180
+export const R2D = 180 / Math.PI
 
 /** 角度归一化到 [0, 360) —— 负数也能正确回卷（JS 原生 % 对负数会出负值） */
 export const normalizeAngle = (angle: number): number => ((angle % 360) + 360) % 360

@@ -266,6 +266,7 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 | `jingFangYao.ts` | 京房爻辞 | 京房八宫飞伏关系 + 爻辞查询 |
 | `guaRelationArrows.ts` | 飞伏关系 | 京房八宫 64 卦飞伏（fei / fu）方向 |
 | `guaRelations.ts` | 卦关系统一计算 | 飞伏/互卦/对卦/综卦/交卦 五种关系纯函数 |
+| `guaLayoutConstants.ts` | 卦布局共享常量 | GuaLayout 类型 + FEIFU_PALACE_ORDER + getGuaAngle + PURE_GUA_VALUES（打破 guaRelations ↔ guaRelationArrows 循环依赖） |
 | `guaDeriveChain.ts` | 卦关系推衍链 | 从基准卦逐级派生目标卦序列 |
 | `qimenDunJia.ts` | 奇门遁甲排局 | 阴阳遁 + 三元 + 超神接气 + 奇门置闰（冬至 0° 起序） |
 | `reverseGeocode.ts` | 逆地理编码 | 经纬度 → 行政区（观斗盘/风水盘定位反查） |
@@ -644,7 +645,7 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │       ├── twelveShichen.ts        # 十二时辰
 │       ├── sevenLuminaries.ts      # 七曜 helper functions
 │       ├── jingFangSixtyGua.ts     # 京房六十卦定义
-│       └── jingFangEightPalaces.ts # 京房八宫六十四卦定义
+│       └── jingFangEightPalaces.ts # 京房八宫六十四卦定义 + JING_FANG_64_GUA_BY_VALUE Map
 ├── composables/
 │   ├── useAnimation.ts             # Animation control
 │   ├── useRingBase.ts              # Layer 4 foundation: all ring shared logic + usePolar + useHighlight
@@ -691,6 +692,7 @@ src/                               # 组件库（无 main.ts / App.vue / router�
     ├── jingFangYao.ts              # 京房爻辞 + 飞伏查询
     ├── guaRelationArrows.ts        # 京房八宫 64 卦飞伏方向（用于箭头渲染）
     ├── guaRelations.ts             # 卦关系统一计算：飞伏/互卦/对卦/综卦/交卦
+    ├── guaLayoutConstants.ts       # 卦布局共享常量：GuaLayout + getGuaAngle + PURE_GUA_VALUES
     ├── guaDeriveChain.ts           # 卦关系推衍链：从基准卦逐级派生目标卦序列
     ├── qimenDunJia.ts              # 奇门遁甲阴阳遁九局排局（超神/接气/正授）
     ├── reverseGeocode.ts           # 逆地理编码：经纬度 → 行政区

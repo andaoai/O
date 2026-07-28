@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import { normalizeAngle, type RotationDirection } from '@/utils/geometry'
 
 /**
  * 罗盘视口状态 composable
@@ -18,7 +19,8 @@ import { ref, type Ref } from 'vue'
  * ════════════════════════════════════════════════════════════════
  */
 
-export type RotationDirection = 'clockwise' | 'counterclockwise'
+/** re-export from geometry.ts for backward compatibility */
+export { type RotationDirection } from '@/utils/geometry'
 
 export interface ViewportInitial {
   zoom?: number
@@ -69,7 +71,6 @@ const OFFSET_STEP = 50
 const ROTATE_STEP = 90
 
 const clampZoom = (z: number) => Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z))
-const normalizeAngle = (a: number) => ((a % 360) + 360) % 360
 
 export function useViewport(initial: ViewportInitial = {}): UseViewportReturn {
   const zoom = ref<number>(initial.zoom ?? 1)

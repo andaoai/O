@@ -967,6 +967,7 @@ const { controlledTime } = useUrlTime()
 | `jianJiang.ts` | 斗建 / 月将 / 太阳所在 宫位换算 |
 | `jingFangYao.ts` | 京房爻辞 + 飞伏查询 |
 | `guaRelationArrows.ts` | 京房八宫 64 卦飞伏方向 |
+| `guaLayoutConstants.ts` | 卦布局共享常量（GuaLayout + getGuaAngle + PURE_GUA_VALUES） |
 | `wuxing.ts` | 五行相生相克 + 配色 |
 | `conjunctions.ts` | 五星会合周期二分搜索（astronomy-engine） |
 | `bodyRing.ts` | 天体圆环纯函数（processBodyItems / getArrowParams 等） |

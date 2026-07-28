@@ -1,4 +1,5 @@
 import type { PointRingData } from './types'
+import { SOLAR_TERMS_LICHUN_ORDER, SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
 
 /**
  * 二十四节气（点导向）
@@ -11,19 +12,11 @@ import type { PointRingData } from './types'
  * 因此使用 PointRing（点圆环）而非 CircleRing（段圆环）来渲染。
  */
 
-const names = [
-  '立春', '雨水', '惊蛰', '春分', '清明', '谷雨',
-  '立夏', '小满', '芒种', '夏至', '小暑', '大暑',
-  '立秋', '处暑', '白露', '秋分', '寒露', '霜降',
-  '立冬', '小雪', '大雪', '冬至', '小寒', '大寒'
-]
-
 /** 每个节气对应精确的黄经（每15°一个） */
 function buildTerms(): PointRingData['items'] {
-  return names.map((label, i) => {
+  return SOLAR_TERMS_LICHUN_ORDER.map((label, i) => {
     const angle = i * 15
-    // 二分二至（春分、夏至、秋分、冬至）用特殊标记
-    const isSpecial = label === '春分' || label === '夏至' || label === '秋分' || label === '冬至'
+    const isSpecial = SOLAR_TERM_CARDINALS.has(label)
     return {
       label,
       angle,

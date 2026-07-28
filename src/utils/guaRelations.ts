@@ -18,9 +18,10 @@
  *    先天八卦（伏羲圆图序）：按二进制位反转排列
  * ═══════════════════════════════════════════════════════════════
  */
-import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram, bitReverse6, GUA_STEP, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
-import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
+import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram, bitReverse6 } from '@/data/sixtyFourGua'
+import { JING_FANG_64_GUA, JING_FANG_64_GUA_BY_VALUE } from '@/data/rings/jingFangEightPalaces'
 import { FEIFU_TABLE } from './guaRelationArrows'
+import { type GuaLayout, FEIFU_PALACE_ORDER, getGuaAngle, PURE_GUA_VALUES } from './guaLayoutConstants'
 // ─── 关系类型定义 ───
 
 /** 支持的卦关系类型 */
@@ -147,80 +148,9 @@ export const RELATION_COLORS: Record<GuaRelationType, string> = {
   weigua: '#1ABC9C',   // 青（阴阳位重组）
 }
 
-// ─── 排序布局 ───
+// ─── 排序布局（re-export from guaLayoutConstants.ts） ───
 
-/**
- * 卦象排列方式
- *
- *   jingfang    — 京房八宫序（汉·京房《京氏易传》）：八宫成扇区
- *   xiantian    — 先天圆图（宋·邵雍《皇极经世·观物外篇》，本自伏羲）：位反转序
- *   binary      — 自然二进制序：value 0→63 顶乾底坤逆时针
- *   wenwang     — 文王卦序（通行本《周易·序卦传》）：乾坤屯蒙需讼师比…
- *   zaguazhuan  — 杂卦传序（《周易·杂卦传》）：乾坤比师临观屯蒙…
- */
-export type GuaLayout = 'jingfang' | 'xiantian' | 'binary' | 'wenwang' | 'zaguazhuan'
-
-/** 京房八宫序下重排宫位，使四对宫处于对径位置（180°） */
-const FEIFU_PALACE_ORDER: readonly string[] = ['乾', '坎', '艮', '震', '坤', '离', '兑', '巽']
-
-/** 由 pos (0-63) 换算成 SVG 圆心角（乾/首卦居顶，逆时针展开 => 顺时针视觉需通过 rotationDirection 调转） */
-function posToAngle(pos: number, startDegree: number): number {
-  return (270 + pos * GUA_STEP + startDegree) % 360
-}
-
-/**
- * 通用角度计算：获取某卦在指定布局下的圆心角（SVG 空间，度）
- *
- * 与 feifu.ts 和 FeifuTextRing 中的 getAngle / getGuaAngle 为同一逻辑，
- * 在此统一收敛，避免三处维护。
- *
- * 各布局的 pos → angle 映射约定：
- *   - jingfang：宫位重排 (乾坎艮震坤离兑巽)，每宫 8 卦占 45°
- *   - xiantian：乾顶坤底、两仪对径 (阳仪右半、阴仪左半)
- *   - binary：value 直接映射为 pos，坤顶乾底
- *   - wenwang：wenwangOrder-1 映射为 pos，乾坤起、既未济终
- *   - zaguazhuan：《杂卦传》文本次序
- *
- * @param value      六爻二进制编码 0-63
- * @param layout     排列方式
- * @param startDegree 起始角度偏移
- * @returns 圆心角度数 (0-360)，SVG 坐标系（0°=正右，90°=正下，270°=正上）
- */
-export function getGuaAngle(value: number, layout: GuaLayout, startDegree: number = 0): number {
-  switch (layout) {
-    case 'jingfang': {
-      const gua = JING_FANG_64_GUA.find(g => g.value === value)
-      if (!gua) return 0
-      const orderInPalace = gua.jingFangOrder % 8
-      const newPalacePos = FEIFU_PALACE_ORDER.indexOf(gua.palace)
-      const order = newPalacePos * 8 + orderInPalace
-      return (270 + order * JING_FANG_EIGHT_PALACE_STEP + startDegree) % 360
-    }
-    case 'xiantian': {
-      // 先天八卦：按二进制位反转（伏羲圆图）定位
-      const pos = bitReverse6(value)
-      const angle = pos >= 32
-        ? 270 + (63 - pos) * GUA_STEP
-        : 270 - (32 - pos) * GUA_STEP
-      return (angle + startDegree) % 360
-    }
-    case 'binary': {
-      // 自然二进制序：pos = value（0=坤居顶，63=乾居首圈末）
-      return posToAngle(value, startDegree)
-    }
-    case 'wenwang': {
-      // 文王卦序：pos = 文王序 - 1（0=乾，63=未济）
-      const meta = WENWANG_GUA_BY_VALUE[value]
-      const pos = meta ? meta.wenwangOrder - 1 : 0
-      return posToAngle(pos, startDegree)
-    }
-    case 'zaguazhuan': {
-      // 《杂卦传》文本序
-      const pos = ZAGUAZHUAN_POS_BY_VALUE[value] ?? 0
-      return posToAngle(pos, startDegree)
-    }
-  }
-}
+export { type GuaLayout, getGuaAngle, PURE_GUA_VALUES } from './guaLayoutConstants'
 
 // ─── 关系计算纯函数 ───
 
@@ -347,8 +277,8 @@ function computeGenericRelationTable(
     const targetValue = computeTarget(value)
     const sourceMeta = WENWANG_GUA_BY_VALUE[value]!
     const targetMeta = WENWANG_GUA_BY_VALUE[targetValue]!
-    const sourceJf = JING_FANG_64_GUA.find(g => g.value === value)
-    const targetJf = JING_FANG_64_GUA.find(g => g.value === targetValue)
+    const sourceJf = JING_FANG_64_GUA_BY_VALUE.get(value)
+    const targetJf = JING_FANG_64_GUA_BY_VALUE.get(targetValue)
     return {
       sourceValue: value,
       targetValue,
@@ -417,7 +347,7 @@ export function computeRelationTable(
  */
 export function getArrowColor(entry: GuaRelationEntry): string {
   if (entry.color) return entry.color
-  const gua = JING_FANG_64_GUA.find(g => g.value === entry.sourceValue)
+  const gua = JING_FANG_64_GUA_BY_VALUE.get(entry.sourceValue)
   return gua?.color ?? '#FFD700'
 }
 
@@ -450,7 +380,7 @@ export function computeFocusRelations(
 
   const out: FocusRelationEntry[] = []
   const sourceMeta = WENWANG_GUA_BY_VALUE[sourceValue]!
-  const sourceJf = JING_FANG_64_GUA.find(g => g.value === sourceValue)
+  const sourceJf = JING_FANG_64_GUA_BY_VALUE.get(sourceValue)
   const sourceUnicode = getUnicodeHexagram(sourceMeta.wenwangOrder)
 
   for (const type of types) {
@@ -475,7 +405,7 @@ export function computeFocusRelations(
     }
 
     const targetMeta = WENWANG_GUA_BY_VALUE[targetValue]!
-    const targetJf = JING_FANG_64_GUA.find(g => g.value === targetValue)
+    const targetJf = JING_FANG_64_GUA_BY_VALUE.get(targetValue)
 
     out.push({
       type,
@@ -496,8 +426,3 @@ export function computeFocusRelations(
   return out
 }
 
-/**
- * 8 个纯卦的 value 集合（仅 feifu 关系有意义）
- * 伏卦全落在此集合：{乾63, 兑27, 离45, 震9, 巽54, 坎18, 艮36, 坤0}
- */
-export const PURE_GUA_VALUES: readonly number[] = [63, 27, 45, 9, 54, 18, 36, 0]

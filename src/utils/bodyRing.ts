@@ -11,7 +11,7 @@
  *   - 运动方向箭头参数
  *   - 天体实际坐标（含黄纬偏移）
  */
-import { polarToCartesian, normalizeAngle } from './geometry'
+import { polarToCartesian, normalizeAngle, D2R } from './geometry'
 import { MOTION_VISUAL_CONFIG, type PlanetMotion, type MotionState } from './celestial'
 import type { Halo, BodyState } from '@/data/rings/types'
 
@@ -32,8 +32,8 @@ export const MOTION_RING_RADIUS_OFFSET = 5
 /** 箭头与虚线环的额外间距（确保在虚线环外侧） */
 export const ARROW_EXTRA_SPACING = 8
 
-/** 角度转弧度常量 */
-export const DEG_TO_RAD = Math.PI / 180
+/** 角度转弧度常量（re-export from geometry.ts） */
+export const DEG_TO_RAD = D2R
 
 // ─── 光晕配置 ──────────────────────────────────────────────────
 

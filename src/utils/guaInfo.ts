@@ -18,7 +18,7 @@
  */
 
 import { najiaLines } from './najia'
-import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
+import { JING_FANG_64_GUA_BY_VALUE } from '@/data/rings/jingFangEightPalaces'
 import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import { BRANCHES } from './constants/ganzhi'
 import { WUXING_COLORS, BRANCH_ELEMENTS, type WuxingElement } from './wuxing'
@@ -202,7 +202,7 @@ export interface GuaInfo {
  * 组件层直接消费本函数结果渲染，不再重复纳甲/六亲逻辑。
  */
 export function deriveGuaInfo(value: number): GuaInfo {
-  const guaMeta = JING_FANG_64_GUA.find(g => g.value === value)
+  const guaMeta = JING_FANG_64_GUA_BY_VALUE.get(value)
   if (!guaMeta) {
     throw new Error(`[guaInfo] value ${value} 未在 JING_FANG_64_GUA 中，检查是否 0..63`)
   }

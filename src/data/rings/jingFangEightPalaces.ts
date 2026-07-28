@@ -159,3 +159,12 @@ export const JING_FANG_64_GUA: readonly JingFangGuaItem[] = PALACES.flatMap(meta
 
 /** 每卦切向宽度：360 / 64 = 5.625° */
 export const JING_FANG_EIGHT_PALACE_STEP = 360 / 64
+
+/**
+ * 按 value 索引的 Map 查找表（替代 Array.find 的 O(n) 线性扫描）
+ *
+ * 使用场景：guaRelations / guaRelationArrows / guaInfo 等模块
+ * 需要频繁按 value(0-63) 反查京房八宫信息，O(1) 查找替代 O(64)。
+ */
+export const JING_FANG_64_GUA_BY_VALUE: ReadonlyMap<number, JingFangGuaItem> =
+  new Map(JING_FANG_64_GUA.map(g => [g.value, g]))

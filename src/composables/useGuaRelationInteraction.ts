@@ -24,7 +24,7 @@ import {
   type GuaRelationEntry,
   type FocusRelationEntry,
 } from '@/utils/guaRelations'
-import { JING_FANG_64_GUA, type ShiyingType } from '@/data/rings/jingFangEightPalaces'
+import { JING_FANG_64_GUA, JING_FANG_64_GUA_BY_VALUE, type ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 依赖注入 Key ───
 
@@ -184,7 +184,7 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
       if (shiyingList.length === 0 && palaceList.length === 0) return null
       const filtered = new Set<number>()
       for (let v = 0; v < 64; v++) {
-        const jf = JING_FANG_64_GUA.find(g => g.value === v)
+        const jf = JING_FANG_64_GUA_BY_VALUE.get(v)
         if (!jf) continue
         if (shiyingList.length > 0 && !shiyingList.includes(jf.shiyingType as ShiyingType)) continue
         if (palaceList.length > 0 && !palaceList.includes(jf.palace)) continue
@@ -208,7 +208,7 @@ export function useGuaRelationInteraction(options?: GuaRelationInteractionOption
       if (hasFilter) {
         filtered = new Set<number>()
         for (let v = 0; v < 64; v++) {
-          const jf = JING_FANG_64_GUA.find(g => g.value === v)
+          const jf = JING_FANG_64_GUA_BY_VALUE.get(v)
           if (!jf) continue
           if (shiyingList.length > 0 && !shiyingList.includes(jf.shiyingType as ShiyingType)) continue
           if (palaceList.length > 0 && !palaceList.includes(jf.palace)) continue
