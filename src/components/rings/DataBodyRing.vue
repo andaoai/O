@@ -3,9 +3,15 @@ import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import BodyMarker from '../celestial/BodyMarker.vue'
 import PlanetSvg from '../celestial/PlanetSvg.vue'
-import { radialTextRotation, polarToCartesian, normalizeAngle } from '@/utils/geometry'
-import { MOTION_VISUAL_CONFIG, type PlanetMotion, type MotionState } from '@/utils/celestial'
-import type { BodyRingData, Halo, BodyState, LuminaryKey } from '@/data/rings/types'
+import { radialTextRotation } from '@/utils/geometry'
+import { MOTION_VISUAL_CONFIG } from '@/utils/celestial'
+import {
+  processBodyItems,
+  getMotionRingConfig,
+  getArrowParams,
+  getBodyCoordinates
+} from '@/utils/bodyRing'
+import type { BodyRingData, LuminaryKey } from '@/data/rings/types'
 
 /**
  * 数据驱动天体圆环（BodyRing）
@@ -56,237 +62,8 @@ const bandMidRadius = computed(() => {
   return mid + props.bandOffset
 })
 
-// ─── 运动状态视觉常量 ──────────────────────────────────────────────
-/** 箭头尺寸按运动状态映射：越快箭头越大 */
-const ARROW_SIZE_MAP: Record<MotionState, number> = {
-  fast: 8,
-  normal: 7,
-  slow: 5,
-  stationary: 7,
-  retrograde: 7
-}
-/** 虚线标记环的半径偏移（与 getMotionRingConfig 保持一致） */
-const MOTION_RING_RADIUS_OFFSET = 5
-/** 箭头与虚线环的额外间距（确保在虚线环外侧） */
-const ARROW_EXTRA_SPACING = 8
-/** 角度转弧度常量 */
-const DEG_TO_RAD = Math.PI / 180
-
-/** 默认光晕配置（按 haloLevel 映射） */
-const getDefaultHalos = (level: number): Halo[] => {
-  switch (level) {
-    case 1: return [{ radius: 8, opacity: 0.2 }]
-    case 2: return [{ radius: 12, opacity: 0.2 }, { radius: 8, opacity: 0.4 }]
-    case 3: return [{ radius: 16, opacity: 0.3 }, { radius: 12, opacity: 0.5 }, { radius: 8, opacity: 0.7 }]
-    default: return []
-  }
-}
-
-/** 处理后的天体列表（合并默认值） */
-const processedItems = computed(() => {
-  return props.data.items.map((item) => {
-    // 光晕来源：item.haloLevel > item.highlightLevel > 默认 2
-    const hl = item.haloLevel ?? (item.highlightLevel || (item.highlight ? 2 : 0))
-    // 默认尺寸：14px
-    const size = item.size ?? 14
-    // 光晕配置：data.defaultHalos 优先，否则按 haloLevel 生成
-    const halos = props.data.defaultHalos ?? getDefaultHalos(hl)
-
-    return {
-      ...item,
-      angle: normalizeAngle(item.angle),
-      size,
-      halos,
-      symbolColor: item.symbolColor ?? '#fff'
-    }
-  })
-})
-
-/**
- * 运动状态标记环配置
- */
-interface MotionRingConfig {
-  radiusOffset: number
-  strokeWidth: number
-  color: string
-  dashArray: string
-  animationDur: string
-  direction: number
-}
-
-/**
- * 生成运动状态标记环的渲染配置
- *
- * 通过虚线旋转速度和方向直观表示行星运动状态，
- * 使用统一的 MOTION_VISUAL_CONFIG 确保全项目颜色一致。
- *
- * @param motion 行星运动状态对象
- * @param mansionEvent 守宿事件信息（预留）
- * @returns 标记环配置对象，normal 状态返回 null 不渲染
- */
-const getMotionRingConfig = (
-  motion: PlanetMotion | undefined,
-  mansionEvent: BodyState['mansionEvent']
-): MotionRingConfig | null => {
-  if (!motion || motion.state === 'normal') {
-    // 正常顺行不显示额外标记环，保持界面简洁
-    return null
-  }
-
-  // 守宿事件：外层加粗实线环（预留功能）
-  if (mansionEvent?.type === 'stationing') {
-    return {
-      radiusOffset: 7,
-      strokeWidth: 3,
-      color: '#AA44FF',
-      dashArray: 'none',
-      animationDur: 'none',
-      direction: 0
-    }
-  }
-
-  // 各运动状态的动画配置
-  const baseConfig = {
-    radiusOffset: MOTION_RING_RADIUS_OFFSET,
-    strokeWidth: 2,
-    color: MOTION_VISUAL_CONFIG[motion.state].color,
-    dashArray: '4,2'
-  }
-
-  switch (motion.state) {
-    case 'fast':
-      return { ...baseConfig, animationDur: '0.5s', direction: -1 }
-    case 'slow':
-      return { ...baseConfig, animationDur: '2s', direction: -1 }
-    case 'retrograde':
-      return { ...baseConfig, animationDur: '1s', direction: 1 }
-    case 'stationary':
-      return { ...baseConfig, animationDur: 'none', direction: 0 }
-    default:
-      return null
-  }
-}
-
-/**
- * 箭头位置与旋转参数
- */
-interface ArrowPosition {
-  pos: { x: number; y: number }
-  rotation: number
-  path: string
-  color: string
-}
-
-/**
- * 运动状态箭头完整配置
- */
-interface ArrowParams {
-  front: ArrowPosition
-  back: ArrowPosition | null
-  isStationary: boolean
-  size: number
-}
-
-/**
- * 计算运动状态箭头的渲染参数
- *
- * 设计原则：箭头放置于【运动方向前方】，尖端沿切线指向运动方向。
- * 使用统一的 MOTION_VISUAL_CONFIG 确保全项目视觉一致性。
- *
- * 核心几何计算（顺时针坐标系）：
- *   右侧行星（0°）示例：
- *     顺行逆时针 → 切线向上 = 270° = 0° - 90°
- *     逆行顺时针 → 切线向下 = 90° = 0° + 90°
- *
- * @param item 天体数据项（含角度、尺寸等）
- * @param baseCoord 天体的绝对坐标（x, y）
- * @param motion 行星运动状态对象
- * @returns 箭头渲染参数对象，normal 状态返回 null
- */
-const getArrowParams = (
-  item: BodyRingData['items'][0],
-  baseCoord: { x: number; y: number },
-  motion: PlanetMotion | undefined
-): ArrowParams | null => {
-  if (!motion || motion.state === 'normal' || motion.arrowDirection === 'none') {
-    return null
-  }
-
-  const config = MOTION_VISUAL_CONFIG[motion.state]
-  const arrowSize = ARROW_SIZE_MAP[motion.state]
-  const isStationary = motion.state === 'stationary'
-
-  // SVG 箭头路径定义：箭尾在原点 (0,0)，尖端朝左（180° 方向）
-  const arrowPath = `M 0,0 L ${-arrowSize},${-arrowSize * 0.6} L ${-arrowSize * 0.4},0 L ${-arrowSize},${arrowSize * 0.6} Z`
-
-  // 箭头总间距：天体尺寸 + 虚线环偏移 + 额外间距（确保在虚线环外侧）
-  const arrowSpacing = (item.size ?? 14) + MOTION_RING_RADIUS_OFFSET + ARROW_EXTRA_SPACING
-
-  const isCCW = props.rotationDirection === 'counterclockwise'
-
-  // 计算运动方向的切线角度（右侧行星0°：顺行向上=270°，逆行向下=90°）
-  const forwardDirection = motion.state === 'retrograde' ? item.angle + 90 : item.angle - 90
-  const tangentAngle = isCCW ? -forwardDirection : forwardDirection
-
-  // 切线方向单位向量（箭头沿切线方向偏移，而非径向
-  const tangentRad = tangentAngle * DEG_TO_RAD
-  const tangentX = Math.cos(tangentRad)
-  const tangentY = Math.sin(tangentRad)
-
-  // 箭头旋转角度：使朝左的箭头旋转到切线方向
-  const arrowRotation = isCCW ? -forwardDirection : forwardDirection
-
-  // 构建前向箭头位置
-  const frontOffset = { x: tangentX * arrowSpacing, y: tangentY * arrowSpacing }
-
-  const front: ArrowPosition = {
-    pos: { x: baseCoord.x + frontOffset.x, y: baseCoord.y + frontOffset.y },
-    rotation: arrowRotation,
-    path: arrowPath,
-    color: config.color
-  }
-
-  // 留守状态：切线反方向也放置标记
-  const back = isStationary
-    ? {
-        pos: { x: baseCoord.x - frontOffset.x, y: baseCoord.y - frontOffset.y },
-        rotation: arrowRotation + 180,
-        path: arrowPath,
-        color: config.color
-      }
-    : null
-
-  return { front, back, isStationary, size: arrowSize }
-}
-
-/** 计算天体实际坐标（含黄纬偏移） */
-const getBodyCoordinates = (longitude: number, latitude: number | undefined, latScale: number | undefined) => {
-  const base = polarToCartesian(longitude, bandMidRadius.value, props.rotationDirection)
-  if (!latScale || !latitude || Math.abs(latitude) < 0.5) {
-    return { base, actual: base, hasOffset: false }
-  }
-
-  // 沿径向方向偏移
-  const perpX = base.x / bandMidRadius.value
-  const perpY = base.y / bandMidRadius.value
-  const offset = Math.sin((latitude * Math.PI) / 180) * latScale
-
-  // 约束到环带内
-  const haloMargin = 16
-  const minR = props.innerRadius + haloMargin
-  const maxR = props.radius - haloMargin
-  const targetR = Math.min(Math.max(bandMidRadius.value + offset, minR), maxR)
-  const actualOffset = targetR - bandMidRadius.value
-
-  return {
-    base,
-    actual: {
-      x: base.x + perpX * actualOffset,
-      y: base.y + perpY * actualOffset
-    },
-    hasOffset: true
-  }
-}
+/** 处理后的天体列表（委托 bodyRing 纯函数标准化） */
+const processedItems = computed(() => processBodyItems(props.data.items, props.data.defaultHalos))
 </script>
 
 <template>
@@ -328,7 +105,7 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
           :class="{ retrograde: item.state?.retrograde }"
         >
           <!-- 坐标计算 -->
-          <template v-for="(coord, cIdx) in [getBodyCoordinates(item.angle, item.state?.latitude, data.latScale)]" :key="'coord-' + cIdx">
+          <template v-for="(coord, cIdx) in [getBodyCoordinates(item.angle, item.state?.latitude, data.latScale, bandMidRadius, props.innerRadius, props.radius, props.rotationDirection)]" :key="'coord-' + cIdx">
             <!-- 黄纬偏移指示线 -->
             <line
               v-if="data.showLatLine && coord.hasOffset"
@@ -367,7 +144,7 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
             </template>
 
             <!-- 运动方向箭头：单箭头仅放置于运动方向前方 -->
-            <template v-for="(arrowParams, aIdx) in [props.showMotionArrow && getArrowParams(item, coord.actual, item.state?.motion)]" :key="'arrows-' + aIdx">
+            <template v-for="(arrowParams, aIdx) in [props.showMotionArrow && getArrowParams(item.angle, item.size ?? 14, coord.actual, item.state?.motion, props.rotationDirection)]" :key="'arrows-' + aIdx">
               <!-- 非留守状态：单箭头指示运动方向 -->
               <template v-if="arrowParams && !arrowParams.isStationary">
                 <path
