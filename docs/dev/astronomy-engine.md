@@ -11,7 +11,7 @@
   - 圆心组件：[`centers/BeidouCenter.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/BeidouCenter.vue)、[`centers/SuzhouSkyMap.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/SuzhouSkyMap.vue)、[`centers/HelioOrbits.vue`](https://github.com/andaoai/O/blob/main/src/components/centers/HelioOrbits.vue)
   - 圆环组件：[`rings/SevenLuminariesRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/SevenLuminariesRing.vue)、[`rings/planet-mansion/SkyChart.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/planet-mansion/SkyChart.vue)、[`rings/tropical-year/MoonPhaseRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/tropical-year/MoonPhaseRing.vue)、[`rings/guan-dou/SunDiurnalRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/guan-dou/SunDiurnalRing.vue)、[`rings/guan-dou/MonthEstablishRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/guan-dou/MonthEstablishRing.vue)、[`rings/guan-dou/MonthGeneralRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/guan-dou/MonthGeneralRing.vue)、[`rings/guan-dou/SolarTermsRing.vue`](https://github.com/andaoai/O/blob/main/src/components/rings/guan-dou/SolarTermsRing.vue)
   - Composable：[`composables/useSevenLuminaries.ts`](https://github.com/andaoai/O/blob/main/src/composables/useSevenLuminaries.ts)
-  - 工具层：[`utils/celestial.ts`](https://github.com/andaoai/O/blob/main/src/utils/celestial.ts)、[`utils/planetMansion.ts`](https://github.com/andaoai/O/blob/main/src/utils/planetMansion.ts)、[`utils/skyProjection.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyProjection.ts)、[`utils/skyEvents.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyEvents.ts)、[`utils/beidou.ts`](https://github.com/andaoai/O/blob/main/src/utils/beidou.ts)、[`utils/ziwei.ts`](https://github.com/andaoai/O/blob/main/src/utils/ziwei.ts)、[`utils/jianJiang.ts`](https://github.com/andaoai/O/blob/main/src/utils/jianJiang.ts)
+  - 工具层：[`utils/celestial.ts`](https://github.com/andaoai/O/blob/main/src/utils/celestial.ts)、[`utils/planetMansion.ts`](https://github.com/andaoai/O/blob/main/src/utils/planetMansion.ts)、[`utils/skyProjection.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyProjection.ts)、[`utils/skyEvents.ts`](https://github.com/andaoai/O/blob/main/src/utils/skyEvents.ts)、[`utils/beidou.ts`](https://github.com/andaoai/O/blob/main/src/utils/beidou.ts)、[`utils/ziwei.ts`](https://github.com/andaoai/O/blob/main/src/utils/ziwei.ts)、[`utils/jianJiang.ts`](https://github.com/andaoai/O/blob/main/src/utils/jianJiang.ts)、[`utils/conjunctions.ts`](https://github.com/andaoai/O/blob/main/src/utils/conjunctions.ts)（会合周期二分搜索）
 
 ## 🚀 项目中的实际应用
 
@@ -103,15 +103,19 @@ const controlledTime = ref(new Date())
 
 `utils/planetMansion.ts` 把太阳、月亮、水金火木土五星的赤经映射到二十八宿区间，配合 `useSevenLuminaries` composable 在 `SevenLuminariesRing`、`SkyChart` 中实时点亮当日入宿。
 
-### 2. 岁差修正的北斗指向
+### 2. 五星会合周期计算
+
+`utils/conjunctions.ts` 利用 astronomy-engine 的二分搜索（`SearchRelativeLongitude`）计算任意两颗行星的会合时间点。模块级 Map 缓存（FIFO 淘汰，max=100）避免同一窗口重复查询。`ConjunctionCyclesView` 消费此工具，绘制五星会合赤经序列连线图。
+
+### 3. 岁差修正的北斗指向
 
 `utils/beidou.ts` 用 astronomy-engine 计算北斗七星在指定时刻的真实赤经赤纬（含 J2000 岁差修正），`BeidouCenter` 与 `SuzhouSkyMap` 都从这里取数，让斗柄随本地恒星时旋转，正确指向所值宿。
 
-### 3. 月相几何绘制
+### 4. 月相几何绘制
 
 `utils/moonPhase.ts` 把 astronomy-engine 计算的月相角转成 SVG 弧段参数，`MoonPhaseRing` 直接消费——当日月相形状、明暗方向都由时间派生。
 
-### 4. 与极坐标系统的集成
+### 5. 与极坐标系统的集成
 
 所有位置都用统一的极坐标工具 `utils/geometry.ts` → `polarToCartesian` 转换，避免各组件重复写三角函数：
 

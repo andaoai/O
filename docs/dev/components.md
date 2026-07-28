@@ -30,6 +30,9 @@
   - [useSidebarLayout](#usesidebarlayout-侧栏折叠状态)
   - [useUrlTime](#useurltime-url--受控时间双向绑定)
   - [useLiveClock](#useliveclock-1hz-实时时钟)
+  - [useDayGridContext](#usedaygridcontext-日粒度年历上下文)
+  - [useTrueHeading](#usetrueheading-真北朝向计算)
+  - [useGuaRelationLayout](#useguarelationlayout-卦关系盘环配置)
 - [平台层](#平台层)
   - [罗盘注册表与路由](#罗盘注册表与路由)
 - [开发指南](#开发指南)
@@ -45,11 +48,13 @@
 ```
 RingItemBase (所有 item 通用)
   ├─ RingItem (段导向分格)
-  └─ PointItem (点导向点)
+  ├─ PointItem (点导向点)
+  └─ BodyItem (天体导向)
 
 RingDataBase (所有环通用)
   ├─ RingData (段导向环)
-  └─ PointRingData (点导向环)
+  ├─ PointRingData (点导向环)
+  └─ BodyRingData (天体导向环)
 ```
 
 **基础公共字段**（`RingItemBase`）：
@@ -819,6 +824,46 @@ const { controlledTime, hasUrlTime, clearUrlTime } = useUrlTime()
 
 给 `LiushiJiaziView` / `PlanetMansionView` 提供每秒推进的实时时钟。用户主动改时间（或 URL 携带 `?t=`）时自动退出 liveMode。
 
+### useDayGridContext 日粒度年历上下文
+
+**位置**：`src/composables/useDayGridContext.ts`
+
+奇门遁甲盘和五运六气盘共用的日粒度年历上下文。提供当日干支序号、24 节气定位、农历日期等信息，避免多个环组件重复计算。组件通过 `useDayGridContext()` 读取共享状态，无需通过 `time` prop 传入时间。
+
+```typescript
+const ctx = useDayGridContext()
+// ctx.jiaziIndex — 当日甲子序号（0-359）
+// ctx.solarTermIndex — 当前节气索引
+// ctx.lunarMonth — 农历月份
+```
+
+### useTrueHeading 真北朝向计算
+
+**位置**：`src/composables/useTrueHeading.ts`
+
+将手机传感器原始数据（alpha/beta/gamma）与磁偏角结合，计算真北朝向，并驱动盘面梯度平滑跟随手机旋转。从 `FengShui24View` 提取的领域逻辑。
+
+```typescript
+const { trueHeading, displayHeading, directionLabel, betaDeviation } = useTrueHeading(
+  phoneOrientation,
+  magneticDeclination
+)
+```
+
+### useGuaRelationLayout 卦关系盘环配置
+
+**位置**：`src/composables/useGuaRelationLayout.ts`
+
+从 `GuaRelationView` 提取的领域逻辑：环配置构建、全局模式悬停配对、聚焦模式焦点卦汇总等。分离视图的布局编排与业务计算。
+
+```typescript
+const { rings, hoveredPair, focusedGuaLabel, focusSummary } = useGuaRelationLayout({
+  layout: 'jingfang', // 或 'xiantian'
+  mode: 'focus',
+  selectedRelations: ['feifu', 'hu']
+})
+```
+
 ---
 
 ## 平台层
@@ -849,6 +894,8 @@ export const compasses: CompassMeta[] = [
   { id: 'suzhou-stellar-map',  name: '苏州石刻天文图',     description: '南宋 1247 年苏州府学石刻复原……', category: '天文' },
   { id: 'fengshui24',          name: '二十四山风水盘',     description: '手机端磁力计驱动的风水罗盘……', category: '风水' },
   { id: 'qi-men-dun-jia',      name: '阴阳遁九局盘',       description: '奇门遁甲阴阳遁九局体系可视化……', category: '术数' },
+  { id: 'huangdi-neijing',     name: '黄帝内经·五运六气盘', description: '五运六气学说可视化……',           category: '术数' },
+  { id: 'conjunction-cycles',  name: '会合周期盘',         description: '五星会合赤经序列连线……',        category: '天文' },
 ]
 ```
 
@@ -901,6 +948,7 @@ const { controlledTime } = useUrlTime()
 | `HourShichenRing.vue` | Segment | 12 时辰赤道环，当前时辰高亮 |
 | `SunDiurnalRing.vue` | Segment | 日周：白昼-曙暮-夜三层弧背景，地轴倾斜驱动 |
 | `guan-dou/SolarTermsRing.vue` | Point | 观斗盘节气刻度（黄经→赤道映射） |
+| `conjunction-cycles/BranchZodiacRing.vue` | Segment | 十二地支宫格环（黄经/赤经对齐） |
 
 新增圆心组件：
 
@@ -908,6 +956,7 @@ const { controlledTime } = useUrlTime()
 |------|------|
 | `BeidouCenter.vue` | 北斗七星（岁差修正）+ 紫微垣东西两藩 + 勾陈一 + 地平圈（浏览器定位） |
 | `SuzhouSkyMap.vue` | 苏州石刻天文图圆心：拱极北斗 + 斗柄随本地恒星时旋转 + 自动标注所指之宿 |
+| `conjunction-cycles/ConjunctionCanvas.vue` | 会合周期连线画布（圆心区连线绘制） |
 
 新增工具函数（Layer 5）：
 
@@ -919,6 +968,9 @@ const { controlledTime } = useUrlTime()
 | `jingFangYao.ts` | 京房爻辞 + 飞伏查询 |
 | `guaRelationArrows.ts` | 京房八宫 64 卦飞伏方向 |
 | `wuxing.ts` | 五行相生相克 + 配色 |
+| `conjunctions.ts` | 五星会合周期二分搜索（astronomy-engine） |
+| `bodyRing.ts` | 天体圆环纯函数（processBodyItems / getArrowParams 等） |
+| `guaDeriveChain.ts` | 卦关系推衍链：从基准卦逐级派生目标卦序列 |
 
 ---
 

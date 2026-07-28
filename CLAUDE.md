@@ -198,6 +198,7 @@ const ringData = computed(() => transform(timeRef.value))
 | `wuyun-liuqi/KeQiRing.vue` | Segment | 五运六气·客气 | 年支推六步，跨冬至向本年终气渐变 |
 | `wuyun-liuqi/MainYunRing.vue` | Segment | 五运·主运 | 每年木火土金水固定五步，太少交替 |
 | `wuyun-liuqi/KeYunRing.vue` | Segment | 五运·客运 | 初运=岁运，按相生顺序排五步 |
+| `conjunction-cycles/BranchZodiacRing.vue` | Segment | 十二地支宫格 | 按黄经/赤经对齐的十二地支宫位（每宫30°） |
 
 ---
 
@@ -223,11 +224,10 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 | `RingStack.vue` | 同心环自动布局容器，唯一状态来源的分发枢纽 |
 | `DataRing.vue` | 数据→渲染桥梁：`RingData` → `CircleRing` |
 | `DataPointRing.vue` | 数据→渲染桥梁：`PointRingData` → `PointRing` |
-| `DataBodyRing.vue` | 数据→渲染桥梁：`BodyRingData` → `BodyMarker` |
+| `DataBodyRing.vue` | 数据→渲染桥梁：`BodyRingData` → `BodyMarker`，业务逻辑委托给 `utils/bodyRing.ts` 纯函数 |
 
 **共享基础能力：**
-- `useRingBase.ts` — 所有环的通用逻辑（半径解析、高亮层级、字体大小、角度计算）
-- `useHighlight.ts` — 三级高亮体系（微亮=1 / 中亮=2 / 强亮=3）
+- `useRingBase.ts` — 所有环的通用逻辑（半径解析、高亮层级、字体大小、角度计算），内含 `useHighlight()` 高亮层级函数
 
 ---
 
@@ -266,6 +266,7 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 | `jingFangYao.ts` | 京房爻辞 | 京房八宫飞伏关系 + 爻辞查询 |
 | `guaRelationArrows.ts` | 飞伏关系 | 京房八宫 64 卦飞伏（fei / fu）方向 |
 | `guaRelations.ts` | 卦关系统一计算 | 飞伏/互卦/对卦/综卦/交卦 五种关系纯函数 |
+| `guaDeriveChain.ts` | 卦关系推衍链 | 从基准卦逐级派生目标卦序列 |
 | `qimenDunJia.ts` | 奇门遁甲排局 | 阴阳遁 + 三元 + 超神接气 + 奇门置闰（冬至 0° 起序） |
 | `reverseGeocode.ts` | 逆地理编码 | 经纬度 → 行政区（观斗盘/风水盘定位反查） |
 | `bodyRing.ts` | 天体圆环工具 | 天体坐标/运动状态/箭头参数纯函数（DataBodyRing 消费） |
@@ -340,6 +341,7 @@ interface CenterProps {
 | `qi-men-dun-jia/InfoCenter.vue` | 奇门信息卡 | QiMenDunJiaView 圆心：阳/阴遁 · 节气 · 三元 · 局 · 超神/接气/正授状态 |
 | `qi-men-dun-jia/LuoshuCenter.vue` | 洛书九宫 | QiMenDunJiaView 圆心叠层：河图洛书 + 后天八卦 + 当前局所在宫高亮 |
 | `wuyun-liuqi/WuYunInfoCenter.vue` | 五运六气信息卡 | HuangDiNeiJingView 圆心：年干支 · 岁运 · 司天 · 在泉 · 当令主客气与主客运 · 干支四柱 |
+| `conjunction-cycles/ConjunctionCanvas.vue` | 会合周期连线 | ConjunctionCyclesView 圆心：五星会合赤经序列连线画布 |
 
 **BaseCenter 基础容器：**
 - 可选的辅助容器，用于复杂插槽分发
@@ -579,6 +581,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   │       ├── KeQiRing.vue               # 五运六气·客气环（年支推六步）
 │   │       ├── MainYunRing.vue            # 五运·主运环（木火土金水，太少交替）
 │   │       └── KeYunRing.vue              # 五运·客运环（岁运起，相生排五步）
+│   │   └── conjunction-cycles/
+│   │       └── BranchZodiacRing.vue       # 十二地支宫格环（黄经/赤经对齐）
 │   ├── centers/                     # Layer 3: Center Domain Components
 │   │   │  ─── 共享（根目录，全局注册供 md 内嵌） ───
 │   │   ├── GuaRelationCenter.vue   # 飞伏/互卦/对卦/综卦/交卦有向箭头
@@ -597,6 +601,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   │       └── LuoshuCenter.vue           # 洛书九宫 + 河图 + 后天八卦
 │   │   └── wuyun-liuqi/
 │   │       └── WuYunInfoCenter.vue        # 年干支 · 岁运 · 司天 · 在泉 · 当令主客气/主客运卡
+│   │   └── conjunction-cycles/
+│   │       └── ConjunctionCanvas.vue      # 会合周期连线画布（圆心区连线绘制）
 │   ├── sidebar/                     # 罗盘左侧嵌入式 Sidebar（取代旧 Control 面板）
 │   │   ├── CompassSidebar.vue      # Sidebar 外壳（挂在 CompassLayout，单点挂载）
 │   │   ├── SidebarHeader.vue       # 顶部：返回罗盘列表 + 当前罗盘名 + 折叠按钮
@@ -641,7 +647,7 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │       └── jingFangEightPalaces.ts # 京房八宫六十四卦定义
 ├── composables/
 │   ├── useAnimation.ts             # Animation control
-│   ├── useRingBase.ts              # Layer 4 foundation: all ring shared logic + usePolar
+│   ├── useRingBase.ts              # Layer 4 foundation: all ring shared logic + usePolar + useHighlight
 │   ├── useSevenLuminaries.ts       # Seven luminaries unified calculation
 │   ├── useTimeController.ts        # 受控时间：播放/步进/输入解析（time ref 由 View 提供）
 │   ├── useTimeShortcuts.ts         # 时间快捷键（Space/R/Y/M/D/H/N/S）
@@ -654,8 +660,10 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   ├── useGeolocation.ts           # 浏览器定位（观斗盘/风水盘使用）
 │   ├── usePhoneOrientation.ts      # DeviceOrientation 手机磁北朝向（风水盘）
 │   ├── useMagneticDeclination.ts   # WMM 地磁模型磁偏角校正（风水盘）
+│   ├── useTrueHeading.ts           # 真北朝向计算 + 手机旋转梯度平滑追踪
 │   ├── useMediaQuery.ts            # 媒体查询响应式 composable
 │   ├── useGuaRelationInteraction.ts # 卦关系盘交互（选卦/关系类型切换）
+│   ├── useGuaRelationLayout.ts     # 卦关系盘环配置与面板汇总（从 GuaRelationView 提取）
 │   ├── useLiveClock.ts             # 1Hz 实时时钟 composable（Liushi/PlanetMansion View）
 │   ├── useDayGridContext.ts        # 日粒度年历上下文（奇门盘 & 黄帝内经盘共用）
 │   └── useUrlTime.ts               # URL ↔ controlledTime 双向绑定（History API 实现）
@@ -683,6 +691,7 @@ src/                               # 组件库（无 main.ts / App.vue / router�
     ├── jingFangYao.ts              # 京房爻辞 + 飞伏查询
     ├── guaRelationArrows.ts        # 京房八宫 64 卦飞伏方向（用于箭头渲染）
     ├── guaRelations.ts             # 卦关系统一计算：飞伏/互卦/对卦/综卦/交卦
+    ├── guaDeriveChain.ts           # 卦关系推衍链：从基准卦逐级派生目标卦序列
     ├── qimenDunJia.ts              # 奇门遁甲阴阳遁九局排局（超神/接气/正授）
     ├── reverseGeocode.ts           # 逆地理编码：经纬度 → 行政区
     └── bodyRing.ts                 # 天体圆环工具：坐标/运动状态/箭头参数纯函数
