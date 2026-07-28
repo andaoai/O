@@ -18,7 +18,7 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { ref, computed, readonly, type Ref, type DeepReadonly } from 'vue'
+import { ref, computed, readonly, onBeforeUnmount, type Ref, type DeepReadonly } from 'vue'
 
 /** 地理定位状态机 */
 export type GeolocationStatus = 'idle' | 'pending' | 'success' | 'denied'
@@ -241,6 +241,9 @@ export const useGeolocation = (options: UseGeolocationOptions): UseGeolocationRe
       watchId = null
     }
   }
+
+  // ─── 组件卸载时自动清理 watchPosition ──────────────────────
+  onBeforeUnmount(stop)
 
   // ─── 自动查询权限状态（不弹框） ───────────────────────────
   if (permissionsQuerySupported()) {

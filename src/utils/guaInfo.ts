@@ -21,9 +21,12 @@ import { najiaLines } from './najia'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName, getUnicodeHexagram } from '@/data/sixtyFourGua'
 import { BRANCHES } from './constants/ganzhi'
-import { WUXING_COLORS, BRANCH_ELEMENTS } from './wuxing'
+import { WUXING_COLORS, BRANCH_ELEMENTS, type WuxingElement } from './wuxing'
 
-export type WuXing = '木' | '火' | '土' | '金' | '水'
+/**
+ * 五行类型（re-export from wuxing.ts，历史名保留以兼容现有 import）
+ */
+export type WuXing = WuxingElement
 export type LiuQin = '父母' | '子孙' | '官鬼' | '妻财' | '兄弟'
 
 /**
