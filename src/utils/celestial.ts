@@ -457,7 +457,11 @@ export interface EquatorialPosition {
 /** 地心观测者（赤经赤纬以地心为准，位置无关） */
 const GEOCENTRIC = new Observer(0, 0, 0)
 
-/** astronomy-engine 自定义恒星槽位（Star1~Star8 共 8 个，循环复用） */
+/**
+ * astronomy-engine 自定义恒星槽位（Star1~Star8 共 8 个，循环复用）
+ * ⚠️ 模块级常量，非副作用——astronomy-engine 要求预定义 Body 槽位，
+ *    DefineStar() 按 slot 索引覆写槽位内容，8 槽循环足够 28 宿距星使用。
+ */
 const STAR_SLOTS = [
   Body.Star1, Body.Star2, Body.Star3, Body.Star4,
   Body.Star5, Body.Star6, Body.Star7, Body.Star8

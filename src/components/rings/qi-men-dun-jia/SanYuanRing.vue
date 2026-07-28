@@ -2,7 +2,7 @@
 /**
  * 奇门 · 三元段环（上元 / 中元 / 下元）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与外层「六轮甲子日环」共享 0° 起点（= 上元甲子日）
@@ -19,14 +19,13 @@
  *     所以下元的实际长度会自然浮动 5-7 天，不需要置闰。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { YUAN_COLORS, YUAN_NAMES } from '@/utils/qimenDunJia'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

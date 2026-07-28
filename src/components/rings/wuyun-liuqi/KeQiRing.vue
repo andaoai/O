@@ -2,7 +2,7 @@
 /**
  * 奇门 · 客气环 —— 五运六气之「客气」六步排布（日粒度 + 冬至叠加）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与主气环完全同构：
@@ -27,7 +27,7 @@
  *      —— 冬至日始终为紫，但每年的紫是从不同客气本色渐变来的。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
@@ -35,7 +35,6 @@ import { usePolar } from '@/composables/useRingBase'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

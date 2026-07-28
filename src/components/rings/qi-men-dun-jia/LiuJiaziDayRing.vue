@@ -2,9 +2,7 @@
 /**
  * 六轮甲子日环（60 甲子 × 6 轮 = 360 天） — 奇门遁甲最外环
  *
- * ⚠️ 时间状态从 useQiMenContext 共享上下文读取（跨天才重算）。
- *    time prop 保留仅供架构兼容 —— 实际数据源来自 View 侧的
- *    provideQiMenContext(controlledTime)。
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取（跨天才重算）。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 环 0° 起点 = 「上元甲子日」（冬至前后最近的甲子日）
@@ -20,7 +18,7 @@
  *  即是「超神/接气/正授」的天文根源。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { ganzhiName } from '@/utils/constants/ganzhi'
@@ -28,8 +26,6 @@ import { YUN_COLORS, jiaziIndexAt } from '@/utils/qimenDunJia'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  /** 时间源（MaybeRef<Date>） */
-  time?: MaybeRef<Date>
   /** 环外半径 */
   radius?: number
   /** 环内半径 */

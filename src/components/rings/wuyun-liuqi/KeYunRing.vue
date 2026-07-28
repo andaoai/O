@@ -2,7 +2,7 @@
 /**
  * 奇门 · 客运环 —— 五运六气之「客运」五步排布（日粒度 + 冬至叠加）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与主运环同构：段边界完全一致（大寒起 5 段 × 72°）
@@ -14,7 +14,7 @@
  *  颜色沿用主气/客气/主运的五行本色，跨 W1 段走「紫 → 本色」渐变。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
@@ -23,7 +23,6 @@ import { useDayGridContext } from '@/composables/useDayGridContext'
 import type { WuYunStep } from '@/utils/qimenDunJia'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

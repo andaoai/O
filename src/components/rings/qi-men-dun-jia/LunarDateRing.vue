@@ -2,7 +2,7 @@
 /**
  * 奇门 · 农历日期环（自绘 SVG）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与外层「六轮甲子日环 / 24 节气环」共享 0° 起点（= 上元甲子日）
@@ -23,14 +23,13 @@
  *     故与 GuaRing 类似自绘 SVG（PolarCanvas + arcPath + polarToCartesian）。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

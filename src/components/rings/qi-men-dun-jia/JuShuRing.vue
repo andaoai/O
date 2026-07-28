@@ -2,7 +2,7 @@
 /**
  * 奇门 · 九局数段环（1~9 洛书方位色）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与外层「六轮甲子日环」共享 0° 起点（= 上元甲子日）
@@ -19,14 +19,13 @@
  *   · 夏至→大雪 阴遁 12 节气（青蓝冷色系为主）
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { JU_COLORS } from '@/utils/qimenDunJia'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

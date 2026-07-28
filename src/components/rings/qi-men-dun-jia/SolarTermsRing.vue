@@ -2,9 +2,7 @@
 /**
  * 奇门 · 二十四节气段环 —— 以冬至为岁首、与六轮甲子日环严格对齐
  *
- * ⚠️ 时间状态从 useQiMenContext 共享上下文读取（跨天才重算）。
- *    time prop 保留仅供架构兼容 —— 实际数据源来自 View 侧的
- *    provideQiMenContext(controlledTime)。
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取（跨天才重算）。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与外层「六轮甲子日环」共享 0° 起点（= 上元甲子日）
@@ -28,13 +26,12 @@
  *  环上每年漂 +5 天，节气整体绕环滑动，最终周期约 72 年一圈。
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import DataRing from '../DataRing.vue'
 import type { RingData, RingItem } from '@/data/rings/types'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number

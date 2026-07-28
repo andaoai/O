@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import DataRing from '../DataRing.vue'
 import { twentyFourMountains, MOUNTAIN_CENTERS, MOUNTAIN_NAMES } from '@/data/rings/twentyFourMountains'
 import type { RingData } from '@/data/rings/types'
@@ -23,14 +23,11 @@ import type { RingData } from '@/data/rings/types'
  *  使用场景：FengShui24View.vue（手机罗盘）
  *
  *  ⚠️ 五层架构：Layer 3 Domain Component
- *     接受 MaybeRef<Date>（太阳位置用），FengShui24View 中可不传 time
- *     （太阳高亮非必需，仅手机朝向高亮亦可）。
+ *     纯静态段环，无时间依赖。
  * ═══════════════════════════════════════════════════════════════
  */
 
 interface Props {
-  /** 时间源（支持 ref 或 plain value，用于太阳位置 → highlightAngle 计算链） */
-  time?: MaybeRef<Date>
   /** 环外半径（RingStack 自动注入） */
   radius?: number
   /** 环内半径（RingStack 自动注入） */

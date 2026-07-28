@@ -3,7 +3,7 @@
  * 奇门 · 五运六气环 —— 一年六气（厥阴风木 / 少阴君火 / 少阳相火 /
  *                                     太阴湿土 / 阳明燥金 / 太阳寒水）
  *
- * ⚠️ 时间驱动架构：接受 MaybeRef<Date>，内部统一为 timeRef computed
+ * ⚠️ 时间状态从 useDayGridContext 共享上下文读取。
  *
  * ═══════════════════════════════════════════════════════════════
  *  🔑 与外层「六轮甲子日环 / 24 节气环 / 农历日期环」共享 0° 起点
@@ -38,7 +38,7 @@
  *  🏷️ 六气标签逐字沿弧线径向分布，标签中心 = 六气几何中点
  * ═══════════════════════════════════════════════════════════════
  */
-import { computed, type MaybeRef } from 'vue'
+import { computed } from 'vue'
 import { SolarDay } from 'tyme4ts'
 import PolarCanvas from '../../base/PolarCanvas.vue'
 import { arcPath, polarToCartesian, radialTextRotation } from '@/utils/geometry'
@@ -46,7 +46,6 @@ import { usePolar } from '@/composables/useRingBase'
 import { useDayGridContext } from '@/composables/useDayGridContext'
 
 interface Props {
-  time?: MaybeRef<Date>
   radius?: number
   innerRadius?: number
   startDegree?: number
