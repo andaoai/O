@@ -65,7 +65,6 @@ const resolvedInnerRadius = computed(() => {
   return props.radius - (props.unicodeFontSize + props.nameFontSize + pad)
 })
 
-const band = computed(() => props.radius - resolvedInnerRadius.value)
 const midRadius = computed(() => (props.radius + resolvedInnerRadius.value) / 2)
 
 // 卦符（外）+ 卦名（内），组合几何居中于环带中线

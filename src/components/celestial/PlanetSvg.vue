@@ -80,7 +80,6 @@ const svgData: Record<PlanetSvgKey, { path: string; color: string; baseSize: num
   }
 }
 
-const actualSize = computed(() => svgData[props.kind].baseSize * props.scale)
 const actualColor = computed(() => props.haloColor || svgData[props.kind].color)
 </script>
 

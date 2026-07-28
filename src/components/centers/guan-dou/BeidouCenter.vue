@@ -291,11 +291,8 @@ const computeHorizonCardinals = (actualRadius: number) => {
         />
 
         <!-- 外接/内接赤纬圈（揭示天极等距投影的物理源头） -->
-        <template
-          v-if="showDeclinationBounds"
-          v-for="bounds in [computeDeclinationBounds(actualRadius)]"
-          :key="'dec-bounds'"
-        >
+        <template v-if="showDeclinationBounds">
+          <template v-for="(bounds, bIdx) in [computeDeclinationBounds(actualRadius)]" :key="'dec-bounds-' + bIdx">
           <!-- 外圈：离极最远的星所在赤纬 -->
           <circle
             cx="0"
@@ -337,19 +334,17 @@ const computeHorizonCardinals = (actualRadius: number) => {
             dominant-baseline="baseline"
             opacity="0.75"
           >δ {{ formatDec(bounds.inner.dec) }}</text>
+          </template>
         </template>
 
         <!-- 地平圈（观测者视界，仅由纬度决定 —— 时间演进时不动）
              用洛阳 φ=34.65° 时，"北点"在盘下靠极，"南点"在盘上远离天极。
              这条线把可视天区分为"永不落下的拱极星"与"会升起落下的普通星"。 -->
-        <template
-          v-if="showHorizon"
-          v-for="hz in [{
+        <template v-if="showHorizon">
+          <template v-for="(hz, hzIdx) in [{
             path: computeHorizonPath(actualRadius),
             cardinals: computeHorizonCardinals(actualRadius)
-          }]"
-          :key="'horizon'"
-        >
+          }]" :key="'horizon-' + hzIdx">
           <g :clip-path="`url(#beidou-visible-${(radius as number).toFixed(0)})`">
             <!-- 地平圈曲线（青绿色系，象征"地"与"天"的分界） -->
             <path
@@ -383,11 +378,8 @@ const computeHorizonCardinals = (actualRadius: number) => {
 
           <!-- "地平线"文字标注：贴在北点旁边 —— 北点是地平圈上离天极最近的点，
                 屏幕下方稳定可见；副标题写出观测者纬度，说明这条线由 φ 唯一决定。 -->
-          <template
-            v-if="showLabels"
-            v-for="north in [hz.cardinals.find((c) => c.label === '北')]"
-            :key="'horizon-label'"
-          >
+          <template v-if="showLabels">
+            <template v-for="(north, nIdx) in [hz.cardinals.find((c) => c.label === '北')]" :key="'horizon-label-' + nIdx">
             <g v-if="north">
               <text
                 :x="north.x + 14"
@@ -413,18 +405,17 @@ const computeHorizonCardinals = (actualRadius: number) => {
               >{{ locationLabel }} · φ={{ observerLat.toFixed(2) }}° λ={{ observerLon.toFixed(2) }}°</text>
             </g>
           </template>
+          </template>
+          </template>
         </template>
 
         <!-- 紫微垣：东西两藩 + 北极星（拱极天区宫墙，与北斗共享投影） -->
-        <template
-          v-if="showZiwei"
-          v-for="zw in [{
+        <template v-if="showZiwei">
+          <template v-for="(zw, zwIdx) in [{
             east: computeZiweiWall(actualRadius, ziwei.east),
             west: computeZiweiWall(actualRadius, ziwei.west),
             polaris: computeZiweiPoint(actualRadius, ziwei.polaris)
-          }]"
-          :key="'ziwei'"
-        >
+          }]" :key="'ziwei-' + zwIdx">
           <!-- 东藩连线（紫红色系，象征帝居东墙） -->
           <polyline
             :points="computeWallPoints(zw.east)"
@@ -529,10 +520,11 @@ const computeHorizonCardinals = (actualRadius: number) => {
               stroke-width="2.2"
             >勾陈一</text>
           </g>
+          </template>
         </template>
 
         <!-- 七星坐标（一次派生，模板内多处消费） -->
-        <template v-for="starPoints in [computeStarPoints(actualRadius)]" :key="'star-points'">
+        <template v-for="(starPoints, spIdx) in [computeStarPoints(actualRadius)]" :key="'star-points-' + spIdx">
           <!-- 北斗七星连线 -->
           <polyline
             :points="computePolyPoints(starPoints)"

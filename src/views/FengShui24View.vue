@@ -45,7 +45,7 @@ const geo = useGeolocation({
   enableHighAccuracy: true,      // 罗盘需要高精度
   throttleMs: 2000,              // 2 秒节流，平衡精度与省电
 })
-const { latitude, longitude, accuracy, status: geoStatus, error: geoError,
+const { latitude, longitude, accuracy, status: geoStatus,
         permissionState: geoPermission, needsPermission: geoNeedsPermission,
         isFallback: geoIsFallback, request: geoRequest, reposition: geoReposition } = geo
 

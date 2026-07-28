@@ -67,7 +67,6 @@ const ringData = computed((): PointRingData => {
     const isToday = yao === currentYaoIndex // 当日爻位高亮
     const isCardinal = yao % 90 === 0       // 四正卦位置：0°(坎冬), 90°(震春), 180°(离夏), 270°(兑秋)
     const isGuaStart = yao % 6 === 0         // 每卦起始（6 爻一卦）
-    const guaIndex = Math.floor(yao / 6)     // 卦序号 0-59
 
     let tickInnerRatio: number
     let tickWidth: number

@@ -328,7 +328,7 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
           :class="{ retrograde: item.state?.retrograde }"
         >
           <!-- 坐标计算 -->
-          <template v-for="coord in [getBodyCoordinates(item.angle, item.state?.latitude, data.latScale)]" :key="'coord'">
+          <template v-for="(coord, cIdx) in [getBodyCoordinates(item.angle, item.state?.latitude, data.latScale)]" :key="'coord-' + cIdx">
             <!-- 黄纬偏移指示线 -->
             <line
               v-if="data.showLatLine && coord.hasOffset"
@@ -343,7 +343,7 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
             />
 
             <!-- 运动状态动态标记环：虚线旋转动画直观表现速度与方向 -->
-            <template v-for="ringConfig in [getMotionRingConfig(item.state?.motion, item.state?.mansionEvent)]" :key="'ring'">
+            <template v-for="(ringConfig, rIdx) in [getMotionRingConfig(item.state?.motion, item.state?.mansionEvent)]" :key="'ring-' + rIdx">
               <circle
                 v-if="ringConfig"
                 :cx="slotProps.centerX + coord.actual.x"
@@ -367,7 +367,7 @@ const getBodyCoordinates = (longitude: number, latitude: number | undefined, lat
             </template>
 
             <!-- 运动方向箭头：单箭头仅放置于运动方向前方 -->
-            <template v-for="arrowParams in [props.showMotionArrow && getArrowParams(item, coord.actual, item.state?.motion)]" :key="'arrows'">
+            <template v-for="(arrowParams, aIdx) in [props.showMotionArrow && getArrowParams(item, coord.actual, item.state?.motion)]" :key="'arrows-' + aIdx">
               <!-- 非留守状态：单箭头指示运动方向 -->
               <template v-if="arrowParams && !arrowParams.isStationary">
                 <path

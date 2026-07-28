@@ -56,6 +56,8 @@ export interface RingDataBase {
   circleColor?: string
   /** 圆环边线宽 */
   circleWidth?: number
+  /** 环数据项数组（由子类型定义具体元素类型） */
+  items?: readonly { fontSize?: number }[]
 }
 
 /* ──────────────────────────────────────────────

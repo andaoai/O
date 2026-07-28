@@ -21,8 +21,6 @@
 import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram, bitReverse6, GUA_STEP, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
 import { FEIFU_TABLE } from './guaRelationArrows'
-import type { RotationDirection } from './geometry'
-
 // ─── 关系类型定义 ───
 
 /** 支持的卦关系类型 */

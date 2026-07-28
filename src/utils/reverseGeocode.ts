@@ -15,7 +15,6 @@
 
 import { CITIES, type CityRecord } from '@/data/cities'
 
-const R2D = 180 / Math.PI
 const D2R = Math.PI / 180
 const EARTH_RADIUS_KM = 6371
 

@@ -40,7 +40,7 @@ interface Props {
   rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   radius: 480,
   innerRadius: 452,
   startDegree: -90,

@@ -55,7 +55,7 @@
  */
 import { polarToCartesian, type RotationDirection } from '@/utils/geometry'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
-import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6, BAGUA_NAMES, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE, GUA_STEP, bitReverse6, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
 import type { ShiyingType } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 布局类型 ───

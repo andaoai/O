@@ -1,5 +1,4 @@
 import { computed } from 'vue'
-import type { RingItem, PointItem } from '@/data/rings/types'
 import {
   normalizeAngle,
   polarToCartesian as polarToCartesianRaw,
@@ -150,7 +149,7 @@ export function usePolar(
    ────────────────────────────────────────────── */
 
 export function useRingBase<
-  TData extends RingDataBase,
+  TData extends RingDataBase & { items?: readonly TItem[] },
   TItem extends { highlight?: boolean; highlightLevel?: number; fontSize?: number }
 >(
   props: {
@@ -168,7 +167,7 @@ export function useRingBase<
   const { resolvedRadius, resolvedInnerRadius, resolvedStartDegree } = useRingProps(props, defaults)
   const { highlightLevelOf, isHighlighted, isStrongHighlighted } = useHighlight<TItem>()
   const itemsWithFontSize = useRingItemsWithFontSize(
-    () => (props.data as any).items as TItem[],
+    () => (props.data.items ?? []) as TItem[],
     () => props.data.fontSize
   )
   const { angleStep } = useRingAngles()

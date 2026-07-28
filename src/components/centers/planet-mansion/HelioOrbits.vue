@@ -1,14 +1,11 @@
 <script setup lang="ts">
 import { computed, unref, type MaybeRef } from 'vue'
 import {
-  earthHeliocentric,
   inferiorConjunctionKind,
-  moonPosition,
   detectAspects,
   formatAspect,
   PLANET_SEMI_MAJOR_AU
 } from '@/utils/celestial'
-import BodyMarker from '../../celestial/BodyMarker.vue'
 import PlanetSvg from '../../celestial/PlanetSvg.vue'
 import { useSevenLuminaries, useEarthHeliocentric, getLuminarySize, getLuminaryHalos } from '@/composables/useSevenLuminaries'
 import type { LuminaryKey } from '@/data/rings/types'
@@ -55,7 +52,7 @@ const innerRadius = computed(() => Math.max(20, props.radius * 0.155))
 const timeRef = computed(() => unref(props.time) ?? new Date())
 
 /** 调用统一的七曜计算 composable */
-const { sun, moon, planets } = useSevenLuminaries(timeRef)
+const { sun: _sun, moon, planets } = useSevenLuminaries(timeRef)
 
 /** 地球日心位置（独立获取） */
 const earthHelio = useEarthHeliocentric(timeRef)

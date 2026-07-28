@@ -2,7 +2,7 @@
 import { computed, unref, type MaybeRef } from 'vue'
 import DataRing from './DataRing.vue'
 import { sixtyJiazi } from '@/data/rings'
-import { getJiaziIndices, branchOf, xunInfo, STEMS, type PillarId } from '@/utils/liushiJiazi'
+import { getJiaziIndices, type PillarId } from '@/utils/liushiJiazi'
 import { colorOfStem } from '@/utils/wuxing'
 
 /**

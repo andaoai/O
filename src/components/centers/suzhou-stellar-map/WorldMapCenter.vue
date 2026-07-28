@@ -263,8 +263,8 @@ const computeMeridian = (actualRadius: number) => {
         -->
         <template v-if="showMeridian">
           <g
-            v-for="mer in [computeMeridian(actualRadius)]"
-            :key="'meridian'"
+            v-for="(mer, merIdx) in [computeMeridian(actualRadius)]"
+            :key="'meridian-' + merIdx"
             class="meridian"
           >
             <!-- 完整的子午线:从对跖端穿过天极到 observer 端 -->
@@ -312,8 +312,8 @@ const computeMeridian = (actualRadius: number) => {
              ═════════════════════════════════════════════════════ -->
         <template v-if="showObserver">
           <g
-            v-for="p in [observerPoint(actualRadius)]"
-            :key="'observer'"
+            v-for="(p, pIdx) in [observerPoint(actualRadius)]"
+            :key="'observer-' + pIdx"
             class="observer-marker"
           >
             <!-- 淡光晕 -->

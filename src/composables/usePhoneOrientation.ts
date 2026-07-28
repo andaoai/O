@@ -69,7 +69,7 @@ export interface UsePhoneOrientationReturn {
 /** 检测 DeviceOrientationEvent 是否需要 requestPermission（iOS 13+） */
 function deviceNeedsPermission(): boolean {
   if (typeof window === 'undefined') return false
-  const api = (window as any).DeviceOrientationEvent
+  const api = window.DeviceOrientationEvent
   return typeof api?.requestPermission === 'function'
 }
 
@@ -95,14 +95,14 @@ function deviceIsSupported(): boolean {
 function getScreenOrientationAngle(): number {
   if (typeof window === 'undefined') return 0
   // 优先使用标准 Screen Orientation API
-  const screenOri = (screen as any).orientation
+  const screenOri = screen.orientation
   if (screenOri?.angle !== undefined) {
     return screenOri.angle
   }
   // 回退到旧的 window.orientation（iOS ≤ 12 / 旧 Android）
   // window.orientation: 90=home左, -90=home右 → screen.orientation.angle: 90=home右, 270=home左
-  if (typeof (window as any).orientation === 'number') {
-    const o = (window as any).orientation
+  if (typeof window.orientation === 'number') {
+    const o = window.orientation
     return o === 90 ? 270 : o === -90 ? 90 : o === 180 ? 180 : 0
   }
   return 0
@@ -191,7 +191,7 @@ export const usePhoneOrientation = (
     // 检查 absolute 标记
     // deviceorientationabsolute 事件的 absolute 始终为 true，无需检查
     // deviceorientation 事件需要检查：absolute === false 表示 alpha 不是相对于磁北的
-    if (!isIOSEvent && (event as any).type === 'deviceorientation' && event.absolute === false) {
+    if (!isIOSEvent && event.type === 'deviceorientation' && event.absolute === false) {
       return null
     }
 
@@ -265,7 +265,7 @@ export const usePhoneOrientation = (
       // 注意：'ondeviceorientationabsolute' in window 在 TS DOM lib 中可能未定义，
       // 因此用类型守卫绕过——先赋值再添加监听
       orientationHandler = createHandler(false)
-      const useAbsolute = typeof (window as any).ondeviceorientationabsolute !== 'undefined'
+      const useAbsolute = typeof window.ondeviceorientationabsolute !== 'undefined'
       const eventType = useAbsolute ? 'deviceorientationabsolute' : 'deviceorientation'
       window.addEventListener(eventType, orientationHandler)
     }
@@ -295,7 +295,7 @@ export const usePhoneOrientation = (
   /** iOS 13+ 请求权限 */
   async function requestPermission(): Promise<void> {
     if (typeof window === 'undefined') return
-    const api = (window as any).DeviceOrientationEvent
+    const api = window.DeviceOrientationEvent
     if (typeof api?.requestPermission !== 'function') {
       permissionStatus.value = 'granted'
       start()

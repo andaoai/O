@@ -18,7 +18,7 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { ref, computed, readonly, watch, type Ref, type DeepReadonly } from 'vue'
+import { ref, computed, readonly, type Ref, type DeepReadonly } from 'vue'
 
 /** 地理定位状态机 */
 export type GeolocationStatus = 'idle' | 'pending' | 'success' | 'denied'

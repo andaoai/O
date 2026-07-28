@@ -74,7 +74,6 @@ const lunarYearProgress = computed(() => {
   if (months.length === 0) return { current: 0, total: 12 }
   const totalDays = months.reduce((sum, m) => sum + m.dayCount, 0)
   // 计算从正月首日到今天的偏移天数
-  const firstMonth = months[0]
   let passedDays = 0
   for (const m of months) {
     const day = getDayOfYear(timeRef.value)

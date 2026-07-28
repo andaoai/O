@@ -22,7 +22,7 @@ interface Props {
   rotationDirection?: 'clockwise' | 'counterclockwise'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   radius: 200,
   innerRadius: 180,
   startDegree: 0,

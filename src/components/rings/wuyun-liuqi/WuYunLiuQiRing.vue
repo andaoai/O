@@ -79,12 +79,6 @@ const toXY = usePolar(
 /** 环带径向中线（划分上下两半的分界） */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 
-/** 本岁实际年长（365 或 366 天） */
-const yearLength = computed<number>(() => ctx.value.yearLength)
-
-/** overflow = 岁末溢出天数（一般 5 或 6） */
-const overflow = computed<number>(() => ctx.value.overflow)
-
 /** 冬至叠加区 (末 overflow+1 格) 索引集 */
 const overlaySet = computed<Set<number>>(() => ctx.value.overlaySet)
 

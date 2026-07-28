@@ -55,8 +55,6 @@ const toXY = usePolar(
   () => props.rotationDirection
 )
 
-/** 环带径向厚度 */
-const band = computed(() => props.radius - props.innerRadius)
 /** 环带径向中线（划分上下两半的分界） */
 const midRadius = computed(() => (props.radius + props.innerRadius) / 2)
 

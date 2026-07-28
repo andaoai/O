@@ -42,7 +42,7 @@ interface Props {
   fillOpacity?: number
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   radius: 480,
   innerRadius: 456,
   rotationDirection: 'clockwise',

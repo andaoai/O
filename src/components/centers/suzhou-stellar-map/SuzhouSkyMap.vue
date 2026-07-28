@@ -851,11 +851,8 @@ const computeCardinals = (actualRadius: number) => {
              ═════════════════════════════════════════════════════
              每规独立 group,包含:实线圆 + 透明厚 stroke(hit area) + text
              hover 命中 hit area 时 text 才亮 -->
-        <template
-          v-if="showThreeRegulae"
-          v-for="reg in [computeRegulae(actualRadius)]"
-          :key="'regulae'"
-        >
+        <template v-if="showThreeRegulae">
+          <template v-for="(reg, regIdx) in [computeRegulae(actualRadius)]" :key="'regulae-' + regIdx">
           <!-- 内规(恒显圈,金色细实线) -->
           <g class="regula">
             <circle
@@ -954,6 +951,7 @@ const computeCardinals = (actualRadius: number) => {
               stroke-width="1.6"
             >外规 δ−{{ (90 - observerLat).toFixed(0) }}°</text>
           </g>
+          </template>
         </template>
 
         <!-- ═════════════════════════════════════════════════════
@@ -1246,11 +1244,8 @@ const computeCardinals = (actualRadius: number) => {
              ═════════════════════════════════════════════════════ -->
         <g :clip-path="`url(#suzhou-visible-${(radius as number).toFixed(0)})`">
           <!-- 太阳:金色实心 + 光芒环 -->
-          <template
-            v-if="showSun"
-            v-for="sun in [bodySvg(sunProj.projAngle, sunProj.dec, projectionScale(actualRadius), dirSign)]"
-            :key="'sun'"
-          >
+          <template v-if="showSun">
+            <template v-for="(sun, sunIdx) in [bodySvg(sunProj.projAngle, sunProj.dec, projectionScale(actualRadius), dirSign)]" :key="'sun-' + sunIdx">
             <g class="body sun" :style="{ '--twinkle-delay': QIYAO_DELAY.sun }">
               <circle :cx="sun.x" :cy="sun.y" :r="16" fill="#FFD54F" class="body-halo" />
               <circle :cx="sun.x" :cy="sun.y" :r="8" fill="#FFECB3" class="body-core" />
@@ -1277,14 +1272,12 @@ const computeCardinals = (actualRadius: number) => {
                 stroke-width="2.2"
               >☉ 日</text>
             </g>
+            </template>
           </template>
 
           <!-- 月亮:银白色 + 光晕 -->
-          <template
-            v-if="showMoon"
-            v-for="moon in [bodySvg(moonProj.projAngle, moonProj.dec, projectionScale(actualRadius), dirSign)]"
-            :key="'moon'"
-          >
+          <template v-if="showMoon">
+            <template v-for="(moon, moonIdx) in [bodySvg(moonProj.projAngle, moonProj.dec, projectionScale(actualRadius), dirSign)]" :key="'moon-' + moonIdx">
             <g class="body moon" :style="{ '--twinkle-delay': QIYAO_DELAY.moon }">
               <circle :cx="moon.x" :cy="moon.y" :r="14" fill="#F5F0E0" class="body-halo" />
               <circle :cx="moon.x" :cy="moon.y" :r="7" fill="#FFFDF5" class="body-core" />
@@ -1311,6 +1304,7 @@ const computeCardinals = (actualRadius: number) => {
                 stroke-width="2.2"
               >☽ 月</text>
             </g>
+            </template>
           </template>
 
           <!-- 五星（水金火木土） -->
@@ -1322,8 +1316,8 @@ const computeCardinals = (actualRadius: number) => {
               :style="{ '--twinkle-delay': (QIYAO_DELAY[planet.key] ?? '0s') }"
             >
               <template
-                v-for="p in [bodySvg(planet.projAngle, planet.dec, projectionScale(actualRadius), dirSign)]"
-                :key="planet.key"
+                v-for="(p, pIdx) in [bodySvg(planet.projAngle, planet.dec, projectionScale(actualRadius), dirSign)]"
+                :key="planet.key + '-' + pIdx"
               >
                 <!-- 水星：暗体 + 超蓝外圈；其他行星统一色 -->
                 <circle
@@ -1365,15 +1359,12 @@ const computeCardinals = (actualRadius: number) => {
         <!-- ═════════════════════════════════════════════════════
              ④ 紫微垣东西两藩 + 勾陈一
              ═════════════════════════════════════════════════════ -->
-        <template
-          v-if="showZiwei"
-          v-for="zw in [{
+        <template v-if="showZiwei">
+          <template v-for="(zw, zwIdx) in [{
             east: computeZiweiWall(actualRadius, ziwei.east),
             west: computeZiweiWall(actualRadius, ziwei.west),
             polaris: computeZiweiPoint(actualRadius, ziwei.polaris)
-          }]"
-          :key="'ziwei'"
-        >
+          }]" :key="'ziwei-' + zwIdx">
           <!-- 东藩连线 -->
           <polyline
             :points="polyPoints(zw.east)"
@@ -1474,16 +1465,14 @@ const computeCardinals = (actualRadius: number) => {
               stroke-width="2.2"
             >勾陈一</text>
           </g>
+          </template>
         </template>
 
         <!-- ═════════════════════════════════════════════════════
              ⑤ 北斗七星连线 + 星名 + 天极中心十字
              ═════════════════════════════════════════════════════ -->
-        <template
-          v-if="showBeidou"
-          v-for="beidouPts in [computeBeidouPoints(actualRadius)]"
-          :key="'beidou'"
-        >
+        <template v-if="showBeidou">
+          <template v-for="(beidouPts, bpIdx) in [computeBeidouPoints(actualRadius)]" :key="'beidou-' + bpIdx">
           <!-- 连线(勺+柄) -->
           <polyline
             :points="polyPoints(beidouPts)"
@@ -1530,6 +1519,7 @@ const computeCardinals = (actualRadius: number) => {
               stroke-width="2.2"
             >{{ s.cnName }}</text>
           </g>
+          </template>
         </template>
       </g>
     </template>

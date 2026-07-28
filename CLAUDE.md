@@ -19,6 +19,7 @@ Compasses currently shipped:
 - **二十四山风水盘 (fengshui24)** — 手机端风水罗盘：DeviceOrientation API 获取磁北朝向 + `useGeolocation` GPS 定位 + WMM 地磁模型自动校正磁偏角 → 真北朝向，整盘随手机旋转、方位始终正确，同时显示当前太阳在廿四山中的位置。定位与传感器授权互相独立。
 - **阴阳遁九局盘 (qi-men-dun-jia)** — 奇门遁甲阴阳遁九局可视化：冬至 = 0° 起序，24 节气 15° × 3 元 5° × 5 天 1° 三层嵌套。5 环由外到内为六轮甲子日环（360 段）/ 24 节气点环 / 农历日期段环 / 上中下三元 / 九局数，圆心信息卡显示当日阳/阴遁 · 节气 · 三元 · 局 · 状态。
 - **黄帝内经·五运六气盘 (huangdi-neijing)** — 《素问》七篇大论所述五运六气学说可视化：与奇门盘共用日粒度年历坐标（六轮甲子 / 24 节气 / 农历日期外层三环），内嵌主气 / 客气 / 主运 / 客运四环，中央 WuYunInfoCenter 展示年干支 · 岁运 · 司天 · 在泉 · 当令主客气与主客运 · 干支四柱。
+- **会合周期盘 (conjunction-cycles)** — 五星（水金火木土）两两会合的赤经序列可视化：以当前时间之后最近一次会合为起点，向未来窗口内的相邻会合两点连线，越远越暗；10 对行星组合各成一色，可自由勾选。外环复用赤经刻度与七曜入宿度标记，中央整片圆域作为连线画布。
 
 Core libraries: **astronomy-engine** for precise solar position, **tyme4ts** for traditional calendar / ganzhi calculations. Hosting: **VitePress 1.6** (no Vue Router, no SPA entry). Compass pages live as `docs/compass/*.md` with a custom `layout: compass` that full-screen-renders `src/views/*.vue`. See §"VitePress ↔ src/ 融合关系" below.
 
@@ -46,6 +47,7 @@ The project evolved from a "one .vue component per ring" design → **data-drive
 │     GuaRelationView, SuzhouStellarMapView,                     │
 │     FengShui24View, QiMenDunJiaView,                             │
 │     HuangDiNeiJingView                                           │
+│     ConjunctionCyclesView                                        │
 │     🔹 RingStack: 「圆心 → 圆环」统一分层布局容器              │
 └────────────────────────────────────┬────────────────────────┘
                                      │
@@ -266,6 +268,7 @@ BodyRingData ──► DataBodyRing ──► BodyMarker ──► PolarCanvas
 | `guaRelations.ts` | 卦关系统一计算 | 飞伏/互卦/对卦/综卦/交卦 五种关系纯函数 |
 | `qimenDunJia.ts` | 奇门遁甲排局 | 阴阳遁 + 三元 + 超神接气 + 奇门置闰（冬至 0° 起序） |
 | `reverseGeocode.ts` | 逆地理编码 | 经纬度 → 行政区（观斗盘/风水盘定位反查） |
+| `bodyRing.ts` | 天体圆环工具 | 天体坐标/运动状态/箭头参数纯函数（DataBodyRing 消费） |
 
 ---
 
@@ -496,7 +499,8 @@ docs/                              # VitePress 站点根
     ├── suzhou-stellar-map.md      # <SuzhouStellarMapView />
     ├── fengshui24.md              # <FengShui24View />
     ├── qi-men-dun-jia.md          # <QiMenDunJiaView />
-    └── huangdi-neijing.md         # <HuangDiNeiJingView />
+    ├── huangdi-neijing.md         # <HuangDiNeiJingView />
+    └── conjunction-cycles.md      # <ConjunctionCyclesView />
 
 src/                               # 组件库（无 main.ts / App.vue / router）
 ├── compasses/
@@ -513,7 +517,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
 │   ├── SuzhouStellarMapView.vue   # 苏州石刻天文图 compass
 │   ├── FengShui24View.vue         # 二十四山风水盘 compass（手机端）
 │   ├── QiMenDunJiaView.vue        # 阴阳遁九局盘 compass
-│   └── HuangDiNeiJingView.vue     # 黄帝内经·五运六气盘 compass
+│   ├── HuangDiNeiJingView.vue     # 黄帝内经·五运六气盘 compass
+│   └── ConjunctionCyclesView.vue  # 会合周期盘 compass
 ├── components/
 │   ├── base/                       # Layer 4: Base Render Layer
 │   │   ├── PolarCanvas.vue         # Base polar coordinate canvas
@@ -679,7 +684,8 @@ src/                               # 组件库（无 main.ts / App.vue / router�
     ├── guaRelationArrows.ts        # 京房八宫 64 卦飞伏方向（用于箭头渲染）
     ├── guaRelations.ts             # 卦关系统一计算：飞伏/互卦/对卦/综卦/交卦
     ├── qimenDunJia.ts              # 奇门遁甲阴阳遁九局排局（超神/接气/正授）
-    └── reverseGeocode.ts           # 逆地理编码：经纬度 → 行政区
+    ├── reverseGeocode.ts           # 逆地理编码：经纬度 → 行政区
+    └── bodyRing.ts                 # 天体圆环工具：坐标/运动状态/箭头参数纯函数
 ```
 
 ---

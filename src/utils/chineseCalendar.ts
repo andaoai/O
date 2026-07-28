@@ -14,11 +14,7 @@
 import {
   SolarDay,
   SolarTime,
-  LunarDay,
-  LunarYear,
   SolarTerm,
-  SixtyCycle,
-  HeavenStem,
   EarthBranch
 } from 'tyme4ts'
 import { STEMS, ganzhiName } from './constants/ganzhi'
@@ -437,13 +433,6 @@ export function dateFromDayOfYear(year: number, dayOfYear: number): Date {
 /**
  * 节气名列表（tyme4ts 索引序：冬至=0）
  */
-const SOLAR_TERM_NAMES = [
-  '冬至', '小寒', '大寒', '立春', '雨水', '惊蛰',
-  '春分', '清明', '谷雨', '立夏', '小满', '芒种',
-  '夏至', '小暑', '大暑', '立秋', '处暑', '白露',
-  '秋分', '寒露', '霜降', '立冬', '小雪', '大雪'
-]
-
 /**
  * 检查节气索引是否为中气
  *

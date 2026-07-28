@@ -9,8 +9,7 @@ import {
   INNER_GAP_RATIO
 } from '@/utils/skyProjection'
 import { lunarOrbit } from '@/utils/celestial'
-import { getMansionSpans, findMansion, type MansionHit } from '@/utils/planetMansion'
-import BodyMarker from '../../celestial/BodyMarker.vue'
+import { getMansionSpans, findMansion } from '@/utils/planetMansion'
 import PlanetSvg from '../../celestial/PlanetSvg.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
