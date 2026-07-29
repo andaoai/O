@@ -43,7 +43,7 @@ const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime }
 
 // 视口控制
 const viewport = useViewport()
-const { zoom, offsetX, offsetY, rotationAngle } = viewport
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 const svgRef = ref<SVGSVGElement | null>(null)
 const { isDragging, isAltPressed } = useAltDragPan({ svgRef, viewport })
@@ -273,14 +273,14 @@ const outerRings = [
         <RingStack
           :outer-radius="DISK_OUTER_RADIUS"
           :rings="outerRings"
-          rotation-direction="clockwise"
+          :rotation-direction="rotationDirection"
         >
           <!-- 圆心画布：会合点 + 折线 -->
           <template #center="{ innerRadius }">
             <ConjunctionCanvas
               :time="controlledTime"
               :radius="innerRadius"
-              rotation-direction="clockwise"
+              :rotation-direction="rotationDirection"
               :window-years="windowYears"
               :enabled-pairs="enabledPairs"
               :pair-colors="PAIR_COLORS"

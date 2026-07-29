@@ -55,7 +55,7 @@ const { onUserTimeChange } = useLiveClock(controlledTime, { paused: hasUrlTime }
 // 视口控制（单一 composable 打包）
 const viewport = useViewport()
 // 解构顶层 refs 给模板使用
-const { zoom, offsetX, offsetY, rotationAngle } = viewport
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // Alt + 拖拽平移
 const svgRef = ref<SVGSVGElement | null>(null)
@@ -189,7 +189,7 @@ const outerRings = [
         <RingStack
           :outer-radius="DISK_OUTER_RADIUS"
           :rings="outerRings"
-          rotation-direction="clockwise"
+          :rotation-direction="rotationDirection"
         >
           <!-- 🔹 圆心区：自动接收最内环的 innerRadius -->
           <template #center>

@@ -115,8 +115,8 @@ const innerRadius = computed(() => {
       :key="index"
       :radius="ring.radius"
       :inner-radius="ring.innerRadius"
-      :rotation-direction="rotationDirection"
       v-bind="ring.extraProps"
+      :rotation-direction="rotationDirection"
     />
     <!-- 🔹 圆心组件区 Slot：自动暴露核心半径
          ══════════════════════════════════════════

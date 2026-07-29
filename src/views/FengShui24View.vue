@@ -61,7 +61,7 @@ const magDecl = useMagneticDeclination({
 
 // ─── 视口 ────────────────────────────────────────────────
 const viewport = useViewport({ rotationAngle: 0 })
-const { zoom, offsetX, offsetY, rotationAngle } = viewport
+const { zoom, offsetX, offsetY, rotationDirection, rotationAngle } = viewport
 
 // ─── 真北朝向 + 自动旋转追踪（从传感器/磁偏角/视口派生） ───
 const { trueHeading, displayHeading, directionLabel, betaDeviation } =
@@ -346,7 +346,7 @@ const showGeoPermission = computed(() =>
           :outer-radius="280"
           :gap="4"
           :rings="rings"
-          rotation-direction="clockwise"
+          :rotation-direction="rotationDirection"
         >
           <template #center="{ innerRadius }">
             <!-- 圆心区域：方向指示器（反旋保持屏幕正立） -->
