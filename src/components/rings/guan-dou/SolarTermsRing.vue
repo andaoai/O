@@ -6,10 +6,9 @@ import { eclipticPointToScreenAngle } from '@/utils/jianJiang'
 import { normalizeAngle } from '@/utils/geometry'
 import {
   SOLAR_TERMS_LICHUN_ORDER,
-  SOLAR_TERM_CARDINALS,
-  currentLichunIndex,
-  isJieqi
+  SOLAR_TERM_CARDINALS
 } from '@/utils/constants/solarTerms'
+import { currentLichunIndex, isJieqi } from '@/utils/solarTerms'
 
 /**
  * 观斗盘专用二十四节气环（点环 · 时间驱动）

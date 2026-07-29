@@ -3,7 +3,8 @@ import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
 import { twentyFourSolarTerms } from '@/data/rings/twentyFourSolarTerms'
 import { sunLongitude } from '@/utils/celestial'
-import { currentLichunIndex, SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
+import { currentLichunIndex } from '@/utils/solarTerms'
+import { SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
 
 /**
  * 二十四节气环组件（传统罗盘版本 · 时间驱动高亮）

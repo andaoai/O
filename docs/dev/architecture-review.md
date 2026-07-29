@@ -137,11 +137,11 @@ Layer 5  Utility      → 28 个纯函数工具
 
 **修复建议**：拆分为子组件，每种关系模式一个组件，主视图只负责模式切换和共享状态。
 
-### P3：constants 目录纯度
+### ~~P3：constants 目录纯度~~ ✅ 已修复
 
-`solarTerms.ts` 中 `isJieqi()`、`isZhongqi()`、`currentLichunIndex()` 依赖 `utils/geometry.ts`，违反 constants 的零依赖原则。
+~~`solarTerms.ts` 中 `isJieqi()`、`isZhongqi()`、`currentLichunIndex()` 依赖 `utils/geometry.ts`，违反 constants 的零依赖原则。~~
 
-**修复建议**：将函数迁移到 `utils/` 下的专用文件。
+**修复**：3 个纯函数迁移至 `src/utils/solarTerms.ts`，constants 文件仅保留 re-export。
 
 ### P4：命名一致性
 

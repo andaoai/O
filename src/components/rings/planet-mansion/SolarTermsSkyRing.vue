@@ -6,9 +6,9 @@ import { eclipticToEquatorial } from '@/utils/skyProjection'
 import { normalizeAngle } from '@/utils/geometry'
 import {
   SOLAR_TERMS_LICHUN_ORDER,
-  SOLAR_TERM_CARDINALS,
-  currentLichunIndex
+  SOLAR_TERM_CARDINALS
 } from '@/utils/constants/solarTerms'
+import { currentLichunIndex } from '@/utils/solarTerms'
 
 /**
  * 二十四节气环组件（天星盘版本 · 时间驱动）

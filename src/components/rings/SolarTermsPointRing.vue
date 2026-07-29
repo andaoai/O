@@ -3,7 +3,8 @@ import { computed, unref, type MaybeRef } from 'vue'
 import DataPointRing from './DataPointRing.vue'
 import { sunLongitude } from '@/utils/celestial'
 import { getSolarTermPositions, isGregorianLeapYear } from '@/utils/chineseCalendar'
-import { currentLichunIndex, SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
+import { currentLichunIndex } from '@/utils/solarTerms'
+import { SOLAR_TERM_CARDINALS } from '@/utils/constants/solarTerms'
 import type { PointRingData } from '@/data/rings/types'
 
 /**
