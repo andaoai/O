@@ -19,7 +19,8 @@
 
 import { najiaLines } from './najia'
 import { JING_FANG_64_GUA_BY_VALUE } from '@/data/rings/jingFangEightPalaces'
-import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName, getUnicodeHexagram } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram } from '@/utils/guaUtils'
 import { BRANCHES } from './constants/ganzhi'
 import { WUXING_COLORS, BRANCH_ELEMENTS, type WuxingElement } from './wuxing'
 

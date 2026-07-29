@@ -15,7 +15,8 @@
  *   value 到六爻数组的映射走 [[sixtyFourGua]] 的 getGuaLines()。
  *   不重复编码六爻二进制。
  */
-import { WENWANG_GUA_BY_VALUE, getGuaLines, getInnerGuaName, getOuterGuaName } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE, getInnerGuaName, getOuterGuaName } from '@/data/sixtyFourGua'
+import { getGuaLines } from '@/utils/guaUtils'
 
 /** 京房卦气 60 卦的一卦元信息 */
 export interface JingFangGua {

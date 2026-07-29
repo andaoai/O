@@ -8,21 +8,25 @@
  *   · hoveredRelationMeta — 当前关系元信息
  *   · focusSummary — 聚焦模式焦点卦汇总
  *   · focusedGuaLabel — 聚焦卦显示名
+ *
+ * 设计原则：
+ *   组件引用由调用方传入（markRaw 包裹），本 composable 不直接导入 Vue 组件。
+ *   避免 composable 层对组件层的硬依赖，保持 Layer 2/3 边界清晰。
  */
-import { computed, markRaw, type Ref } from 'vue'
-import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
-import DeriveStatRing from '@/components/rings/gua-relation/DeriveStatRing.vue'
+import { computed, type Component, type Ref } from 'vue'
 import type { GuaRelationTextLayer } from '@/components/rings/GuaRelationTextRing.vue'
 import type { GuaRelationMode } from '@/composables/useGuaRelationInteraction'
 import {
   RELATION_METAS,
+  getArrowColor,
   type FocusRelationEntry,
   type GuaRelationEntry,
   type GuaRelationType,
   type GuaLayout,
 } from '@/utils/guaRelations'
 import { computeDeriveChain } from '@/utils/guaDeriveChain'
-import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram } from '@/utils/guaUtils'
 
 /** 六爻位标签：0=初爻，5=上爻 */
 export const YAO_LABELS = ['初', '二', '三', '四', '五', '上'] as const
@@ -82,7 +86,7 @@ const RING_LAYERS: readonly RingLayerConfig[] = [
 ] as const
 
 type RingGroupItem = {
-  component: ReturnType<typeof markRaw>
+  component: Component
   thickness: number
   gapBefore: number
   props: Record<string, unknown>
@@ -99,6 +103,10 @@ interface GuaRelationLayoutOptions {
   hoveredValue: Ref<number | null>
   relationTable: Ref<readonly GuaRelationEntry[]>
   effectiveFocusedValue: Ref<number | null>
+  /** 组件引用：文字环组件（markRaw 包裹），避免 composable 直接导入组件 */
+  textRingComponent: Component
+  /** 组件引用：推衍统计环组件（markRaw 包裹），避免 composable 直接导入组件 */
+  deriveStatRingComponent: Component
 }
 
 /**
@@ -118,6 +126,8 @@ export function useGuaRelationLayout(options: GuaRelationLayoutOptions) {
     hoveredValue,
     relationTable,
     effectiveFocusedValue,
+    textRingComponent,
+    deriveStatRingComponent,
   } = options
 
   /** 聚焦卦的显示名 */
@@ -140,6 +150,12 @@ export function useGuaRelationLayout(options: GuaRelationLayoutOptions) {
     return relationTable.value.find(
       e => e.sourceValue === hoveredValue.value || e.targetValue === hoveredValue.value,
     ) as GuaRelationEntry | null ?? null
+  })
+
+  /** 全局模式悬停配对的箭头颜色（下沉 getArrowColor 逻辑，避免 View 层直接调用 utils） */
+  const hoveredPairColor = computed(() => {
+    if (!hoveredPair.value) return '#FFD700'
+    return getArrowColor(hoveredPair.value)
   })
 
   /** 全局模式当前关系元信息 */
@@ -185,7 +201,7 @@ export function useGuaRelationLayout(options: GuaRelationLayoutOptions) {
       r => r.always || ringVisibility.value[r.key as keyof RingVisibility]
     )
     return visible.map((r, idx) => ({
-      component: markRaw(GuaRelationTextRing),
+      component: textRingComponent,
       thickness: LAYER_THICKNESS[r.layer],
       // 组内第一环用组间距 firstGap；组内其余环用默认小间距 GAP
       gapBefore: idx === 0 ? firstGap : GAP,
@@ -216,7 +232,7 @@ export function useGuaRelationLayout(options: GuaRelationLayoutOptions) {
         // 每层文字环组的正外侧插一层独立的发光统计环，
         // 环厚 14px，独占空间，数字标签落在环带正中央，永不与相邻卦名/卦符重叠
         groups.push({
-          component: markRaw(DeriveStatRing),
+          component: deriveStatRingComponent,
           thickness: 14,
           // 第 0 层不留组间距；第 k>0 层用 GROUP_GAP 拉开与上一组的距离
           gapBefore: k === 0 ? GAP : GROUP_GAP,
@@ -237,6 +253,7 @@ export function useGuaRelationLayout(options: GuaRelationLayoutOptions) {
   return {
     rings,
     hoveredPair,
+    hoveredPairColor,
     hoveredRelationMeta,
     focusSummary,
     focusedGuaLabel,

@@ -147,7 +147,6 @@ export const WENWANG_GUA_BY_VALUE: readonly GuaMeta[] = [
 ]
 
 /** 6 位整体位反转：bit0↔bit5, bit1↔bit4, bit2↔bit3 */
-export { bitReverse6, getGuaLines, getXiantianPos, getUnicodeHexagram } from '@/utils/guaUtils'
 import { bitReverse6, getGuaLines, getXiantianPos, getUnicodeHexagram } from '@/utils/guaUtils'
 
 /** 由先天位置 pos 取圆心角（SVG 空间，度）。乾顶坤底、两仪对称。 */

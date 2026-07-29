@@ -13,7 +13,8 @@
  */
 import { computed, inject } from 'vue'
 import { GUA_RELATION_KEY } from '@/composables/useGuaRelationInteraction'
-import { WENWANG_GUA_BY_VALUE, getUnicodeHexagram } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram } from '@/utils/guaUtils'
 import { JING_FANG_64_GUA } from '@/data/rings/jingFangEightPalaces'
 import { BAGUA_ELEMENT, ELEMENT_COLORS } from '@/utils/guaInfo'
 import { getGuaAngle, type GuaRelationType, type GuaLayout } from '@/utils/guaRelations'

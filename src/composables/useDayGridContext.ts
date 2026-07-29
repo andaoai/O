@@ -95,58 +95,52 @@ export interface RealTermMark {
   chaoshenLabel: 'chaoshen' | 'jieqi'
 }
 
-/** 日粒度共享年历上下文 —— 奇门盘 & 黄帝内经·五运六气盘共用 */
-export interface DayGridContext {
-  /* ── 时间锚点 ── */
+/** 两盘共用的时间锚点与节气基础数据 */
+export interface DayGridAnchors {
   upperYuan: Date
   W1: Date                        // 本岁冬至
-  W2: Date | null                 // 下一岁冬至（理论上一年内必存在）
+  W2: Date | null                 // 下一岁冬至
   D1: number                      // W1 在环上位置 [0, 360)
   yearLength: number              // 365 或 366（W2 − W1）
   overflow: number                // yearLength − 360，一般 5 或 6
-
-  /* ── 节气 ── */
   terms: QiMenSolarTerm[]
   yearTerms: QiMenSolarTerm[]     // 本岁 24 节气
   nextWinter: QiMenSolarTerm | null
-
-  /* ── 冬至叠加区 ── */
   overlayIndices: number[]        // 长度 overflow+1
   overlaySet: Set<number>
-
-  /* ── 农历环 ── */
   lunarEntries: LunarRingEntry[]  // 长度 360
+}
 
-  /* ── 三元九局：360 格全预算 ── */
+/** 奇门盘专属：三元九局 + 节气分段索引 + 今日运序 */
+export interface QiMenSpecific {
   yuanJuAt: Array<YuanJuInfo | null>  // 长度 360
+  startIdxOf: Map<number, TermSlot>
+  realTermIdxOf: Map<number, RealTermMark>
+  segAssignment: Map<number, TermSlot>
+  currentYunIndex: number         // 今日所在运 1-6
+}
 
-  /* ── SolarTermsRing 分段索引表 ── */
-  startIdxOf: Map<number, TermSlot>     // 首日格 → TermSlot（含下一冬至锚）
-  realTermIdxOf: Map<number, RealTermMark>  // 天文真实日（错位）标记
-  segAssignment: Map<number, TermSlot>  // 每格所属节气段
+/** 五运六气专属：客气 / 主运 / 客运 / 岁运 */
+export interface WuYunSpecific {
+  termDayFromWinter: Map<string, number>
+  termDayInRing: Map<string, number>
+  keQi: string[]                  // 客气六步序列
+  keQiYearBranchIndex: number     // 本岁年地支索引（子=0…亥=11）
+  wuYunYearStemIndex: number      // 本岁年干索引（甲=0…癸=9）
+  suiYun: SuiYunInfo              // 岁运（天干化运结果）
+  mainYun: WuYunStep[]            // 主运五步
+  keYun: WuYunStep[]              // 客运五步
+}
 
-  /* ── WuYunLiuQiRing ── */
-  termDayFromWinter: Map<string, number>  // 节气名 → 距 W1 天数
-  termDayInRing: Map<string, number>      // 节气名 → 环上真实位置
-  /** 客气六步序列（初→二→三→四→五→终），本岁大寒年地支决定 */
-  keQi: string[]
-  /** 本岁年地支索引（子=0…亥=11），供调试或圆心卡展示 */
-  keQiYearBranchIndex: number
-  /** 本岁年干索引（甲=0…癸=9），五运排布基准 */
-  wuYunYearStemIndex: number
-  /** 岁运（天干化运结果，太/少 + 五音） */
-  suiYun: SuiYunInfo
-  /** 主运五步（每年固定木火土金水，太少交替；初运极性依年干） */
-  mainYun: WuYunStep[]
-  /** 客运五步（初运=岁运，后按相生顺序，太少交替） */
-  keYun: WuYunStep[]
-
-  /* ── 今日派生量（日粒度） ── */
+/** 今日派生量（日粒度，两盘都用） */
+export interface DayGridToday {
   todayInRing: number             // 今日环上 index [0, 360)
   kToday: number                  // 今日距 W1 天数 [0, yearLength)
   isInOverlayTail: boolean        // 今日是否落在岁末溢出天
-  currentYunIndex: number         // 今日所在运 1-6
 }
+
+/** 日粒度共享年历上下文 —— 奇门盘 & 黄帝内经·五运六气盘共用（扁平结构保持 provide/inject 简洁） */
+export interface DayGridContext extends DayGridAnchors, QiMenSpecific, WuYunSpecific, DayGridToday {}
 
 const DAY_GRID_KEY: InjectionKey<ComputedRef<DayGridContext>> = Symbol('DayGridContext')
 

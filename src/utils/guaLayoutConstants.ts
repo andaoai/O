@@ -13,7 +13,8 @@
  * ═══════════════════════════════════════════════════════════════
  */
 
-import { bitReverse6, GUA_STEP, WENWANG_GUA_BY_VALUE, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
+import { bitReverse6 } from '@/utils/guaUtils'
+import { GUA_STEP, WENWANG_GUA_BY_VALUE, ZAGUAZHUAN_POS_BY_VALUE } from '@/data/sixtyFourGua'
 import { JING_FANG_64_GUA_BY_VALUE, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
 
 // ─── 排序布局类型 ───

@@ -7,9 +7,11 @@
  *
  * 关系类型与排序布局互相独立，可任意组合。
  */
-import { ref, computed, provide } from 'vue'
+import { ref, computed, provide, markRaw } from 'vue'
 import RingStack from '@/components/base/RingStack.vue'
 import GuaRelationCenter from '@/components/centers/GuaRelationCenter.vue'
+import GuaRelationTextRing from '@/components/rings/GuaRelationTextRing.vue'
+import DeriveStatRing from '@/components/rings/gua-relation/DeriveStatRing.vue'
 import { useGuaRelationInteraction, GUA_RELATION_KEY, type GuaRelationMode } from '@/composables/useGuaRelationInteraction'
 import { useGuaRelationLayout, type RingVisibility, YAO_LABELS } from '@/composables/useGuaRelationLayout'
 import { useUrlTime } from '@/composables/useUrlTime'
@@ -22,7 +24,6 @@ import {
   RELATION_METAS,
   RELATION_METAS_LIST,
   RELATION_COLORS,
-  getArrowColor,
   type GuaRelationType,
   type GuaLayout,
 } from '@/utils/guaRelations'
@@ -169,7 +170,7 @@ const RING_OPTIONS: readonly { key: keyof RingVisibility; label: string; color: 
 ]
 
 // ─── 环配置 + 面板汇总（领域逻辑下沉到 composable） ───
-const { rings, hoveredPair, hoveredRelationMeta, focusSummary, focusedGuaLabel } =
+const { rings, hoveredPair, hoveredPairColor, hoveredRelationMeta, focusSummary, focusedGuaLabel } =
   useGuaRelationLayout({
     mode,
     relationType,
@@ -181,6 +182,9 @@ const { rings, hoveredPair, hoveredRelationMeta, focusSummary, focusedGuaLabel }
     hoveredValue: interaction.hoveredValue,
     relationTable: interaction.relationTable,
     effectiveFocusedValue: interaction.effectiveFocusedValue,
+    // 组件引用由 View 层传入，避免 composable 直接导入组件
+    textRingComponent: markRaw(GuaRelationTextRing),
+    deriveStatRingComponent: markRaw(DeriveStatRing),
   })
 
 // ─── 通用 tooltip 状态（Teleport 到 body，脱离 sidebar 的 overflow 裁剪） ───
@@ -593,7 +597,7 @@ function selectPalace(palace: string) {
       </div>
       <div class="detail-row">
         <span class="detail-key">{{ hoveredRelationMeta.label === '飞伏' ? '飞卦' : '源卦' }}：</span>
-        <span class="detail-val" :style="{ color: getArrowColor(hoveredPair) }">
+        <span class="detail-val" :style="{ color: hoveredPairColor }">
           {{ hoveredPair.sourceUnicode }} {{ hoveredPair.sourceName }}
         </span>
       </div>

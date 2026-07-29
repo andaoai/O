@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
 import { arcPath as arcPathUtil, radialTextRotation } from '@/utils/geometry'
 import { usePolar } from '@/composables/useRingBase'
-import { getUnicodeHexagram, WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
+import { WENWANG_GUA_BY_VALUE } from '@/data/sixtyFourGua'
+import { getUnicodeHexagram } from '@/utils/guaUtils'
 import { JING_FANG_64_GUA, JING_FANG_EIGHT_PALACE_STEP } from '@/data/rings/jingFangEightPalaces'
 
 /**
