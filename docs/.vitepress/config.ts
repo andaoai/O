@@ -271,7 +271,6 @@ export default defineConfig({
             { text: '总览', link: '/dev/' },
             { text: '组件 API 与类型契约', link: '/dev/components' },
             { text: 'Astronomy Engine 集成', link: '/dev/astronomy-engine' },
-            { text: '架构审视报告', link: '/dev/architecture-review' },
           ],
         },
       ],
