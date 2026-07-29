@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import PolarCanvas from '../base/PolarCanvas.vue'
-import BodyMarker from '../celestial/BodyMarker.vue'
-import PlanetSvg from '../celestial/PlanetSvg.vue'
+import BodyMarker from '../base/BodyMarker.vue'
+import PlanetSvg from '../base/PlanetSvg.vue'
 import { radialTextRotation } from '@/utils/geometry'
 import { MOTION_VISUAL_CONFIG } from '@/utils/celestial'
 import {

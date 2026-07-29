@@ -6,7 +6,7 @@ import {
   formatAspect,
   PLANET_SEMI_MAJOR_AU
 } from '@/utils/celestial'
-import PlanetSvg from '../../celestial/PlanetSvg.vue'
+import PlanetSvg from '../../base/PlanetSvg.vue'
 import { useSevenLuminaries, useEarthHeliocentric, getLuminarySize, getLuminaryHalos } from '@/composables/useSevenLuminaries'
 import type { LuminaryKey } from '@/data/rings/types'
 

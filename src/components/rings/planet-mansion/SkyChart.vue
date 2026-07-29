@@ -10,7 +10,7 @@ import {
 } from '@/utils/skyProjection'
 import { lunarOrbit } from '@/utils/celestial'
 import { getMansionSpans, findMansion } from '@/utils/planetMansion'
-import PlanetSvg from '../../celestial/PlanetSvg.vue'
+import PlanetSvg from '../../base/PlanetSvg.vue'
 import { useSevenLuminaries } from '@/composables/useSevenLuminaries'
 import { getLuminarySize, getLuminaryHalos } from '@/data/rings/sevenLuminaries'
 import HelioOrbits from '../../centers/planet-mansion/HelioOrbits.vue'

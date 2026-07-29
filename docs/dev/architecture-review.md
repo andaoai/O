@@ -143,15 +143,15 @@ Layer 5  Utility      → 28 个纯函数工具
 
 **修复**：3 个纯函数迁移至 `src/utils/solarTerms.ts`，constants 文件仅保留 re-export。
 
-### P4：命名一致性
+### ~~P4：命名一致性~~ ✅ 已修复
 
-| 问题 | 详情 |
+| 问题 | 状态 |
 |------|------|
-| 同名组件 3 份 | `SolarTermsRing.vue` 分布在 `rings/`、`guan-dou/`、`qi-men-dun-jia/` |
-| viz/ 命名混用 | `SingleGuaViz` vs `ChongViz` vs `DivChartViz` |
-| 默认导出孤例 | `usePhoneOrientation.ts` 是 21 个 composable 中唯一有 `export default` 的 |
-| 导出风格分裂 | 18 个用 `export function`，3 个用 `export const =` 箭头函数 |
-| celestial/ 过薄 | 仅 2 个文件（`BodyMarker.vue`、`PlanetSvg.vue`），可考虑归入 `base/` |
+| ~~同名组件 3 份~~ | ✅ guan-dou/ → `GuanDouSolarTermsRing.vue`，qi-men-dun-jia/ → `QiMenSolarTermsRing.vue` |
+| ~~viz/ 命名混用~~ | ✅ 已统一为 `*Viz` 后缀（`SingleGuaChart` → `SingleGuaViz`） |
+| ~~默认导出孤例~~ | ✅ `usePhoneOrientation` 默认导出已移除 |
+| ~~导出风格分裂~~ | ✅ 已统一为 `export function` |
+| ~~celestial/ 过薄~~ | ✅ `BodyMarker.vue` + `PlanetSvg.vue` 合并入 `base/`，`celestial/` 目录已删除 |
 
 ### P5：文档同步
 

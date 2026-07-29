@@ -5,7 +5,7 @@ import MonthEstablishRing from '../components/rings/guan-dou/MonthEstablishRing.
 import HourShichenRing from '../components/rings/guan-dou/HourShichenRing.vue'
 import SunDiurnalRing from '../components/rings/guan-dou/SunDiurnalRing.vue'
 import MonthGeneralRing from '../components/rings/guan-dou/MonthGeneralRing.vue'
-import SolarTermsRing from '../components/rings/guan-dou/SolarTermsRing.vue'
+import SolarTermsRing from '../components/rings/guan-dou/GuanDouSolarTermsRing.vue'
 import SevenLuminariesRing from '../components/rings/SevenLuminariesRing.vue'
 import BeidouCenter from '../components/centers/guan-dou/BeidouCenter.vue'
 import { useUrlTime } from '@/composables/useUrlTime'
